@@ -22,7 +22,7 @@ export function ProjectProgressChart({ projects }: { projects: any[] }) {
   return (
     <Card className="p-6 mt-8">
       <h3 className="text-lg font-semibold text-slate-900 mb-6">Progreso por Proyecto (%)</h3>
-      <div className="h-72 w-full">
+      <div className="h-72 w-full" style={{ minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
