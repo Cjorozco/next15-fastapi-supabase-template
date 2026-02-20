@@ -2,11 +2,14 @@
 
 A full-stack **SaaS project management app** built with Next.js 15, FastAPI, and Supabase. Features a clean dashboard to track projects and tasks with real-time UI updates.
 
+🔗 **[Live Demo](https://project-manager-web-five.vercel.app)** &nbsp;|&nbsp; API Docs: [Swagger UI](https://project-manager-api-adoi.onrender.com/docs)
+
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.129-009688?style=flat-square&logo=fastapi)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python)
+![Live](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)
 
 ---
 
