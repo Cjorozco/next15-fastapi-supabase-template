@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- Clipboard body -->
+  <rect x="16" y="14" width="32" height="40" rx="4" fill="white" opacity="0.95"/>
+  <!-- Clipboard clip -->
+  <rect x="24" y="10" width="16" height="8" rx="3" fill="white"/>
+  <rect x="27" y="12" width="10" height="4" rx="2" fill="#6366f1"/>
+  <!-- Checkmark -->
+  <polyline points="24,36 30,42 40,28" stroke="#6366f1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
