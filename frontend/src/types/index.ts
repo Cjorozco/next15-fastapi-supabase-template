@@ -2,6 +2,7 @@ export interface Task {
   id: number;
   title: string;
   is_completed: boolean;
+  position: number;
   project_id: number;
 }
 

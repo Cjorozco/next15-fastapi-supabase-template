@@ -2,7 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useProject } from '@/hooks/useProject';
-import { useUpdateTask, useCreateTask, useDeleteTask } from '@/hooks/useTasks';
+import { useUpdateTask, useCreateTask, useDeleteTask, useReorderTasks } from '@/hooks/useTasks';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableTaskItem } from './SortableTaskItem';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,9 +28,28 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { mutate: updateTask } = useUpdateTask();
   const { mutate: createTask, isPending: isCreating } = useCreateTask();
   const { mutate: deleteTask } = useDeleteTask();
+  const { mutate: reorderTasks } = useReorderTasks();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
+
+  const sortedTasks = project ? [...project.tasks].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)) : [];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sortedTasks.findIndex((t: any) => t.id === active.id);
+    const newIndex = sortedTasks.findIndex((t: any) => t.id === over.id);
+
+    const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
+    reorderTasks({ projectId, taskIds: newOrder.map((t: any) => t.id) });
+  };
 
   const handleAddTask = () => {
     const title = newTaskTitle.trim();
@@ -166,37 +189,19 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
 
                 {/* Lista */}
                 <div className="space-y-1">
-                  {project.tasks.map((task: any) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 group transition-colors"
-                    >
-                      <Checkbox
-                        id={`task-detail-${task.id}`}
-                        checked={task.is_completed}
-                        onCheckedChange={(checked) =>
-                          updateTask({ taskId: task.id, isCompleted: !!checked })
-                        }
-                      />
-                      <label
-                        htmlFor={`task-detail-${task.id}`}
-                        className={`flex-1 text-sm cursor-pointer ${task.is_completed ? 'line-through text-slate-400' : 'text-slate-700'
-                          }`}
-                      >
-                        {task.title}
-                      </label>
-                      {task.is_completed && (
-                        <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      )}
-                      <button
-                        onClick={() => deleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-red-500 p-1 rounded"
-                        title="Delete task"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={sortedTasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
+                      {sortedTasks.map((task: any) => (
+                        <SortableTaskItem
+                          key={task.id}
+                          task={task}
+                          isDetailView={true}
+                          onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
+                          onDelete={(taskId) => deleteTask(taskId)}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                 </div>
               </div>
             </div>

@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Project } from '@/types';
-import { useUpdateTask, useCreateTask, useDeleteTask } from '@/hooks/useTasks';
+import { useUpdateTask, useCreateTask, useDeleteTask, useReorderTasks } from '@/hooks/useTasks';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableTaskItem } from './SortableTaskItem';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Loader2, X } from 'lucide-react';
 
@@ -18,9 +22,28 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { mutate: updateTask } = useUpdateTask();
   const { mutate: createTask, isPending: isCreating } = useCreateTask();
   const { mutate: deleteTask } = useDeleteTask();
+  const { mutate: reorderTasks } = useReorderTasks();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
+
+  const sortedTasks = [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sortedTasks.findIndex((t) => t.id === active.id);
+    const newIndex = sortedTasks.findIndex((t) => t.id === over.id);
+
+    const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
+    reorderTasks({ projectId: project.id, taskIds: newOrder.map(t => t.id) });
+  };
 
   const handleAddTask = () => {
     const title = newTaskTitle.trim();
@@ -76,31 +99,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {project.tasks.length === 0 ? (
           <p className="text-sm text-slate-500 italic">No tasks yet</p>
         ) : (
-          <div className="space-y-1 max-h-48 overflow-y-auto">
-            {project.tasks.map((task) => (
-              <div key={task.id} className="flex items-center gap-2 py-1 group/task">
-                <Checkbox
-                  id={`task-${task.id}`}
-                  checked={task.is_completed}
-                  onCheckedChange={(checked) => {
-                    updateTask({ taskId: task.id, isCompleted: !!checked });
-                  }}
-                />
-                <label
-                  htmlFor={`task-${task.id}`}
-                  className={`flex-1 text-sm cursor-pointer ${task.is_completed ? 'line-through text-slate-400' : 'text-slate-700'}`}
-                >
-                  {task.title}
-                </label>
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="opacity-0 group-hover/task:opacity-100 transition-opacity text-slate-300 hover:text-red-500 p-0.5 rounded"
-                  title="Borrar tarea"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+          <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                {sortedTasks.map((task) => (
+                  <SortableTaskItem
+                    key={task.id}
+                    task={task}
+                    onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
+                    onDelete={(taskId) => deleteTask(taskId)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         )}
 

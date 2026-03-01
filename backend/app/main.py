@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from . import database, models, schemas
 from .auth import get_current_user
 
-app = FastAPI(title="Project Manager API", version="1.0.0")
+app = FastAPI(title="Project Manager API", version="1.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -154,7 +154,17 @@ async def create_task_for_project(
     if not project_result.scalars().first():
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
-    new_task = models.Task(**task.model_dump(), project_id=project_id)
+    # Get max position
+    tasks_result = await db.execute(
+        select(models.Task).filter(models.Task.project_id == project_id)
+    )
+    existing_tasks = tasks_result.scalars().all()
+    next_position = max([t.position for t in existing_tasks], default=-1) + 1
+
+    task_data = task.model_dump()
+    task_data["position"] = next_position
+
+    new_task = models.Task(**task_data, project_id=project_id)
     db.add(new_task)
     await db.commit()
     await db.refresh(new_task)
@@ -191,6 +201,38 @@ async def delete_task(
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
     await db.delete(db_task)
     await db.commit()
+
+
+@app.put("/projects/{project_id}/tasks/reorder")
+async def reorder_tasks(
+    project_id: int,
+    reorder_data: schemas.TaskReorder,
+    db: AsyncSession = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    # Verify project
+    project_result = await db.execute(
+        select(models.Project).filter(
+            models.Project.id == project_id,
+            models.Project.owner_id == current_user.id,
+        )
+    )
+    if not project_result.scalars().first():
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    # Update tasks: find all tasks for this project
+    tasks_result = await db.execute(
+        select(models.Task).filter(models.Task.project_id == project_id)
+    )
+    existing_tasks = {t.id: t for t in tasks_result.scalars().all()}
+
+    # Update positions based on the order of task_ids
+    for index, task_id in enumerate(reorder_data.task_ids):
+        if task_id in existing_tasks:
+            existing_tasks[task_id].position = index
+
+    await db.commit()
+    return {"message": "Tasks reordered successfully"}
 
 
 @app.get("/")

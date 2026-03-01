@@ -78,3 +78,45 @@ export const useDeleteTask = () => {
     },
   });
 };
+
+export const useReorderTasks = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ projectId, taskIds }: { projectId: number; taskIds: number[] }) => {
+      const response = await api.put(`/projects/${projectId}/tasks/reorder`, { task_ids: taskIds });
+      return response.data;
+    },
+    onMutate: async ({ projectId, taskIds }) => {
+      await queryClient.cancelQueries({ queryKey: PROJECTS_KEY });
+      const previousData = queryClient.getQueriesData<Project[]>({ queryKey: PROJECTS_KEY });
+
+      queryClient.setQueriesData<Project[]>({ queryKey: PROJECTS_KEY }, (old) => {
+        if (!old) return old;
+        return old.map((project) => {
+          if (project.id === projectId) {
+            const reorderedTasks = taskIds.map(id => project.tasks.find(t => t.id === id)).filter(Boolean) as typeof project.tasks;
+            const missingTasks = project.tasks.filter(t => !taskIds.includes(t.id));
+            return {
+              ...project,
+              tasks: [...reorderedTasks, ...missingTasks].map((t, index) => ({ ...t, position: index }))
+            };
+          }
+          return project;
+        });
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _variables, context) => {
+      context?.previousData.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      toast.error('Error reordering tasks');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
+    },
+  });
+};

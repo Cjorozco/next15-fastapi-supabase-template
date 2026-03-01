@@ -6,10 +6,15 @@ from typing import List, Optional
 class TaskBase(BaseModel):
     title: str
     is_completed: bool = False
+    position: int = 0
 
 
 class TaskCreate(TaskBase):
     pass
+
+
+class TaskReorder(BaseModel):
+    task_ids: List[int]
 
 
 class Task(TaskBase):

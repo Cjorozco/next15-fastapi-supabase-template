@@ -23,7 +23,7 @@ class Project(Base):
 
     # Relaciones
     owner = relationship("User", back_populates="projects")
-    tasks = relationship("Task", back_populates="project")
+    tasks = relationship("Task", back_populates="project", order_by="Task.position")
 
 
 class Task(Base):
@@ -31,6 +31,7 @@ class Task(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     is_completed = Column(Boolean, default=False)
+    position = Column(Integer, default=0)
     project_id = Column(Integer, ForeignKey("projects.id"))
 
     project = relationship("Project", back_populates="tasks")
