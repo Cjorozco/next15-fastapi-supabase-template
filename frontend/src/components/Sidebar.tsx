@@ -23,11 +23,11 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-2">
-        <Link href="/" className={linkClass('/')}>
+        <Link href="/" className={linkClass('/')} data-cy="nav-dashboard">
           <LayoutDashboard className="w-5 h-5" />
           Dashboard
         </Link>
-        <Link href="/projects" className={linkClass('/projects')}>
+        <Link href="/projects" className={linkClass('/projects')} data-cy="nav-projects">
           <FolderKanban className="w-5 h-5" />
           Projects
         </Link>
@@ -37,6 +37,7 @@ export function Sidebar() {
         <button
           onClick={signOut}
           className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors w-full"
+          data-cy="sidebar-logout"
         >
           <LogOut className="w-4 h-4" />
           Cerrar sesión

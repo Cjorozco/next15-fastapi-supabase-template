@@ -85,6 +85,7 @@ export function ProjectsContent() {
             <Button
               onClick={() => { setShowForm((v) => !v); setFormError(''); }}
               className="bg-slate-900 hover:bg-slate-700"
+              data-cy="new-project-btn"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               {showForm ? 'Cancel' : 'New Project'}
@@ -106,6 +107,7 @@ export function ProjectsContent() {
                     required
                     autoFocus
                     className={formError ? 'border-red-400 focus-visible:ring-red-400' : ''}
+                    data-cy="project-name-input"
                   />
                   {formError && (
                     <p className="text-sm text-red-600 flex items-center gap-1">
@@ -122,10 +124,11 @@ export function ProjectsContent() {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Brief description of the project goals..."
                     rows={3}
+                    data-cy="project-desc-input"
                   />
                 </div>
                 <div className="flex gap-3">
-                  <Button type="submit" disabled={isCreating || !name.trim()}>
+                  <Button type="submit" disabled={isCreating || !name.trim()} data-cy="save-project-btn">
                     {isCreating ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
                     ) : (
@@ -186,7 +189,7 @@ export function ProjectsContent() {
           {filteredProjects && filteredProjects.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map((project) => (
-                <div key={project.id} className="relative group">
+                <div key={project.id} className="relative group" data-cy="project-card">
                   <ProjectCard project={project} />
 
                   {/* Botón borrar — aparece al hacer hover */}

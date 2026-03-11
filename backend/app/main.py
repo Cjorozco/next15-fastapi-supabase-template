@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import text
 
 from . import database, models, schemas
 from .auth import get_current_user
@@ -238,3 +239,16 @@ async def reorder_tasks(
 @app.get("/")
 def read_root():
     return {"status": "Backend Python Corriendo 🚀"}
+
+
+@app.get("/health")
+async def health_check(db: AsyncSession = Depends(database.get_db)):
+    try:
+        # Un ping super ligero a PostgreSQL para resetear el contador de 7 días de Supabase
+        await db.execute(text("SELECT 1"))
+        return {
+            "status": "Activo", 
+            "message": "Render y Supabase están 100% despiertos 🚀"
+        }
+    except Exception as e:
+        return {"status": "Error", "detail": "Fallo la conexión a la BD"}
