@@ -5,7 +5,7 @@ import { CheckCircle2, ListTodo, LayoutGrid } from "lucide-react";
 export function StatsGrid({ projects }: { projects: Project[] }) {
   const totalTasks = projects.reduce((acc, p) => acc + p.tasks.length, 0);
   const completedTasks = projects.reduce(
-    (acc, p) => acc + p.tasks.filter((t) => t.is_completed).length, 0
+    (acc, p) => acc + p.tasks.filter((t) => t.isCompleted).length, 0
   );
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 

@@ -1,21 +1,22 @@
+import { Id } from '../../convex/_generated/dataModel';
+
 export interface Task {
-  id: number;
+  _id: Id<'tasks'>;
+  projectId: Id<'projects'>;
   title: string;
-  is_completed: boolean;
+  isCompleted: boolean;
   position: number;
-  project_id: number;
 }
 
 export interface Project {
-  id: number;
+  _id: Id<'projects'>;
+  ownerId: Id<'users'>;
   name: string;
-  description: string;
-  owner_id: number;
+  description?: string;
   tasks: Task[];
 }
 
 export interface User {
-  id: number;
+  _id: Id<'users'>;
   email: string;
-  name?: string;
 }

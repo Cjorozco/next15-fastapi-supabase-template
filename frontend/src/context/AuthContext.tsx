@@ -3,51 +3,39 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
+import { useConvexAuth, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
-  userId: number | null;   // ID interno de nuestra DB
   isLoading: boolean;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  userId: null,
   isLoading: true,
-  signOut: async () => { },
+  signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userId, setUserId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const storeUser = useMutation(api.users.store);
+  const { isAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
 
   useEffect(() => {
-    // Obtener sesión inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (!session?.user) setIsLoading(false);
+      setIsLoading(false);
     });
 
-    // Escuchar cambios de sesión
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
-
-      if (session?.user) {
-        // Llamar a /me para obtener el ID interno y crear el usuario si es su primer login
-        try {
-          const { api } = await import('@/lib/api');
-          const { data } = await api.get<{ id: number }>('/me');
-          setUserId(data.id);
-        } catch {
-          setUserId(null);
-        }
-      } else {
-        setUserId(null);
-      }
 
       setIsLoading(false);
 
@@ -58,15 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      void storeUser().catch(() => {});
+    }
+  }, [isAuthenticated, storeUser]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    setUserId(null);
     router.push('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ user, userId, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading: isLoading || isConvexAuthLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

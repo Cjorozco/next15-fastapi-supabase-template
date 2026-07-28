@@ -1,57 +1,80 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Project } from '@/types';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { toast } from 'sonner';
-import axios from 'axios';
+import { useState } from 'react';
 
-const fetchProjects = async (userId: number): Promise<Project[]> => {
-  const { data } = await api.get<Project[]>(`/users/${userId}/projects/`);
-  return data;
+export const useProjects = () => {
+  const currentUser = useQuery(api.users.me);
+  const error: Error | null = null;
+
+  const data = useQuery(
+    api.projects.list,
+    currentUser ? {} : 'skip'
+  );
+
+  return {
+    data,
+    isLoading: currentUser === undefined || (currentUser !== null && data === undefined),
+    error,
+  };
 };
 
-export const useProjects = (userId?: number) => {
-  return useQuery({
-    queryKey: ['projects', userId],
-    queryFn: () => fetchProjects(userId!),
-    enabled: userId !== undefined,
-  });
-};
+export const useCreateProject = () => {
+  const create = useMutation(api.projects.create);
+  const [isPending, setIsPending] = useState(false);
 
-export const useCreateProject = (userId?: number) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (newProject: { name: string; description: string }) => {
-      const response = await api.post('/projects', newProject);
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['projects', userId] });
-      toast.success(`Proyecto "${data.name}" creado`);
-    },
-    onError: (err) => {
-      if (axios.isAxiosError(err) && err.response?.status === 400) {
-        toast.error(err.response.data.detail);
-      } else {
-        toast.error('Error al crear el proyecto');
+  return {
+    mutate: (
+      newProject: { name: string; description: string },
+      options?: {
+        onSuccess?: (data: unknown) => void;
+        onError?: (err: Error) => void;
       }
+    ) => {
+      setIsPending(true);
+      void create({
+        name: newProject.name,
+        description: newProject.description || undefined,
+      })
+        .then((data) => {
+          toast.success(`Proyecto "${data.name}" creado`);
+          options?.onSuccess?.(data);
+        })
+        .catch((err: Error) => {
+          toast.error(err.message || 'Error al crear el proyecto');
+          options?.onError?.(err);
+        })
+        .finally(() => {
+          setIsPending(false);
+        });
     },
-  });
+    isPending,
+  };
 };
 
-export const useDeleteProject = (userId?: number) => {
-  const queryClient = useQueryClient();
+export const useDeleteProject = () => {
+  const remove = useMutation(api.projects.remove);
+  const [isPending, setIsPending] = useState(false);
 
-  return useMutation({
-    mutationFn: async (projectId: number) => {
-      await api.delete(`/projects/${projectId}`);
+  return {
+    mutate: (
+      projectId: Parameters<typeof remove>[0]['projectId'],
+      options?: { onSuccess?: () => void; onError?: () => void }
+    ) => {
+      setIsPending(true);
+      void remove({ projectId })
+        .then(() => {
+          toast.success('Proyecto eliminado');
+          options?.onSuccess?.();
+        })
+        .catch(() => {
+          toast.error('Error al eliminar el proyecto');
+          options?.onError?.();
+        })
+        .finally(() => {
+          setIsPending(false);
+        });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', userId] });
-      toast.success('Proyecto eliminado');
-    },
-    onError: () => {
-      toast.error('Error al eliminar el proyecto');
-    },
-  });
+    isPending,
+  };
 };

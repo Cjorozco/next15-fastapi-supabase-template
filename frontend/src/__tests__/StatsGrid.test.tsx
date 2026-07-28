@@ -2,25 +2,26 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { StatsGrid } from '@/components/StatsGrid';
 import type { Project } from '@/types';
+import type { Id } from '../../convex/_generated/dataModel';
 
 const mockProjects: Project[] = [
   {
-    id: 1,
+    _id: 'project_1' as Id<'projects'>,
     name: 'Proyecto A',
     description: '',
-    owner_id: 1,
+    ownerId: 'user_1' as Id<'users'>,
     tasks: [
-      { id: 1, title: 'Tarea 1', is_completed: true, project_id: 1 },
-      { id: 2, title: 'Tarea 2', is_completed: false, project_id: 1 },
+      { _id: 'task_1' as Id<'tasks'>, title: 'Tarea 1', isCompleted: true, position: 0, projectId: 'project_1' as Id<'projects'> },
+      { _id: 'task_2' as Id<'tasks'>, title: 'Tarea 2', isCompleted: false, position: 1, projectId: 'project_1' as Id<'projects'> },
     ],
   },
   {
-    id: 2,
+    _id: 'project_2' as Id<'projects'>,
     name: 'Proyecto B',
     description: '',
-    owner_id: 1,
+    ownerId: 'user_1' as Id<'users'>,
     tasks: [
-      { id: 3, title: 'Tarea 3', is_completed: true, project_id: 2 },
+      { _id: 'task_3' as Id<'tasks'>, title: 'Tarea 3', isCompleted: true, position: 0, projectId: 'project_2' as Id<'projects'> },
     ],
   },
 ];

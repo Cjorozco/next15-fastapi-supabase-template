@@ -8,15 +8,14 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTaskItem } from './SortableTaskItem';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Loader2, X } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const completedTasks = project.tasks.filter((task) => task.is_completed).length;
+  const completedTasks = project.tasks.filter((task) => task.isCompleted).length;
   const totalTasks = project.tasks.length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
   const { mutate: updateTask } = useUpdateTask();
@@ -38,11 +37,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = sortedTasks.findIndex((t) => t.id === active.id);
-    const newIndex = sortedTasks.findIndex((t) => t.id === over.id);
+    const oldIndex = sortedTasks.findIndex((t) => t._id === active.id);
+    const newIndex = sortedTasks.findIndex((t) => t._id === over.id);
 
     const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
-    reorderTasks({ projectId: project.id, taskIds: newOrder.map(t => t.id) });
+    reorderTasks({ projectId: project._id, taskIds: newOrder.map(t => t._id) });
   };
 
   const handleAddTask = () => {
@@ -50,7 +49,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     if (!title) return;
 
     createTask(
-      { projectId: project.id, title },
+      { projectId: project._id, title },
       {
         onSuccess: () => {
           setNewTaskTitle('');
@@ -70,7 +69,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
-      <Link href={`/projects/${project.id}`} className="block group cursor-pointer">
+      <Link href={`/projects/${project._id}`} className="block group cursor-pointer">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
             {project.name}
@@ -101,10 +100,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
         ) : (
           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={sortedTasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
                 {sortedTasks.map((task) => (
                   <SortableTaskItem
-                    key={task.id}
+                    key={task._id}
                     task={task}
                     onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
                     onDelete={(taskId) => deleteTask(taskId)}

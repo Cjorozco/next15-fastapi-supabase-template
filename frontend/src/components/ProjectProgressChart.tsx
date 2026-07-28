@@ -4,12 +4,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { Card } from '@/components/ui/card';
+import type { Project } from '@/types';
 
-export function ProjectProgressChart({ projects }: { projects: any[] }) {
+export function ProjectProgressChart({ projects }: { projects: Project[] }) {
   // Transformamos los datos para la gráfica
   const data = projects.map(project => {
     const total = project.tasks.length;
-    const completed = project.tasks.filter((t: any) => t.is_completed).length;
+    const completed = project.tasks.filter((task) => task.isCompleted).length;
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return {

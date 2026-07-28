@@ -2,12 +2,14 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ProjectCard } from '@/components/ProjectCard';
 import type { Project } from '@/types';
+import type { Id } from '../../convex/_generated/dataModel';
 
 // Mock useMutation hooks to avoid real API calls in tests
 vi.mock('@/hooks/useTasks', () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useCreateTask: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
+  useReorderTasks: () => ({ mutate: vi.fn() }),
 }));
 
 // Mock next/link since jsdom doesn't do routing
@@ -18,13 +20,13 @@ vi.mock('next/link', () => ({
 }));
 
 const mockProject: Project = {
-  id: 1,
+  _id: 'project_1' as Id<'projects'>,
   name: 'Proyecto Test',
   description: 'Descripción de prueba',
-  owner_id: 1,
+  ownerId: 'user_1' as Id<'users'>,
   tasks: [
-    { id: 1, title: 'Tarea 1', is_completed: true, project_id: 1 },
-    { id: 2, title: 'Tarea 2', is_completed: false, project_id: 1 },
+    { _id: 'task_1' as Id<'tasks'>, title: 'Tarea 1', isCompleted: true, position: 0, projectId: 'project_1' as Id<'projects'> },
+    { _id: 'task_2' as Id<'tasks'>, title: 'Tarea 2', isCompleted: false, position: 1, projectId: 'project_1' as Id<'projects'> },
   ],
 };
 
@@ -47,6 +49,6 @@ describe('ProjectCard', () => {
   it('links the title to the project detail page', () => {
     render(<ProjectCard project={mockProject} />);
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/projects/1');
+    expect(link).toHaveAttribute('href', '/projects/project_1');
   });
 });

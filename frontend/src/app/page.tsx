@@ -6,14 +6,13 @@ import { ProjectProgressChart } from '@/components/ProjectProgressChart';
 import { Sidebar } from '@/components/Sidebar';
 import { StatsGrid } from '@/components/StatsGrid';
 import { useProjects } from '@/hooks/useProjects';
-import { useAuth } from '@/context/AuthContext';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 import { Suspense } from 'react';
+import Link from 'next/link';
 
 function DashboardContent() {
-  const { userId } = useAuth();
-  const { data: projects, isLoading, error } = useProjects(userId ?? undefined);
+  const { data: projects, isLoading } = useProjects();
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -46,18 +45,6 @@ function DashboardContent() {
             </div>
           )}
 
-          {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <div>
-                <p className="font-semibold">Error loading projects</p>
-                <p className="text-sm">
-                  {error instanceof Error ? error.message : 'Unknown error'}
-                </p>
-              </div>
-            </div>
-          )}
-
           {projects && projects.length === 0 && (
             <div className="text-center py-20">
               <p className="text-slate-500 text-lg">No projects found</p>
@@ -72,13 +59,13 @@ function DashboardContent() {
             <div className="mt-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-slate-800">Recent Projects</h3>
-                <a href="/projects" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+                <Link href="/projects" className="text-sm font-medium text-slate-600 hover:text-slate-900">
                   View all &rarr;
-                </a>
+                </Link>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {projects.slice(0, 3).map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+                  <ProjectCard key={project._id} project={project} />
                 ))}
               </div>
             </div>

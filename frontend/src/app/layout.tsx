@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { QueryProvider } from "@/lib/query-provider";
+import { ConvexClientProvider } from "@/lib/convex-provider";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
 
@@ -23,11 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <QueryProvider>
+        <ConvexClientProvider>
           <AuthProvider>
             {children}
           </AuthProvider>
-        </QueryProvider>
+        </ConvexClientProvider>
         <Toaster position="bottom-right" richColors />
       </body>
     </html>

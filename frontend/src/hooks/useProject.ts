@@ -1,16 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Project } from '@/types';
+import { useConvexAuth, useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
 
-const fetchProject = async (projectId: number): Promise<Project> => {
-  const { data } = await api.get<Project>(`/projects/${projectId}`);
-  return data;
-};
+export const useProject = (projectId?: Id<'projects'>) => {
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const currentUser = useQuery(
+    api.users.me,
+    isAuthenticated ? {} : 'skip'
+  );
 
-export const useProject = (projectId?: number) => {
-  return useQuery({
-    queryKey: ['project', projectId],
-    queryFn: () => fetchProject(projectId!),
-    enabled: projectId !== undefined,
-  });
+  const data = useQuery(
+    api.projects.get,
+    currentUser && projectId ? { projectId } : 'skip'
+  );
+
+  return {
+    data: data ?? undefined,
+    isLoading:
+      authLoading ||
+      currentUser === undefined ||
+      (currentUser !== null && projectId !== undefined && data === undefined),
+    error: data === null ? new Error('Project not found') : null,
+  };
 };

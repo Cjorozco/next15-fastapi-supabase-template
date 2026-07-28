@@ -5,11 +5,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, GripVertical, CheckCircle2 } from 'lucide-react';
 import { Task } from '@/types';
+import { Id } from '../../convex/_generated/dataModel';
 
 interface SortableTaskItemProps {
   task: Task;
-  onUpdateStatus: (taskId: number, isCompleted: boolean) => void;
-  onDelete: (taskId: number) => void;
+  onUpdateStatus: (taskId: Id<'tasks'>, isCompleted: boolean) => void;
+  onDelete: (taskId: Id<'tasks'>) => void;
   isDetailView?: boolean;
 }
 
@@ -21,7 +22,7 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task._id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -30,7 +31,7 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
     zIndex: isDragging ? 10 : 1,
   };
 
-  const statusLabelId = `task-${isDetailView ? 'detail-' : ''}${task.id}`;
+  const statusLabelId = `task-${isDetailView ? 'detail-' : ''}${task._id}`;
 
   if (isDetailView) {
     return (
@@ -48,20 +49,20 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
         </button>
         <Checkbox
           id={statusLabelId}
-          checked={task.is_completed}
-          onCheckedChange={(checked) => onUpdateStatus(task.id, !!checked)}
+          checked={task.isCompleted}
+          onCheckedChange={(checked) => onUpdateStatus(task._id, !!checked)}
         />
         <label
           htmlFor={statusLabelId}
-          className={`flex-1 text-sm cursor-pointer ${task.is_completed ? 'line-through text-slate-400' : 'text-slate-700'}`}
+          className={`flex-1 text-sm cursor-pointer ${task.isCompleted ? 'line-through text-slate-400' : 'text-slate-700'}`}
         >
           {task.title}
         </label>
-        {task.is_completed && (
+        {task.isCompleted && (
           <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
         )}
         <button
-          onClick={() => onDelete(task.id)}
+          onClick={() => onDelete(task._id)}
           className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-red-500 p-1 rounded"
           title="Delete task"
         >
@@ -71,7 +72,6 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
     );
   }
 
-  // Card View
   return (
     <div
       ref={setNodeRef}
@@ -88,17 +88,17 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
 
       <Checkbox
         id={statusLabelId}
-        checked={task.is_completed}
-        onCheckedChange={(checked) => onUpdateStatus(task.id, !!checked)}
+        checked={task.isCompleted}
+        onCheckedChange={(checked) => onUpdateStatus(task._id, !!checked)}
       />
       <label
         htmlFor={statusLabelId}
-        className={`flex-1 text-sm cursor-pointer ${task.is_completed ? 'line-through text-slate-400' : 'text-slate-700'}`}
+        className={`flex-1 text-sm cursor-pointer ${task.isCompleted ? 'line-through text-slate-400' : 'text-slate-700'}`}
       >
         {task.title}
       </label>
       <button
-        onClick={() => onDelete(task.id)}
+        onClick={() => onDelete(task._id)}
         className="opacity-0 group-hover/task:opacity-100 transition-opacity text-slate-300 hover:text-red-500 p-0.5 rounded"
         title="Borrar tarea"
       >

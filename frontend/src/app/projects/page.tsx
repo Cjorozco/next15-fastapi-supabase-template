@@ -6,19 +6,17 @@ import { Header } from '@/components/Header';
 import { ProjectCard } from '@/components/ProjectCard';
 import { Sidebar } from '@/components/Sidebar';
 import { useProjects, useCreateProject, useDeleteProject } from '@/hooks/useProjects';
-import { useAuth } from '@/context/AuthContext';
 import { Loader2, AlertCircle, PlusCircle, FolderKanban, Trash2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import axios from 'axios';
+import { Id } from '../../../convex/_generated/dataModel';
 
 export function ProjectsContent() {
-  const { userId } = useAuth();
-  const { data: projects, isLoading, error } = useProjects(userId ?? undefined);
-  const { mutate: createProject, isPending: isCreating } = useCreateProject(userId ?? undefined);
-  const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject(userId ?? undefined);
+  const { data: projects, isLoading } = useProjects();
+  const { mutate: createProject, isPending: isCreating } = useCreateProject();
+  const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject();
 
   const searchParams = useSearchParams();
   const query = searchParams.get('q')?.toLowerCase() ?? '';
@@ -30,8 +28,8 @@ export function ProjectsContent() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [formError, setFormError] = useState('');
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<Id<'projects'> | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<Id<'projects'> | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,17 +45,13 @@ export function ProjectsContent() {
           setShowForm(false);
         },
         onError: (err) => {
-          if (axios.isAxiosError(err) && err.response?.status === 400) {
-            setFormError(err.response.data.detail);
-          } else {
-            setFormError('Error al crear el proyecto. Intenta de nuevo.');
-          }
+          setFormError(err.message || 'Error al crear el proyecto. Intenta de nuevo.');
         },
       }
     );
   };
 
-  const handleDelete = (projectId: number) => {
+  const handleDelete = (projectId: Id<'projects'>) => {
     setDeletingId(projectId);
     deleteProject(projectId, {
       onSuccess: () => {
@@ -154,17 +148,6 @@ export function ProjectsContent() {
             </div>
           )}
 
-          {/* Error de carga */}
-          {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <div>
-                <p className="font-semibold">Error loading projects</p>
-                <p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
-              </div>
-            </div>
-          )}
-
           {/* Estado vacío — sin proyectos */}
           {!isLoading && projects?.length === 0 && (
             <div className="text-center py-20">
@@ -189,20 +172,20 @@ export function ProjectsContent() {
           {filteredProjects && filteredProjects.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map((project) => (
-                <div key={project.id} className="relative group" data-cy="project-card">
+                <div key={project._id} className="relative group" data-cy="project-card">
                   <ProjectCard project={project} />
 
                   {/* Botón borrar — aparece al hacer hover */}
                   <div className="absolute top-3 right-3">
-                    {confirmDeleteId === project.id ? (
+                    {confirmDeleteId === project._id ? (
                       <div className="flex items-center gap-1 bg-white border border-red-200 rounded-lg shadow-sm p-1">
                         <span className="text-xs text-red-600 px-1">¿Borrar?</span>
                         <button
-                          onClick={() => handleDelete(project.id)}
-                          disabled={isDeleting && deletingId === project.id}
+                          onClick={() => handleDelete(project._id)}
+                          disabled={isDeleting && deletingId === project._id}
                           className="text-xs bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
                         >
-                          {isDeleting && deletingId === project.id
+                          {isDeleting && deletingId === project._id
                             ? <Loader2 className="w-3 h-3 animate-spin" />
                             : 'Sí'}
                         </button>
@@ -215,7 +198,7 @@ export function ProjectsContent() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setConfirmDeleteId(project.id)}
+                        onClick={() => setConfirmDeleteId(project._id)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-slate-200 rounded-lg p-1.5 hover:bg-red-50 hover:border-red-300 shadow-sm"
                         title="Borrar proyecto"
                       >

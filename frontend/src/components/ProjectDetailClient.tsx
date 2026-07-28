@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useProject } from '@/hooks/useProject';
 import { useUpdateTask, useCreateTask, useDeleteTask, useReorderTasks } from '@/hooks/useTasks';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -9,21 +8,19 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { SortableTaskItem } from './SortableTaskItem';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Loader2, AlertCircle, ArrowLeft, Plus, X,
-  CheckCircle2, Circle, FolderKanban
+  Circle, FolderKanban
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Id } from '../../convex/_generated/dataModel';
 
 interface ProjectDetailClientProps {
-  projectId: number;
+  projectId: Id<'projects'>;
 }
 
 export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
-  const router = useRouter();
-
   const { data: project, isLoading, error } = useProject(projectId);
   const { mutate: updateTask } = useUpdateTask();
   const { mutate: createTask, isPending: isCreating } = useCreateTask();
@@ -33,7 +30,7 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
 
-  const sortedTasks = project ? [...project.tasks].sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0)) : [];
+  const sortedTasks = project ? [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)) : [];
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -44,11 +41,11 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = sortedTasks.findIndex((t: any) => t.id === active.id);
-    const newIndex = sortedTasks.findIndex((t: any) => t.id === over.id);
+    const oldIndex = sortedTasks.findIndex((t) => t._id === active.id);
+    const newIndex = sortedTasks.findIndex((t) => t._id === over.id);
 
     const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
-    reorderTasks({ projectId, taskIds: newOrder.map((t: any) => t.id) });
+    reorderTasks({ projectId, taskIds: newOrder.map((t) => t._id) });
   };
 
   const handleAddTask = () => {
@@ -64,7 +61,7 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     if (e.key === 'Escape') { setShowInput(false); setNewTaskTitle(''); }
   };
 
-  const completedTasks = project?.tasks.filter((t: any) => t.is_completed).length ?? 0;
+  const completedTasks = project?.tasks.filter((t) => t.isCompleted).length ?? 0;
   const totalTasks = project?.tasks.length ?? 0;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
@@ -76,7 +73,6 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
         <Header />
 
         <main className="flex-1 p-8 max-w-3xl mx-auto w-full">
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-6">
             <Link href="/projects" className="flex items-center gap-1 hover:text-slate-900 transition-colors">
               <ArrowLeft className="w-4 h-4" />
@@ -90,14 +86,12 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
             )}
           </div>
 
-          {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
             </div>
           )}
 
-          {/* Error */}
           {error && (
             <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -107,7 +101,6 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
 
           {project && (
             <div className="space-y-6">
-              {/* Info del proyecto */}
               <div className="bg-white border border-slate-200 rounded-xl p-6">
                 <div className="flex items-start gap-3 mb-4">
                   <FolderKanban className="w-7 h-7 text-slate-400 mt-0.5 flex-shrink-0" />
@@ -119,7 +112,6 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   </div>
                 </div>
 
-                {/* Barra de progreso */}
                 <div className="mt-4">
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="text-slate-600 font-medium">Global Progress</span>
@@ -137,7 +129,6 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                 </div>
               </div>
 
-              {/* Lista de tareas */}
               <div className="bg-white border border-slate-200 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-slate-900">Tasks</h2>
@@ -150,7 +141,6 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   </button>
                 </div>
 
-                {/* Input para nueva tarea */}
                 {showInput && (
                   <div className="flex items-center gap-2 mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <input
@@ -179,7 +169,6 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   </div>
                 )}
 
-                {/* Sin tareas */}
                 {project.tasks.length === 0 && !showInput && (
                   <div className="text-center py-8">
                     <Circle className="w-8 h-8 text-slate-200 mx-auto mb-2" />
@@ -187,13 +176,12 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   </div>
                 )}
 
-                {/* Lista */}
                 <div className="space-y-1">
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={sortedTasks.map((t: any) => t.id)} strategy={verticalListSortingStrategy}>
-                      {sortedTasks.map((task: any) => (
+                    <SortableContext items={sortedTasks.map((t) => t._id)} strategy={verticalListSortingStrategy}>
+                      {sortedTasks.map((task) => (
                         <SortableTaskItem
-                          key={task.id}
+                          key={task._id}
                           task={task}
                           isDetailView={true}
                           onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
