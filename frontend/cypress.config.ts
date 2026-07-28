@@ -1,6 +1,10 @@
 import { defineConfig } from 'cypress';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { tmpdir } from 'os';
+
+// Use TEMP para cache de Cypress y evitar conflictos con OneDrive
+process.env.CYPRESS_CACHE_FOLDER ||= resolve(tmpdir(), 'cypress-cache');
 
 // Read .env.local to pick up NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
 function loadEnvLocal(): Record<string, string> {
@@ -24,7 +28,7 @@ const envLocal = loadEnvLocal();
 
 export default defineConfig({
   e2e: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: process.env.CYPRESS_BASE_URL || 'https://project-manager-web-five.vercel.app',
     supportFile: 'cypress/support/e2e.ts',
     viewportWidth: 1280,
     viewportHeight: 720,

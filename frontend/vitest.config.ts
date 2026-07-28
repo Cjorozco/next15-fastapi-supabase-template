@@ -5,9 +5,12 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
     globals: true,
+    environment: 'jsdom',
     setupFiles: ['./src/__tests__/setup.ts'],
+    environmentMatchGlobs: [
+      ['convex/**', 'edge-runtime'],
+    ],
   },
   resolve: {
     alias: {
