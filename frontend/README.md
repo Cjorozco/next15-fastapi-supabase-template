@@ -77,4 +77,4 @@ convex/                  # Backend Convex
 - ✅ Estados de loading, error y empty
 - ✅ Integración con Convex para datos y autenticación en tiempo real
 - ✅ Notificaciones con Sonner
-- ✅ Tests unitarios (Convex) y E2E (Cypress)
+- ✅ Tests unitarios y de integración con Vitest (Convex Test + Testing Library)
