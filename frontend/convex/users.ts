@@ -1,6 +1,6 @@
-import { mutation, query } from "../_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { DomainException } from "../lib/errors";
+import { DomainException } from "./lib/errors";
 
 export const me = query({
   args: {},

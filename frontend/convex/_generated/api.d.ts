@@ -10,10 +10,9 @@
 
 import type * as lib_authorization from "../lib/authorization.js";
 import type * as lib_errors from "../lib/errors.js";
-import type * as projects_mutations from "../projects/mutations.js";
-import type * as projects_queries from "../projects/queries.js";
-import type * as tasks_mutations from "../tasks/mutations.js";
-import type * as users_index from "../users/index.js";
+import type * as projects from "../projects.js";
+import type * as tasks from "../tasks.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -24,10 +23,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   "lib/authorization": typeof lib_authorization;
   "lib/errors": typeof lib_errors;
-  "projects/mutations": typeof projects_mutations;
-  "projects/queries": typeof projects_queries;
-  "tasks/mutations": typeof tasks_mutations;
-  "users/index": typeof users_index;
+  projects: typeof projects;
+  tasks: typeof tasks;
+  users: typeof users;
 }>;
 
 /**

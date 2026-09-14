@@ -1,7 +1,7 @@
-import { mutation } from "../_generated/server";
+import { mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireProjectOwner } from "../lib/authorization";
-import { DomainException } from "../lib/errors";
+import { requireProjectOwner } from "./lib/authorization";
+import { DomainException } from "./lib/errors";
 
 const taskValidator = v.object({
   _id: v.id("tasks"),
@@ -101,18 +101,9 @@ export const reorder = mutation({
   handler: async (ctx, args) => {
     await requireProjectOwner(ctx, args.projectId);
 
-    const existingTasks = await ctx.db
-      .query("tasks")
-      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
-      .collect();
-
-    const tasksById = new Map(existingTasks.map((task) => [task._id, task]));
-
-    for (const [index, taskId] of args.taskIds.entries()) {
-      const task = tasksById.get(taskId);
-      if (task) {
-        await ctx.db.patch(taskId, { position: index });
-      }
+    for (let index = 0; index < args.taskIds.length; index++) {
+      const taskId = args.taskIds[index];
+      await ctx.db.patch(taskId, { position: index });
     }
 
     return null;

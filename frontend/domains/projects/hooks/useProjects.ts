@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 
 export const useProjects = () => {
-  const currentUser = useQuery(api.users.index.me);
+  const currentUser = useQuery(api.users.me);
   const error: Error | null = null;
 
   const data = useQuery(
-    api.projects.queries.list,
+    api.projects.list,
     currentUser ? {} : 'skip'
   );
 
@@ -21,7 +21,7 @@ export const useProjects = () => {
 };
 
 export const useCreateProject = () => {
-  const create = useMutation(api.projects.mutations.create);
+  const create = useMutation(api.projects.create);
   const [isPending, setIsPending] = useState(false);
 
   return {
@@ -55,7 +55,7 @@ export const useCreateProject = () => {
 };
 
 export const useDeleteProject = () => {
-  const remove = useMutation(api.projects.mutations.remove);
+  const remove = useMutation(api.projects.remove);
   const [isPending, setIsPending] = useState(false);
 
   return {

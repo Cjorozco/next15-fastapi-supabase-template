@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-  const storeUser = useMutation(api.users.index.store);
+  const storeUser = useMutation(api.users.store);
   const { isAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
 
   useEffect(() => {

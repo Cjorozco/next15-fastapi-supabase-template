@@ -5,7 +5,7 @@ import { Id } from '@/convex/_generated/dataModel';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 
 export const useCreateTask = () => {
-  const create = useMutation(api.tasks.mutations.create);
+  const create = useMutation(api.tasks.create);
 
   return {
     mutate: (
@@ -26,7 +26,7 @@ export const useCreateTask = () => {
 };
 
 export const useUpdateTask = () => {
-  const update = useMutation(api.tasks.mutations.update);
+  const update = useMutation(api.tasks.update);
 
   return {
     mutate: ({
@@ -44,7 +44,7 @@ export const useUpdateTask = () => {
 };
 
 export const useDeleteTask = () => {
-  const remove = useMutation(api.tasks.mutations.remove);
+  const remove = useMutation(api.tasks.remove);
 
   return {
     mutate: (taskId: Id<'tasks'>) => {
@@ -58,7 +58,7 @@ export const useDeleteTask = () => {
 };
 
 export const useReorderTasks = () => {
-  const reorder = useMutation(api.tasks.mutations.reorder);
+  const reorder = useMutation(api.tasks.reorder);
 
   return {
     mutate: ({

@@ -5,12 +5,12 @@ import { Id } from '@/convex/_generated/dataModel';
 export const useProject = (projectId?: Id<'projects'>) => {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const currentUser = useQuery(
-    api.users.index.me,
+    api.users.me,
     isAuthenticated ? {} : 'skip'
   );
 
   const data = useQuery(
-    api.projects.queries.get,
+    api.projects.get,
     currentUser && projectId ? { projectId } : 'skip'
   );
 
