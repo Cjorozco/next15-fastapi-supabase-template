@@ -38,12 +38,12 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
       <div
         ref={setNodeRef}
         style={style}
-        className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 group transition-colors ${
-          isDragging ? 'bg-[#111827] shadow-md border border-primary/40' : ''
+        className={`flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 group transition-colors ${
+          isDragging ? 'bg-card shadow-md border border-primary/40' : ''
         }`}
       >
         <button
-          className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white"
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground"
           {...attributes}
           {...listeners}
         >
@@ -56,7 +56,7 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
         />
         <label
           htmlFor={statusLabelId}
-          className={`flex-1 text-xs cursor-pointer ${task.isCompleted ? 'line-through text-white/40' : 'text-white'}`}
+          className={`flex-1 text-xs cursor-pointer ${task.isCompleted ? 'line-through text-muted-foreground/60' : 'text-foreground'}`}
         >
           {task.title}
         </label>
@@ -65,7 +65,7 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
         )}
         <button
           onClick={() => onDelete(task._id)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-red-400 p-1 rounded"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-1 rounded"
           title="Eliminar tarea"
         >
           <X className="w-3.5 h-3.5" />
@@ -79,11 +79,11 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-2 py-1 group/task relative ${
-        isDragging ? 'bg-[#111827] rounded-lg shadow-sm border border-primary/40 indent-1' : ''
+        isDragging ? 'bg-card rounded-lg shadow-xs border border-primary/40 indent-1' : ''
       }`}
     >
       <button
-        className="cursor-grab active:cursor-grabbing text-white/30 hover:text-white shrink-0"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground shrink-0"
         {...attributes}
         {...listeners}
       >
@@ -97,13 +97,13 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
       />
       <label
         htmlFor={statusLabelId}
-        className={`flex-1 text-xs cursor-pointer ${task.isCompleted ? 'line-through text-white/40' : 'text-white'}`}
+        className={`flex-1 text-xs cursor-pointer ${task.isCompleted ? 'line-through text-muted-foreground/60' : 'text-foreground'}`}
       >
         {task.title}
       </label>
       <button
         onClick={() => onDelete(task._id)}
-        className="opacity-0 group-hover/task:opacity-100 transition-opacity text-white/30 hover:text-red-400 p-0.5 rounded"
+        className="opacity-0 group-hover/task:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 rounded"
         title="Borrar tarea"
       >
         <X className="w-3.5 h-3.5" />

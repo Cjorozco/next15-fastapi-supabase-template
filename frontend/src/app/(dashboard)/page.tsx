@@ -14,7 +14,7 @@ function DashboardContent() {
   const { data: projects, isLoading } = useProjects();
 
   return (
-    <div className="flex min-h-screen bg-[#0B0F19] text-white">
+    <div className="flex min-h-screen bg-background text-foreground transition-colors">
       <Sidebar />
 
       <div className="flex-1 flex flex-col">
@@ -22,10 +22,10 @@ function DashboardContent() {
 
         <main className="flex-1 p-8">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-1">
+            <h2 className="text-2xl font-bold text-foreground mb-1">
               Dashboard
             </h2>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-muted-foreground">
               Resumen ejecutivo de proyectos, métricas y avance de tareas
             </p>
           </div>
@@ -45,9 +45,9 @@ function DashboardContent() {
           )}
 
           {projects && projects.length === 0 && (
-            <div className="text-center py-20 bg-[#111827] border border-white/10 rounded-2xl p-12 mt-4">
-              <p className="text-white/80 text-base font-medium">No se encontraron proyectos</p>
-              <p className="text-white/40 text-xs mt-1">
+            <div className="text-center py-20 bg-card border border-border rounded-2xl p-12 mt-4 shadow-sm">
+              <p className="text-foreground text-base font-medium">No se encontraron proyectos</p>
+              <p className="text-muted-foreground text-xs mt-1">
                 Crea tu primer proyecto para comenzar a gestionar tareas
               </p>
               <div className="mt-6">
@@ -65,7 +65,7 @@ function DashboardContent() {
           {projects && projects.length > 0 && (
             <div className="mt-8">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-white">Proyectos Recientes</h3>
+                <h3 className="text-base font-semibold text-foreground">Proyectos Recientes</h3>
                 <Link href="/projects" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
                   Ver todos &rarr;
                 </Link>
@@ -85,7 +85,7 @@ function DashboardContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-[#0B0F19]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
       <DashboardContent />
     </Suspense>
   );

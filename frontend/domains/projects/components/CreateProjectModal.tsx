@@ -41,33 +41,33 @@ export function CreateProjectModal() {
           Nuevo Proyecto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-[#111827] border-white/10 text-white rounded-2xl shadow-2xl">
+      <DialogContent className="sm:max-w-[425px] bg-card border-border text-foreground rounded-2xl shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="text-white text-base">Crear Nuevo Proyecto</DialogTitle>
+          <DialogTitle className="text-foreground text-base">Crear Nuevo Proyecto</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-xs text-white/70">Nombre del Proyecto</Label>
+            <Label htmlFor="name" className="text-xs text-muted-foreground">Nombre del Proyecto</Label>
             <Input
               id="name"
               name="name"
               placeholder="Ej: Rediseño de Plataforma"
               required
-              className="bg-[#0B0F19] border-white/10 text-white placeholder:text-white/30 rounded-xl text-xs focus:ring-primary focus:border-primary"
+              className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl text-xs focus:ring-primary focus:border-primary"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-xs text-white/70">Descripción</Label>
+            <Label htmlFor="description" className="text-xs text-muted-foreground">Descripción</Label>
             <Textarea
               id="description"
               name="description"
               placeholder="Breve descripción de los objetivos..."
-              className="bg-[#0B0F19] border-white/10 text-white placeholder:text-white/30 rounded-xl text-xs focus:ring-primary focus:border-primary"
+              className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl text-xs focus:ring-primary focus:border-primary"
             />
           </div>
           <Button
             type="submit"
-            className="w-full bg-primary hover:opacity-90 text-white font-medium rounded-xl text-xs py-2 shadow-sm"
+            className="w-full bg-primary hover:opacity-90 text-white font-medium rounded-xl text-xs py-2 shadow-xs"
             disabled={isPending}
           >
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Guardar Proyecto'}

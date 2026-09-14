@@ -9,15 +9,21 @@ import {
   applyThemeToDOM,
 } from '@/shared/lib/themeEngine';
 
+export type ThemeMode = 'light' | 'dark';
+
 interface ThemeContextType {
+  mode: ThemeMode;
   baseColor: string;
   activePresetId: string | null;
   theme: GeneratedTheme;
   presets: ThemePreset[];
+  toggleMode: () => void;
+  setMode: (mode: ThemeMode) => void;
   setBaseColor: (color: string) => void;
   setPreset: (presetId: string) => void;
 }
 
+const STORAGE_KEY_MODE = 'pm_theme_mode';
 const STORAGE_KEY_COLOR = 'pm_theme_base_color';
 const STORAGE_KEY_PRESET = 'pm_theme_preset_id';
 const DEFAULT_PRESET = THEME_PRESETS[0]; // Indigo Flow
@@ -25,6 +31,7 @@ const DEFAULT_PRESET = THEME_PRESETS[0]; // Indigo Flow
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [mode, setModeState] = useState<ThemeMode>('light');
   const [baseColor, setBaseColorState] = useState<string>(DEFAULT_PRESET.color);
   const [activePresetId, setActivePresetId] = useState<string | null>(DEFAULT_PRESET.id);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -32,15 +39,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Carga inicial desde localStorage
   useEffect(() => {
     try {
+      const savedMode = localStorage.getItem(STORAGE_KEY_MODE) as ThemeMode | null;
       const savedColor = localStorage.getItem(STORAGE_KEY_COLOR);
       const savedPreset = localStorage.getItem(STORAGE_KEY_PRESET);
 
+      if (savedMode === 'dark' || savedMode === 'light') {
+        setModeState(savedMode);
+      }
       if (savedColor) {
         setBaseColorState(savedColor);
         setActivePresetId(savedPreset);
       }
     } catch {
-      // Ignora errores si localStorage no está disponible
+      // noop
     } finally {
       setIsHydrated(true);
     }
@@ -51,6 +62,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return generateHarmoniousTheme(baseColor);
   }, [baseColor]);
 
+  // Sincroniza la clase .dark en el <html>
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    if (mode === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [mode]);
+
   // Aplica las variables CSS al DOM en cada cambio
   useEffect(() => {
     if (isHydrated) {
@@ -58,9 +80,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme, isHydrated]);
 
+  const setMode = useCallback((newMode: ThemeMode) => {
+    setModeState(newMode);
+    try {
+      localStorage.setItem(STORAGE_KEY_MODE, newMode);
+    } catch {
+      // noop
+    }
+  }, []);
+
+  const toggleMode = useCallback(() => {
+    setModeState((prev) => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      try {
+        localStorage.setItem(STORAGE_KEY_MODE, next);
+      } catch {
+        // noop
+      }
+      return next;
+    });
+  }, []);
+
   const setBaseColor = useCallback((newColor: string) => {
     setBaseColorState(newColor);
-    // Verifica si coincide exactamente con un preset
     const matchingPreset = THEME_PRESETS.find(
       (p) => p.color.toLowerCase() === newColor.toLowerCase()
     );
@@ -96,10 +138,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <ThemeContext.Provider
       value={{
+        mode,
         baseColor,
         activePresetId,
         theme,
         presets: THEME_PRESETS,
+        toggleMode,
+        setMode,
         setBaseColor,
         setPreset,
       }}

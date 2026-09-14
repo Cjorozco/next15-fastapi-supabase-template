@@ -13,18 +13,18 @@ export function Sidebar() {
     const isActive = pathname === href;
     return `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
       isActive
-        ? 'bg-primary text-white font-semibold shadow-lg shadow-primary/20'
-        : 'text-white/70 hover:bg-white/5 hover:text-white'
+        ? 'bg-primary text-white font-semibold shadow-md shadow-primary/20'
+        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
     }`;
   };
 
   return (
-    <aside className="w-64 bg-[#0F172A] border-r border-white/10 text-white min-h-screen p-6 flex flex-col">
+    <aside className="w-64 bg-sidebar border-r border-sidebar-border text-sidebar-foreground min-h-screen p-6 flex flex-col transition-colors">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-1.5">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
           Project <span className="text-primary">Manager</span>
         </h1>
-        <p className="text-white/50 text-xs mt-1 truncate">{user?.email}</p>
+        <p className="text-muted-foreground text-xs mt-1 truncate">{user?.email}</p>
       </div>
 
       <nav className="flex-1 space-y-2">
@@ -38,15 +38,15 @@ export function Sidebar() {
         </Link>
       </nav>
 
-      <div className="pt-6 border-t border-white/10">
+      <div className="pt-6 border-t border-sidebar-border">
         <button
           onClick={signOut}
-          className="flex items-center gap-2 text-sm text-white/60 hover:text-primary transition-colors w-full"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-full"
         >
           <LogOut className="w-4 h-4" />
           Cerrar sesión
         </button>
-        <p className="text-[11px] text-white/30 mt-3">© 2026 Project Manager SaaS</p>
+        <p className="text-[11px] text-muted-foreground/60 mt-3">© 2026 Project Manager SaaS</p>
       </div>
     </aside>
   );
