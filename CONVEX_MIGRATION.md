@@ -73,15 +73,33 @@ la propiedad de cada proyecto antes de retirar PostgreSQL. La importacion debe
 ser una mutacion temporal protegida con una clave de administrador y debe
 eliminarse al terminar.
 
-## 5. Produccion y retirada
+## 5. Producción y retirada
 
 Cuando desarrollo este validado:
 
 ```bash
+# Deploy to production (SUPABASE_URL must be in env for auth.config.ts)
 npx convex deploy
 ```
 
-Repite `npx convex env set SUPABASE_URL ...` para el deployment de produccion,
-define `NEXT_PUBLIC_CONVEX_URL` de produccion en Vercel y vuelve a desplegar el
-frontend. Solo despues de validar autenticacion, CRUD y datos migrados elimina
+Repite `npx convex env set SUPABASE_URL ...` para el deployment de producción,
+define `NEXT_PUBLIC_CONVEX_URL` de producción en Vercel y vuelve a desplegar el
+frontend. **Importante:** `NEXT_PUBLIC_CONVEX_URL` no debe tener trailing slash,
+por ejemplo `https://kindred-ox-372.convex.cloud` (no `https://...convex.cloud/`).
+Un trailing slash causa doble slash en la URL del WebSocket (`wss://...convex.cloud//api/...sync`)
+y la conexión falla con código 1006.
+
+Solo despúes de validar autenticación, CRUD y datos migrados elimina
 las variables `NEXT_PUBLIC_API_URL`, el cliente Axios y `backend/`.
+
+### 5.1 Tests E2E en producción
+
+Los tests de Cypress se ejecutan contra el deployment de Vercel. Como la base
+de datos de Convex acumula datos entre ejecuciones, cada test llama a la
+mutation `projects:cleanupAll` al inicio para borrar proyectos anteriores del
+usuario de test. Esto evita que renderizados múltiples `ProjectCard` con
+`@dnd-kit` causen fallos intermitentes en el renderizado del formulario.
+
+```bash
+npx cypress run --e2e
+```

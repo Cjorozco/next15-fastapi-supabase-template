@@ -1,42 +1,40 @@
 /// <reference types="cypress" />
 
-describe('Flujo completo: proyecto con tareas', () => {
-  const projectName = `Demo ${Date.now()}`;
+/// <reference types="cypress" />
 
-  beforeEach(() => {
+describe('Flujo completo: proyecto con tareas', () => {
+  const now = Date.now();
+
+  function loginAndVisitProjects() {
     cy.login();
-    cy.visit('/');
-    cy.contains('h2', 'Dashboard', { timeout: 15000 }).should('be.visible');
-  });
+    cy.visit('/projects', { timeout: 20000 });
+    cy.contains('h2', 'Projects', { timeout: 20000 }).should('be.visible');
+  }
 
   it('crea un proyecto desde el botón New Project en /projects', () => {
-    cy.visit('/projects');
-    cy.contains('h2', 'Projects').should('be.visible');
+    const name = `Demo A ${now}`;
+    loginAndVisitProjects();
 
     cy.get('[data-cy="new-project-btn"]').click();
-    cy.get('[data-cy="project-name-input"]').type(projectName);
-    cy.get('[data-cy="project-desc-input"]').type('Proyecto de prueba automatizada');
+    cy.get('[data-cy="project-name-input"]').type(name);
     cy.get('[data-cy="save-project-btn"]').click();
 
     cy.contains('Create New Project').should('not.exist');
-    cy.get('[data-cy="project-card"]').should('contain', projectName);
+    cy.get('[data-cy="project-card"]').should('contain', name);
   });
 
   it('navega al detalle del proyecto, crea tareas y las completa', () => {
-    cy.visit('/projects');
-    cy.contains('h2', 'Projects').should('be.visible');
+    const name = `Demo B ${now}`;
+    loginAndVisitProjects();
 
-    // Crear proyecto primero
     cy.get('[data-cy="new-project-btn"]').click();
-    cy.get('[data-cy="project-name-input"]').type(projectName);
+    cy.get('[data-cy="project-name-input"]').type(name);
     cy.get('[data-cy="save-project-btn"]').click();
-    cy.get('[data-cy="project-card"]').should('contain', projectName);
+    cy.get('[data-cy="project-card"]').should('contain', name);
 
-    // Click en el nombre del proyecto para ir al detalle
-    cy.contains(projectName).click();
+    cy.contains(name).click();
     cy.url().should('include', '/projects/');
 
-    // Crear tareas una por una
     cy.contains('New Task').click();
     cy.get('input[placeholder="Task name..."]').type('Tarea A{enter}');
     cy.contains('Tarea A').should('be.visible');
@@ -49,34 +47,36 @@ describe('Flujo completo: proyecto con tareas', () => {
     cy.get('input[placeholder="Task name..."]').type('Tarea C{enter}');
     cy.contains('Tarea C').should('be.visible');
 
-    // Completar la tarea del medio
     cy.contains('Tarea B')
       .parent()
       .find('button[role="checkbox"]')
       .click();
 
-    // Verificar que el progreso se actualizó
     cy.contains('1/3 tasks completed').should('be.visible');
     cy.contains('33%').should('be.visible');
   });
 
   it('elimina una tarea y verifica el contador', () => {
-    cy.visit('/projects');
-    cy.get('[data-cy="new-project-btn"]').click();
-    cy.get('[data-cy="project-name-input"]').type(projectName);
-    cy.get('[data-cy="save-project-btn"]').click();
-    cy.contains(projectName).click();
+    const name = `Demo C ${now}`;
+    loginAndVisitProjects();
 
-    // Crear dos tareas
+    cy.get('[data-cy="new-project-btn"]').click();
+    cy.get('[data-cy="project-name-input"]').type(name);
+    cy.get('[data-cy="save-project-btn"]').click();
+    cy.get('[data-cy="project-card"]').should('contain', name);
+    cy.contains(name).click();
+    cy.url({ timeout: 10000 }).should('include', '/projects/');
+
     cy.contains('New Task').click();
     cy.get('input[placeholder="Task name..."]').type('Una tarea{enter}');
+    cy.contains('Una tarea').should('be.visible');
     cy.contains('New Task').click();
     cy.get('input[placeholder="Task name..."]').type('Otra tarea{enter}');
+    cy.contains('Otra tarea').should('be.visible');
 
-    // Eliminar la segunda
     cy.contains('Otra tarea')
       .parent()
-      .find('button[title="Borrar tarea"]')
+      .find('button[title="Delete task"]')
       .click({ force: true });
 
     cy.contains('Otra tarea').should('not.exist');

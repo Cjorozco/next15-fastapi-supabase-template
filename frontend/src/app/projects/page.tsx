@@ -77,12 +77,15 @@ export function ProjectsContent() {
               <p className="text-slate-500">Manage and track all your projects</p>
             </div>
             <Button
-              onClick={() => { setShowForm((v) => !v); setFormError(''); }}
+              onClick={() => {
+                setShowForm(true);
+                setFormError('');
+              }}
               className="bg-slate-900 hover:bg-slate-700"
               data-cy="new-project-btn"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
-              {showForm ? 'Cancel' : 'New Project'}
+              New Project
             </Button>
           </div>
 

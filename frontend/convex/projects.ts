@@ -111,6 +111,29 @@ export const create = mutation({
   },
 });
 
+export const cleanupAll = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+    for (const project of projects) {
+      const tasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_project", (q) => q.eq("projectId", project._id))
+        .collect();
+      for (const task of tasks) {
+        await ctx.db.delete("tasks", task._id);
+      }
+      await ctx.db.delete("projects", project._id);
+    }
+    return null;
+  },
+});
+
 export const remove = mutation({
   args: { projectId: v.id("projects") },
   returns: v.null(),
