@@ -1,17 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { ProjectCard } from '@/components/ProjectCard';
-import type { Project } from '@/types';
-import type { Id } from '../../convex/_generated/dataModel';
+import { ProjectCard } from '@/domains/projects/components/ProjectCard';
+import type { Project } from '@/domains/projects/types';
+import type { Id } from '@/convex/_generated/dataModel';
 
 // Mock useMutation hooks to avoid real API calls in tests
-vi.mock('@/hooks/useTasks', () => ({
+vi.mock('@/domains/tasks/hooks/useTaskMutations', () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useCreateTask: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
   useReorderTasks: () => ({ mutate: vi.fn() }),
 }));
-
 // Mock next/link since jsdom doesn't do routing
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => (

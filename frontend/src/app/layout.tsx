@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ConvexClientProvider } from "@/lib/convex-provider";
-import { AuthProvider } from "@/context/AuthContext";
+import { ConvexClientProvider } from "@/shared/lib/convex-provider";
+import { AuthProvider } from "@/shared/context/AuthContext";
 import { Toaster } from "sonner";
 
 const inter = Inter({

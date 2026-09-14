@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { StatsGrid } from '@/components/StatsGrid';
-import type { Project } from '@/types';
-import type { Id } from '../../convex/_generated/dataModel';
+import { StatsGrid } from '@/domains/dashboard/components/StatsGrid';
+import type { Project } from '@/domains/projects/types';
+import type { Id } from '@/convex/_generated/dataModel';
 
 const mockProjects: Project[] = [
   {
