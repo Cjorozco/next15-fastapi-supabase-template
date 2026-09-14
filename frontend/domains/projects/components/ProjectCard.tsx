@@ -68,25 +68,25 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <div className="bg-[#0D0D0D] border border-white/10 rounded-xl p-6 hover:border-[#FF6B1A]/40 hover:shadow-[0_0_24px_rgba(255,107,26,0.12)] transition-all">
+    <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 hover:border-primary/40 transition-all shadow-lg">
       <Link href={`/projects/${project._id}`} className="block group cursor-pointer">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-[#FF6B1A] transition-colors">
+          <h3 className="text-base font-semibold text-white mb-1 group-hover:text-primary transition-colors">
             {project.name}
           </h3>
-          <p className="text-sm text-white/60 line-clamp-2">{project.description}</p>
+          <p className="text-xs text-white/50 line-clamp-2">{project.description || 'Sin descripción'}</p>
         </div>
 
         <div className="mb-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-white/60 font-medium">Progress</span>
+          <div className="flex items-center justify-between text-xs mb-2">
+            <span className="text-white/50 font-medium">Progreso</span>
             <span className="text-white font-semibold">
               {completedTasks}/{totalTasks}
             </span>
           </div>
-          <div className="w-full bg-white/10 rounded-full h-2">
+          <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
             <div
-              className="bg-[#FF6B1A] h-2 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(255,107,26,0.4)]"
+              className="bg-primary h-1.5 rounded-full transition-all duration-300 shadow-sm"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -94,9 +94,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </Link>
 
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-white/80 mb-3">Tasks</h4>
+        <h4 className="text-xs font-semibold text-white/70 mb-3">Tareas</h4>
         {project.tasks.length === 0 ? (
-          <p className="text-sm text-white/40 italic">No tasks yet</p>
+          <p className="text-xs text-white/30 italic">No hay tareas aún</p>
         ) : (
           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -123,30 +123,30 @@ export function ProjectCard({ project }: ProjectCardProps) {
               onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Nombre de la tarea..."
-              className="flex-1 text-sm bg-[#0A1E3F] border border-white/15 rounded-md px-2.5 py-1 text-white placeholder:text-white/30 outline-none focus:border-[#FF6B1A] transition-colors"
+              className="flex-1 text-xs bg-[#0B0F19] border border-white/10 rounded-lg px-2.5 py-1.5 text-white placeholder:text-white/30 outline-none focus:border-primary transition-colors"
               disabled={isCreating}
             />
             <button
               onClick={handleAddTask}
               disabled={isCreating || !newTaskTitle.trim()}
-              className="text-sm bg-[#FF6B1A] text-white font-semibold px-3 py-1 rounded-md hover:bg-[#E05A10] disabled:opacity-50 transition-all flex items-center gap-1 shadow-sm"
+              className="text-xs bg-primary text-white font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-1 shadow-sm"
             >
-              {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add'}
+              {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Agregar'}
             </button>
             <button
               onClick={() => { setShowInput(false); setNewTaskTitle(''); }}
-              className="text-sm text-white/50 hover:text-white px-2 py-1 transition-colors"
+              className="text-xs text-white/50 hover:text-white px-2 py-1.5 transition-colors"
             >
-              Cancel
+              Cancelar
             </button>
           </div>
         ) : (
           <button
             onClick={() => setShowInput(true)}
-            className="flex items-center gap-1 text-sm text-white/50 hover:text-[#FF6B1A] mt-3 transition-colors"
+            className="flex items-center gap-1 text-xs text-white/40 hover:text-primary mt-3 transition-colors font-medium"
           >
-            <Plus className="w-4 h-4" />
-            Add task
+            <Plus className="w-3.5 h-3.5" />
+            Nueva tarea
           </button>
         )}
       </div>

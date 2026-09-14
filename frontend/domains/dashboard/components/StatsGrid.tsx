@@ -18,13 +18,13 @@ export function StatsGrid({ projects }: { projects: Project[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
       {stats.map((item) => (
-        <Card key={item.name} className="p-6 bg-[#0D0D0D] border-white/10 hover:border-[#FF6B1A]/40 transition-all shadow-lg">
+        <Card key={item.name} className="p-6 bg-[#111827] border-white/10 hover:border-primary/40 transition-all shadow-lg">
           <div className="flex items-center space-x-4">
-            <div className="p-3 rounded-xl bg-[#FF6B1A]/15 text-[#FF6B1A]">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary">
               <item.icon size={24} />
             </div>
             <div>
-              <p className="text-sm font-medium text-white/60">{item.name}</p>
+              <p className="text-xs font-medium text-white/50">{item.name}</p>
               <h3 className="text-2xl font-bold text-white tracking-tight">{item.value}</h3>
             </div>
           </div>

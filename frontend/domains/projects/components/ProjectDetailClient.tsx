@@ -70,17 +70,17 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
-    <div className="flex min-h-screen bg-[#0A1E3F] text-white">
+    <div className="flex min-h-screen bg-[#0B0F19] text-white">
       <Sidebar />
 
       <div className="flex-1 flex flex-col">
         <Header />
 
         <main className="flex-1 p-8 max-w-3xl mx-auto w-full">
-          <div className="flex items-center gap-2 text-sm text-white/60 mb-6">
+          <div className="flex items-center gap-2 text-xs text-white/50 mb-6">
             <Link href="/projects" className="flex items-center gap-1 hover:text-white transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              Projects
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Proyectos
             </Link>
             {project && (
               <>
@@ -92,79 +92,79 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
 
           {isLoading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-[#FF6B1A]" />
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           )}
 
           {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-950/50 border border-red-500/40 rounded-lg text-red-200">
+            <div className="flex items-center gap-3 p-4 bg-red-950/50 border border-red-500/40 rounded-xl text-red-200">
               <AlertCircle className="w-5 h-5 flex-shrink-0 text-red-400" />
-              <p className="font-semibold">Project not found</p>
+              <p className="font-semibold text-xs">Proyecto no encontrado</p>
             </div>
           )}
 
           {project && (
             <div className="space-y-6">
-              <div className="bg-[#0D0D0D] border border-white/10 rounded-xl p-6 shadow-xl">
+              <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 shadow-xl">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2.5 rounded-lg bg-[#FF6B1A]/15 text-[#FF6B1A] mt-0.5 flex-shrink-0">
-                    <FolderKanban className="w-6 h-6" />
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary mt-0.5 flex-shrink-0">
+                    <FolderKanban className="w-5 h-5" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-white">{project.name}</h1>
+                    <h1 className="text-xl font-bold text-white">{project.name}</h1>
                     {project.description && (
-                      <p className="text-white/60 mt-1">{project.description}</p>
+                      <p className="text-xs text-white/50 mt-1">{project.description}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="mt-4">
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-white/60 font-medium">Global Progress</span>
-                    <span className="font-semibold text-[#FF6B1A]">
-                      {completedTasks}/{totalTasks} tasks completed
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <span className="text-white/50 font-medium">Progreso Global</span>
+                    <span className="font-semibold text-primary">
+                      {completedTasks}/{totalTasks} tareas completadas
                     </span>
                   </div>
-                  <div className="w-full bg-white/10 rounded-full h-3">
+                  <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-[#FF6B1A] h-3 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(255,107,26,0.4)]"
+                      className="bg-primary h-2 rounded-full transition-all duration-500 shadow-sm"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-right text-xs text-white/40 mt-1">{Math.round(progress)}%</p>
+                  <p className="text-right text-[11px] text-white/40 mt-1">{Math.round(progress)}%</p>
                 </div>
               </div>
 
-              <div className="bg-[#0D0D0D] border border-white/10 rounded-xl p-6 shadow-xl">
+              <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 shadow-xl">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-white">Tasks</h2>
+                  <h2 className="text-base font-semibold text-white">Tareas</h2>
                   <button
                     onClick={() => setShowInput(true)}
-                    className="flex items-center gap-1.5 text-sm text-[#FF6B1A] hover:bg-[#FF6B1A]/10 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-primary hover:bg-primary/10 px-3 py-1.5 rounded-xl font-medium transition-colors"
                   >
-                    <Plus className="w-4 h-4" />
-                    New Task
+                    <Plus className="w-3.5 h-3.5" />
+                    Nueva Tarea
                   </button>
                 </div>
 
                 {showInput && (
-                  <div className="flex items-center gap-2 mb-4 p-3 bg-[#0A1E3F] rounded-lg border border-white/15">
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-[#0B0F19] rounded-xl border border-white/10">
                     <input
                       autoFocus
                       type="text"
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Task name..."
-                      className="flex-1 text-sm bg-transparent outline-none text-white placeholder:text-white/40"
+                      placeholder="Nombre de la tarea..."
+                      className="flex-1 text-xs bg-transparent outline-none text-white placeholder:text-white/40"
                       disabled={isCreating}
                     />
                     <button
                       onClick={handleAddTask}
                       disabled={isCreating || !newTaskTitle.trim()}
-                      className="text-sm bg-[#FF6B1A] text-white font-semibold px-3 py-1.5 rounded-md hover:bg-[#E05A10] disabled:opacity-50 transition-colors flex items-center gap-1 shadow-sm"
+                      className="text-xs bg-primary text-white font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-1 shadow-sm"
                     >
-                      {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Add'}
+                      {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Agregar'}
                     </button>
                     <button
                       onClick={() => { setShowInput(false); setNewTaskTitle(''); }}
@@ -177,8 +177,8 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
 
                 {project.tasks.length === 0 && !showInput && (
                   <div className="text-center py-8">
-                    <Circle className="w-8 h-8 text-white/20 mx-auto mb-2" />
-                    <p className="text-white/40 text-sm">No tasks yet</p>
+                    <Circle className="w-7 h-7 text-white/20 mx-auto mb-2" />
+                    <p className="text-white/40 text-xs">No hay tareas aún</p>
                   </div>
                 )}
 

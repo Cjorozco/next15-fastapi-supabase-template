@@ -38,8 +38,8 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
       <div
         ref={setNodeRef}
         style={style}
-        className={`flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 group transition-colors ${
-          isDragging ? 'bg-[#0D0D0D] shadow-md border border-[#FF6B1A]/40' : ''
+        className={`flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 group transition-colors ${
+          isDragging ? 'bg-[#111827] shadow-md border border-primary/40' : ''
         }`}
       >
         <button
@@ -56,17 +56,17 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
         />
         <label
           htmlFor={statusLabelId}
-          className={`flex-1 text-sm cursor-pointer ${task.isCompleted ? 'line-through text-white/40' : 'text-white'}`}
+          className={`flex-1 text-xs cursor-pointer ${task.isCompleted ? 'line-through text-white/40' : 'text-white'}`}
         >
           {task.title}
         </label>
         {task.isCompleted && (
-          <CheckCircle2 className="w-4 h-4 text-[#FF6B1A] flex-shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
         )}
         <button
           onClick={() => onDelete(task._id)}
           className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-red-400 p-1 rounded"
-          title="Delete task"
+          title="Eliminar tarea"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -79,7 +79,7 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-2 py-1 group/task relative ${
-        isDragging ? 'bg-[#0D0D0D] rounded shadow-sm border border-[#FF6B1A]/40 indent-1' : ''
+        isDragging ? 'bg-[#111827] rounded-lg shadow-sm border border-primary/40 indent-1' : ''
       }`}
     >
       <button
@@ -97,7 +97,7 @@ export function SortableTaskItem({ task, onUpdateStatus, onDelete, isDetailView 
       />
       <label
         htmlFor={statusLabelId}
-        className={`flex-1 text-sm cursor-pointer ${task.isCompleted ? 'line-through text-white/40' : 'text-white'}`}
+        className={`flex-1 text-xs cursor-pointer ${task.isCompleted ? 'line-through text-white/40' : 'text-white'}`}
       >
         {task.title}
       </label>

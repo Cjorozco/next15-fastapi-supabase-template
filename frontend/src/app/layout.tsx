@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "@/shared/lib/convex-provider";
 import { AuthProvider } from "@/shared/context/AuthContext";
+import { ThemeProvider } from "@/shared/context/ThemeContext";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -11,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Personal Finance SaaS - Project Manager",
-  description: "Manage your projects efficiently",
+  title: "Project SaaS Manager",
+  description: "Manage your projects and tasks efficiently",
 };
 
 export default function RootLayout({
@@ -23,12 +24,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <ConvexClientProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ConvexClientProvider>
-        <Toaster position="bottom-right" richColors />
+        <ThemeProvider>
+          <ConvexClientProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ConvexClientProvider>
+          <Toaster position="bottom-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

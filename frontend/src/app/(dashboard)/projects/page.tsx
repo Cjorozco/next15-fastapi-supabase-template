@@ -67,7 +67,7 @@ export function ProjectsContent() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0A1E3F] text-white">
+    <div className="flex min-h-screen bg-[#0B0F19] text-white">
       <Sidebar />
 
       <div className="flex-1 flex flex-col">
@@ -77,78 +77,74 @@ export function ProjectsContent() {
           {/* Encabezado */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-white mb-1">Projects</h2>
-              <p className="text-white/60">Manage and track all your projects</p>
+              <h2 className="text-2xl font-bold text-white mb-1">Proyectos</h2>
+              <p className="text-xs text-white/50">Gestiona, organiza y monitorea todos tus proyectos</p>
             </div>
             <Button
               onClick={() => {
                 setShowForm(true);
                 setFormError('');
               }}
-              className="bg-[#FF6B1A] hover:bg-[#E05A10] text-white font-semibold shadow-md shadow-[#FF6B1A]/20 transition-all"
-              data-cy="new-project-btn"
+              className="bg-primary hover:opacity-90 text-white font-medium text-xs rounded-xl shadow-md shadow-primary/20 transition-all"
             >
               <PlusCircle className="mr-2 h-4 w-4" />
-              New Project
+              Nuevo Proyecto
             </Button>
           </div>
 
           {/* Formulario de creación */}
           {showForm && (
-            <div className="bg-[#0D0D0D] border border-white/10 rounded-xl p-6 mb-8 shadow-xl">
-              <h3 className="text-lg font-semibold text-white mb-4">Create New Project</h3>
+            <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 mb-8 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <h3 className="text-base font-semibold text-white mb-4">Crear Nuevo Proyecto</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-white/80">Project Name</Label>
+                  <Label htmlFor="name" className="text-xs text-white/70">Nombre del Proyecto</Label>
                   <Input
                     id="name"
                     value={name}
                     onChange={(e) => { setName(e.target.value); setFormError(''); }}
-                    placeholder="e.g. Website redesign"
+                    placeholder="Ej: Rediseño de Plataforma"
                     required
                     autoFocus
-                    className={`bg-[#0A1E3F] border border-white/15 text-white placeholder:text-white/30 focus-visible:ring-[#FF6B1A] ${formError ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
-                    data-cy="project-name-input"
+                    className={`bg-[#0B0F19] border border-white/10 text-white placeholder:text-white/30 text-xs rounded-xl focus-visible:ring-primary ${formError ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
                   />
                   {formError && (
-                    <p className="text-sm text-red-400 flex items-center gap-1">
+                    <p className="text-xs text-red-400 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" />
                       {formError}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-white/80">Description</Label>
+                  <Label htmlFor="description" className="text-xs text-white/70">Descripción</Label>
                   <Textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief description of the project goals..."
+                    placeholder="Breve resumen de los objetivos..."
                     rows={3}
-                    className="bg-[#0A1E3F] border border-white/15 text-white placeholder:text-white/30 focus-visible:ring-[#FF6B1A]"
-                    data-cy="project-desc-input"
+                    className="bg-[#0B0F19] border border-white/10 text-white placeholder:text-white/30 text-xs rounded-xl focus-visible:ring-primary"
                   />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <Button
                     type="submit"
                     disabled={isCreating || !name.trim()}
-                    data-cy="save-project-btn"
-                    className="bg-[#FF6B1A] hover:bg-[#E05A10] text-white font-semibold"
+                    className="bg-primary hover:opacity-90 text-white font-medium text-xs rounded-xl"
                   >
                     {isCreating ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                      <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Guardando...</>
                     ) : (
-                      'Save Project'
+                      'Guardar Proyecto'
                     )}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-white/20 text-white/80 hover:bg-white/10"
+                    className="border-white/10 text-white/70 hover:bg-white/5 text-xs rounded-xl"
                     onClick={() => { setShowForm(false); setName(''); setDescription(''); setFormError(''); }}
                   >
-                    Cancel
+                    Cancelar
                   </Button>
                 </div>
               </form>
@@ -158,27 +154,27 @@ export function ProjectsContent() {
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-[#FF6B1A]" />
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           )}
 
           {/* Estado vacío — sin proyectos */}
           {!isLoading && projects?.length === 0 && (
-            <div className="text-center py-20 bg-[#0D0D0D] border border-white/10 rounded-2xl p-12">
+            <div className="text-center py-20 bg-[#111827] border border-white/10 rounded-2xl p-12">
               <FolderKanban className="w-12 h-12 text-white/30 mx-auto mb-4" />
-              <p className="text-white/70 text-lg font-medium">No projects yet</p>
-              <p className="text-white/40 text-sm mt-1">
-                Click <span className="font-semibold text-[#FF6B1A]">New Project</span> to get started
+              <p className="text-white/80 text-base font-medium">No hay proyectos aún</p>
+              <p className="text-white/40 text-xs mt-1">
+                Haz clic en <span className="font-semibold text-primary">Nuevo Proyecto</span> para comenzar
               </p>
             </div>
           )}
 
           {/* Sin resultados de búsqueda */}
           {!isLoading && projects && projects.length > 0 && filteredProjects?.length === 0 && (
-            <div className="text-center py-20 bg-[#0D0D0D] border border-white/10 rounded-2xl p-12">
+            <div className="text-center py-20 bg-[#111827] border border-white/10 rounded-2xl p-12">
               <Search className="w-12 h-12 text-white/30 mx-auto mb-4" />
-              <p className="text-white/70 text-lg font-medium">No results for &ldquo;{searchParams.get('q')}&rdquo;</p>
-              <p className="text-white/40 text-sm mt-1">Try a different search term</p>
+              <p className="text-white/80 text-base font-medium">No se encontraron resultados para &ldquo;{searchParams.get('q')}&rdquo;</p>
+              <p className="text-white/40 text-xs mt-1">Intenta con otro término de búsqueda</p>
             </div>
           )}
 
@@ -186,18 +182,18 @@ export function ProjectsContent() {
           {filteredProjects && filteredProjects.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map((project) => (
-                <div key={project._id} className="relative group" data-cy="project-card">
+                <div key={project._id} className="relative group">
                   <ProjectCard project={project} />
 
                   {/* Botón borrar — aparece al hacer hover */}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-4 right-4">
                     {confirmDeleteId === project._id ? (
-                      <div className="flex items-center gap-1 bg-[#0D0D0D] border border-red-500/40 rounded-lg shadow-lg p-1">
+                      <div className="flex items-center gap-1 bg-[#0B0F19] border border-red-500/40 rounded-xl shadow-lg p-1">
                         <span className="text-xs text-red-400 px-1">¿Borrar?</span>
                         <button
                           onClick={() => handleDelete(project._id)}
                           disabled={isDeleting && deletingId === project._id}
-                          className="text-xs bg-red-600 text-white px-2 py-1 rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                         >
                           {isDeleting && deletingId === project._id
                             ? <Loader2 className="w-3 h-3 animate-spin" />
@@ -213,7 +209,7 @@ export function ProjectsContent() {
                     ) : (
                       <button
                         onClick={() => setConfirmDeleteId(project._id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#0D0D0D] border border-white/15 rounded-lg p-1.5 hover:bg-red-500/20 hover:border-red-500/40 shadow-sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#111827] border border-white/15 rounded-lg p-1.5 hover:bg-red-500/20 hover:border-red-500/40 shadow-sm"
                         title="Borrar proyecto"
                       >
                         <Trash2 className="w-4 h-4 text-white/50 hover:text-red-400" />

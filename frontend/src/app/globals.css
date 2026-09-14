@@ -5,12 +5,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-brand-petroleum: #0A1E3F;
-  --color-brand-dark: #0D0D0D;
-  --color-brand-accent: #FF6B1A;
-  --color-brand-white: #FFFFFF;
-  --color-brand: #FF6B1A;
-
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -40,6 +34,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -54,72 +49,74 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: #0A1E3F;
-  --foreground: #FFFFFF;
-  --card: #0D0D0D;
-  --card-foreground: #FFFFFF;
-  --popover: #0D0D0D;
-  --popover-foreground: #FFFFFF;
-  --primary: #FF6B1A;
+  --radius: 0.75rem;
+  --background: #0B0F19;
+  --foreground: #F8FAFC;
+  --card: #111827;
+  --card-foreground: #F8FAFC;
+  --popover: #111827;
+  --popover-foreground: #F8FAFC;
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
   --primary-foreground: #FFFFFF;
-  --secondary: #12284C;
-  --secondary-foreground: #FFFFFF;
-  --muted: #0E2246;
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E293B;
   --muted-foreground: #94A3B8;
-  --accent: #FF6B1A;
+  --accent: #6366F1;
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.16);
-  --ring: #FF6B1A;
-  --chart-1: #FF6B1A;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #6366F1;
+  --chart-1: #6366F1;
   --chart-2: #10B981;
   --chart-3: #38BDF8;
   --chart-4: #F59E0B;
   --chart-5: #A855F7;
-  --sidebar: #0D0D0D;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #FF6B1A;
+  --sidebar: #0F172A;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #6366F1;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: rgba(255, 107, 26, 0.15);
-  --sidebar-accent-foreground: #FF6B1A;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #FF6B1A;
+  --sidebar-accent: rgba(99, 102, 241, 0.12);
+  --sidebar-accent-foreground: #6366F1;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #6366F1;
 }
 
 .dark {
-  --background: #0A1E3F;
-  --foreground: #FFFFFF;
-  --card: #0D0D0D;
-  --card-foreground: #FFFFFF;
-  --popover: #0D0D0D;
-  --popover-foreground: #FFFFFF;
-  --primary: #FF6B1A;
+  --background: #0B0F19;
+  --foreground: #F8FAFC;
+  --card: #111827;
+  --card-foreground: #F8FAFC;
+  --popover: #111827;
+  --popover-foreground: #F8FAFC;
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
   --primary-foreground: #FFFFFF;
-  --secondary: #12284C;
-  --secondary-foreground: #FFFFFF;
-  --muted: #0E2246;
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E293B;
   --muted-foreground: #94A3B8;
-  --accent: #FF6B1A;
+  --accent: #6366F1;
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.16);
-  --ring: #FF6B1A;
-  --chart-1: #FF6B1A;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #6366F1;
+  --chart-1: #6366F1;
   --chart-2: #10B981;
   --chart-3: #38BDF8;
   --chart-4: #F59E0B;
   --chart-5: #A855F7;
-  --sidebar: #0D0D0D;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #FF6B1A;
+  --sidebar: #0F172A;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #6366F1;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: rgba(255, 107, 26, 0.15);
-  --sidebar-accent-foreground: #FF6B1A;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #FF6B1A;
+  --sidebar-accent: rgba(99, 102, 241, 0.12);
+  --sidebar-accent-foreground: #6366F1;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #6366F1;
 }
 
 @layer base {
@@ -127,6 +124,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
   }
 }

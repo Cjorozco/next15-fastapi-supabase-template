@@ -28,7 +28,7 @@ export function CreateProjectModal() {
       description: formData.get('description') as string,
     }, {
       onSuccess: () => {
-        setOpen(false); // Cerramos el modal al terminar
+        setOpen(false);
       }
     });
   };
@@ -36,25 +36,40 @@ export function CreateProjectModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-slate-900 hover:bg-slate-800">
+        <Button className="bg-primary hover:opacity-90 text-white font-medium shadow-md shadow-primary/20 rounded-xl">
           <PlusCircle className="mr-2 h-4 w-4" />
           Nuevo Proyecto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-[#111827] border-white/10 text-white rounded-2xl shadow-2xl">
         <DialogHeader>
-          <DialogTitle>Crear Nuevo Proyecto</DialogTitle>
+          <DialogTitle className="text-white text-base">Crear Nuevo Proyecto</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nombre del Proyecto</Label>
-            <Input id="name" name="name" placeholder="Ej: Mudanza a Barranquilla" required />
+            <Label htmlFor="name" className="text-xs text-white/70">Nombre del Proyecto</Label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="Ej: Rediseño de Plataforma"
+              required
+              className="bg-[#0B0F19] border-white/10 text-white placeholder:text-white/30 rounded-xl text-xs focus:ring-primary focus:border-primary"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
-            <Textarea id="description" name="description" placeholder="Breve descripción de los objetivos..." />
+            <Label htmlFor="description" className="text-xs text-white/70">Descripción</Label>
+            <Textarea
+              id="description"
+              name="description"
+              placeholder="Breve descripción de los objetivos..."
+              className="bg-[#0B0F19] border-white/10 text-white placeholder:text-white/30 rounded-xl text-xs focus:ring-primary focus:border-primary"
+            />
           </div>
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            className="w-full bg-primary hover:opacity-90 text-white font-medium rounded-xl text-xs py-2 shadow-sm"
+            disabled={isPending}
+          >
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Guardar Proyecto'}
           </Button>
         </form>
