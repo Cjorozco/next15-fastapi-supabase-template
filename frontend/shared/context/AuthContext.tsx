@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useConvexAuth, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { supabase } from '@/shared/lib/supabase';
@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const storeUser = useMutation(api.users.store);
   const { isAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
 
@@ -36,15 +37,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
-
       setIsLoading(false);
 
-      if (event === 'SIGNED_OUT') router.push('/login');
-      if (event === 'SIGNED_IN') router.push('/');
+      if (event === 'SIGNED_OUT') {
+        if (pathname !== '/login' && pathname !== '/register') {
+          router.push('/login');
+        }
+      }
+      if (event === 'SIGNED_IN') {
+        if (pathname === '/login' || pathname === '/register') {
+          router.push('/');
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     if (isAuthenticated) {

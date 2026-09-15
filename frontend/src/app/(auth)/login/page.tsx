@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/shared/lib/supabase';
 import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
@@ -9,6 +10,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,6 +30,8 @@ export default function LoginPage() {
         : error.message
       );
       setIsLoading(false);
+    } else {
+      router.push('/');
     }
   };
 
