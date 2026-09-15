@@ -23,5 +23,14 @@ export default defineSchema({
     title: v.string(),
     isCompleted: v.boolean(),
     position: v.number(),
+    subtasks: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          title: v.string(),
+          isCompleted: v.boolean(),
+        })
+      )
+    ),
   }).index("by_project", ["projectId"]),
 });

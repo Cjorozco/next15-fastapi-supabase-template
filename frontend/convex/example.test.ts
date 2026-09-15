@@ -147,3 +147,76 @@ test("create project with tasks atomically", async () => {
   expect(allProjects[0].tasks).toHaveLength(3);
 });
 
+test("subtasks lifecycle and auto-complete parent task", async () => {
+  const t = authed();
+
+  await t.mutation(api.users.store, {});
+  const project = await t.mutation(api.projects.create, {
+    name: "Subtask Test Project",
+  });
+
+  const task = await t.mutation(api.tasks.create, {
+    projectId: project._id,
+    title: "Tarea Principal",
+  });
+
+  expect(task.isCompleted).toBe(false);
+  expect(task.subtasks).toEqual([]);
+
+  // 1. Añadir 2 subtareas
+  const withSubtask1 = await t.mutation(api.tasks.addSubtask, {
+    taskId: task._id,
+    title: "Subtarea 1",
+  });
+  expect(withSubtask1.subtasks).toHaveLength(1);
+  expect(withSubtask1.subtasks?.[0].title).toBe("Subtarea 1");
+  expect(withSubtask1.subtasks?.[0].isCompleted).toBe(false);
+  expect(withSubtask1.isCompleted).toBe(false);
+
+  const sub1Id = withSubtask1.subtasks![0].id;
+
+  const withSubtask2 = await t.mutation(api.tasks.addSubtask, {
+    taskId: task._id,
+    title: "Subtarea 2",
+  });
+  expect(withSubtask2.subtasks).toHaveLength(2);
+  const sub2Id = withSubtask2.subtasks![1].id;
+
+  // 2. Completar solo la primera subtarea -> Tarea padre sigue incompleta
+  const partialComplete = await t.mutation(api.tasks.toggleSubtask, {
+    taskId: task._id,
+    subtaskId: sub1Id,
+    isCompleted: true,
+  });
+  expect(partialComplete.subtasks?.[0].isCompleted).toBe(true);
+  expect(partialComplete.subtasks?.[1].isCompleted).toBe(false);
+  expect(partialComplete.isCompleted).toBe(false);
+
+  // 3. Completar la segunda subtarea -> TAREA PADRE SE AUTO-COMPLETA (Regla de negocio)
+  const allComplete = await t.mutation(api.tasks.toggleSubtask, {
+    taskId: task._id,
+    subtaskId: sub2Id,
+    isCompleted: true,
+  });
+  expect(allComplete.subtasks?.[0].isCompleted).toBe(true);
+  expect(allComplete.subtasks?.[1].isCompleted).toBe(true);
+  expect(allComplete.isCompleted).toBe(true);
+
+  // 4. Desmarcar una subtarea -> Tarea padre se desmarca automáticamente
+  const uncompleteOne = await t.mutation(api.tasks.toggleSubtask, {
+    taskId: task._id,
+    subtaskId: sub1Id,
+    isCompleted: false,
+  });
+  expect(uncompleteOne.isCompleted).toBe(false);
+
+  // 5. Eliminar la subtarea incompleta -> Queda solo 1 subtarea (que está completada) -> Tarea padre pasa a completada
+  const afterRemove = await t.mutation(api.tasks.removeSubtask, {
+    taskId: task._id,
+    subtaskId: sub1Id,
+  });
+  expect(afterRemove.subtasks).toHaveLength(1);
+  expect(afterRemove.isCompleted).toBe(true);
+});
+
+

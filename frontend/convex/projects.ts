@@ -4,6 +4,12 @@ import { Id } from "./_generated/dataModel";
 import { requireAuthenticatedUser, requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
 
+const subtaskValidator = v.object({
+  id: v.string(),
+  title: v.string(),
+  isCompleted: v.boolean(),
+});
+
 const taskValidator = v.object({
   _id: v.id("tasks"),
   _creationTime: v.number(),
@@ -11,6 +17,7 @@ const taskValidator = v.object({
   title: v.string(),
   isCompleted: v.boolean(),
   position: v.number(),
+  subtasks: v.optional(v.array(subtaskValidator)),
 });
 
 const projectWithTasksValidator = v.object({

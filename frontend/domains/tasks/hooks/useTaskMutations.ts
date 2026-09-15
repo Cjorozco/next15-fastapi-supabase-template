@@ -74,3 +74,63 @@ export const useReorderTasks = () => {
     },
   };
 };
+
+export const useAddSubtask = () => {
+  const addSubtask = useMutation(api.tasks.addSubtask);
+
+  return {
+    mutate: (
+      { taskId, title }: { taskId: Id<'tasks'>; title: string },
+      options?: { onSuccess?: () => void }
+    ) => {
+      addSubtask({ taskId, title })
+        .then(() => {
+          options?.onSuccess?.();
+        })
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al agregar la subtarea'));
+        });
+    },
+  };
+};
+
+export const useToggleSubtask = () => {
+  const toggleSubtask = useMutation(api.tasks.toggleSubtask);
+
+  return {
+    mutate: ({
+      taskId,
+      subtaskId,
+      isCompleted,
+    }: {
+      taskId: Id<'tasks'>;
+      subtaskId: string;
+      isCompleted: boolean;
+    }) => {
+      toggleSubtask({ taskId, subtaskId, isCompleted }).catch((err: unknown) => {
+        toast.error(mapErrorToUserMessage(err, 'Error al actualizar la subtarea'));
+      });
+    },
+  };
+};
+
+export const useRemoveSubtask = () => {
+  const removeSubtask = useMutation(api.tasks.removeSubtask);
+
+  return {
+    mutate: ({
+      taskId,
+      subtaskId,
+    }: {
+      taskId: Id<'tasks'>;
+      subtaskId: string;
+    }) => {
+      removeSubtask({ taskId, subtaskId })
+        .then(() => toast.success('Subtarea eliminada'))
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al eliminar la subtarea'));
+        });
+    },
+  };
+};
+

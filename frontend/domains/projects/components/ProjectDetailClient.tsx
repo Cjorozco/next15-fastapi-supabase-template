@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { Header } from '@/shared/components/layout/Header';
 import { Sidebar } from '@/shared/components/layout/Sidebar';
 import { useProject } from '@/domains/projects/hooks/useProject';
-import { useUpdateTask, useCreateTask, useDeleteTask, useReorderTasks } from '@/domains/tasks/hooks/useTaskMutations';
+import {
+  useUpdateTask,
+  useCreateTask,
+  useDeleteTask,
+  useReorderTasks,
+  useAddSubtask,
+  useToggleSubtask,
+  useRemoveSubtask,
+} from '@/domains/tasks/hooks/useTaskMutations';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -23,6 +31,9 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { mutate: createTask, isPending: isCreating } = useCreateTask();
   const { mutate: deleteTask } = useDeleteTask();
   const { mutate: reorderTasks } = useReorderTasks();
+  const { mutate: addSubtask } = useAddSubtask();
+  const { mutate: toggleSubtask } = useToggleSubtask();
+  const { mutate: removeSubtask } = useRemoveSubtask();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
@@ -192,6 +203,13 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                           isDetailView={true}
                           onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
                           onDelete={(taskId) => deleteTask(taskId)}
+                          onAddSubtask={(taskId, title) => addSubtask({ taskId, title })}
+                          onToggleSubtask={(taskId, subtaskId, isCompleted) =>
+                            toggleSubtask({ taskId, subtaskId, isCompleted })
+                          }
+                          onRemoveSubtask={(taskId, subtaskId) =>
+                            removeSubtask({ taskId, subtaskId })
+                          }
                         />
                       ))}
                     </SortableContext>
