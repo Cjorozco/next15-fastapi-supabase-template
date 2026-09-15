@@ -54,6 +54,45 @@ export const useCreateProject = () => {
   };
 };
 
+export const useCreateProjectWithTasks = () => {
+  const createWithTasks = useMutation(api.projects.createWithTasks);
+  const [isPending, setIsPending] = useState(false);
+
+  return {
+    mutate: (
+      projectData: {
+        name: string;
+        description?: string;
+        tasks: Array<{ title: string; position: number }>;
+      },
+      options?: {
+        onSuccess?: (data: { _id: string; name: string; tasks: Array<{ title: string; position: number }> }) => void;
+        onError?: (err: Error) => void;
+      }
+    ) => {
+      setIsPending(true);
+      void createWithTasks({
+        name: projectData.name,
+        description: projectData.description || undefined,
+        tasks: projectData.tasks,
+      })
+        .then((data) => {
+          toast.success(`Proyecto "${data.name}" generado con ${data.tasks.length} tareas`);
+          options?.onSuccess?.(data);
+        })
+        .catch((err: unknown) => {
+          const message = mapErrorToUserMessage(err, 'Error al crear el proyecto generado con IA');
+          toast.error(message);
+          options?.onError?.(err instanceof Error ? err : new Error(message));
+        })
+        .finally(() => {
+          setIsPending(false);
+        });
+    },
+    isPending,
+  };
+};
+
 export const useDeleteProject = () => {
   const remove = useMutation(api.projects.remove);
   const [isPending, setIsPending] = useState(false);

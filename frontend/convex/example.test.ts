@@ -119,3 +119,31 @@ test("cannot access other user project", async () => {
   });
   expect(result).toBeNull();
 });
+
+test("create project with tasks atomically", async () => {
+  const t = authed();
+
+  await t.mutation(api.users.store, {});
+  const project = await t.mutation(api.projects.createWithTasks, {
+    name: "Campaña de marketing en 3 semanas",
+    description: "Proyecto generado por IA para planificar lanzamiento",
+    tasks: [
+      { title: "Definir público objetivo", position: 0 },
+      { title: "Crear contenido para redes", position: 1 },
+      { title: "Lanzar anuncios de pago", position: 2 },
+    ],
+  });
+
+  expect(project.name).toBe("Campaña de marketing en 3 semanas");
+  expect(project.tasks).toHaveLength(3);
+  expect(project.tasks[0].title).toBe("Definir público objetivo");
+  expect(project.tasks[0].position).toBe(0);
+  expect(project.tasks[1].title).toBe("Crear contenido para redes");
+  expect(project.tasks[2].title).toBe("Lanzar anuncios de pago");
+
+  // Verify list retrieves it with all tasks
+  const allProjects = await t.query(api.projects.list, {});
+  expect(allProjects).toHaveLength(1);
+  expect(allProjects[0].tasks).toHaveLength(3);
+});
+

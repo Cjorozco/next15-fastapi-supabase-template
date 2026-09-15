@@ -15,3 +15,6 @@ export interface User {
   _id: Id<'users'>;
   email: string;
 }
+
+export type { AiProject, AiTask } from './schemas/ai-project.schema';
+export { AiProjectSchema, AiTaskSchema, validateAiProjectResponse } from './schemas/ai-project.schema';

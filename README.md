@@ -1,6 +1,8 @@
 # 📋 Project Manager — Full-Stack SaaS
 
-A full-stack **SaaS project management app** built with Next.js 15, Convex, and Supabase Auth. Features a clean dashboard to track projects and tasks with real-time UI updates.
+A full-stack **SaaS project management application** built with Next.js 15, Convex, and Supabase Auth. Features a clean, high-performance dashboard to track projects and tasks with real-time UI updates.
+
+> 🚀 **AI-Native Product Engineering**: Este software fue diseñado, arquitectado y desarrollado bajo un modelo de ingeniería asistida por IA, combinando visión de producto, rigor arquitectónico y co-creación iterativa humano-agente.
 
 🔗 **[Live Demo](https://project-manager-web-five.vercel.app)**
 
@@ -8,7 +10,21 @@ A full-stack **SaaS project management app** built with Next.js 15, Convex, and 
 ![Convex](https://img.shields.io/badge/Convex-serverless%20backend-000000?style=flat-square)
 ![Supabase](https://img.shields.io/badge/Supabase-Auth-3ECF8E?style=flat-square&logo=supabase)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)
+![AI-Native](https://img.shields.io/badge/Engineering-AI--Native-7928CA?style=flat-square)
 ![Live](https://img.shields.io/badge/demo-live-brightgreen?style=flat-square)
+
+---
+
+## 🤖 Metodología de Desarrollo
+
+Este proyecto fue construido y evolucionado bajo un enfoque de **Ingeniería de Producto AI-Native (AI-Native Product Engineering)**:
+
+1. **Rol Humano (Product Owner, Arquitecto y Orquestador)**: Actué como Product Owner, Arquitecto de Software y Orquestador, guiando iterativamente al agente de IA para transformar requerimientos de negocio y casos de uso en especificaciones técnicas de alto nivel y código de producción robusto.
+2. **Principios de Arquitectura de Software**:
+   - **Diseño modular por dominios**: Separación estricta de dominios (proyectos, tareas, autenticación, usuarios).
+   - **Tipado estricto end-to-end**: Garantía de coherencia y validación de tipos con TypeScript tanto en cliente como en servidor.
+   - **Separación de responsabilidades (*"UI tonta, backend fuerte"* / *Dumb UI, Strong Backend*)**: La lógica de negocio, validaciones de seguridad, integridad relacional y autorización residen en el backend (Convex / Supabase), permitiendo que la interfaz de usuario permanezca declarativa, predecible y centrada en la experiencia visual.
+3. **Co-Creación Acelerada y Calidad Rigurosa**: La co-creación con agentes de IA permitió acelerar drásticamente los ciclos de iteración y entrega (incluyendo migraciones arquitectónicas y optimizaciones reactivas), manteniendo estándares estrictos de pruebas automatizadas (**Vitest** y **Cypress**) y garantizando la resiliencia y mantenibilidad del sistema.
 
 ---
 
@@ -123,7 +139,10 @@ The app will be available at `http://localhost:3000`.
 ## 🧪 Testing
 
 ```bash
-# Convex unit tests
+# Unit & integration tests (Vitest)
+npm run test
+
+# Convex backend tests
 npx convex test
 
 # Cypress E2E tests (production)

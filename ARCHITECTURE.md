@@ -188,3 +188,19 @@ En Next.js 16+, la convención recomendada de red es `proxy.ts`. Este archivo:
 2. Refresca automáticamente el token si es necesario.
 3. Redirige usuarios anónimos intentando acceder a rutas protegidas hacia `/login`.
 4. Redirige usuarios ya autenticados que visiten `/login` o `/register` directamente al dashboard `/`.
+
+---
+
+## 8. Principios de Integración de IA y Validación con Zod (Zero-Trust Boundary)
+
+Para futuras capacidades de IA generativa (Gemini, OpenAI, agentes autónomos), el sistema implementa una política de **Límite de Cero Confianza (Zero-Trust AI Boundary)**:
+
+1. **Entrada No Confiable por Defecto:** Las salidas de modelos de lenguaje son probabilísticas y nunca deben insertarse de forma cruda en la base de datos de Convex ni mutar el estado de React sin validación previa.
+2. **Intercepción y Sanitización:** Los payloads generados por LLMs son procesados con `safeParseAIResponse` (`frontend/shared/lib/ai/safe-ai-parser.ts`), eliminando bloques de markdown (` ```json `) y extrayendo el JSON estructurado.
+3. **Validación Estricta con Zod:** Se aplican esquemas con descarte de campos extra (`.strip()`), coerciones seguras (`z.coerce.*`) y defaults defensivos.
+4. **Flujo Convex Action -> Internal Mutation:**
+   - La llamada a la API del proveedor de IA se realiza dentro de una **Convex Action**.
+   - La acción valida el payload con Zod.
+   - **Únicamente tras una validación exitosa**, se ejecuta la mutación interna (`internalMutation`) para persistir los datos.
+5. **Resiliencia y Degradación Elegante:** En caso de discrepancia de esquema, se extraen los problemas (`formatZodIssuesForPrompt`) para reintento/autocorrección por el LLM o se activa un fallback seguro (`parseAIWithFallback`) impidiendo fallos de renderizado en la UI.
+

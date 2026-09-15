@@ -6,6 +6,7 @@ import { ProjectProgressChart } from '@/domains/projects/components/ProjectProgr
 import { Sidebar } from '@/shared/components/layout/Sidebar';
 import { StatsGrid } from '@/domains/dashboard/components/StatsGrid';
 import { useProjects } from '@/domains/projects/hooks/useProjects';
+import { GenerateProjectWithAiModal } from '@/domains/projects/components/GenerateProjectWithAiModal';
 import { Loader2 } from 'lucide-react';
 import { Suspense } from 'react';
 import Link from 'next/link';
@@ -21,13 +22,18 @@ function DashboardContent() {
         <Header />
 
         <main className="flex-1 p-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-1">
-              Dashboard
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Resumen ejecutivo de proyectos, métricas y avance de tareas
-            </p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-1">
+                Dashboard
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Resumen ejecutivo de proyectos, métricas y avance de tareas
+              </p>
+            </div>
+            {projects && projects.length > 0 && (
+              <GenerateProjectWithAiModal />
+            )}
           </div>
 
           {projects && projects.length > 0 && (
@@ -47,13 +53,14 @@ function DashboardContent() {
           {projects && projects.length === 0 && (
             <div className="text-center py-20 bg-card border border-border rounded-2xl p-12 mt-4 shadow-sm">
               <p className="text-foreground text-base font-medium">No se encontraron proyectos</p>
-              <p className="text-muted-foreground text-xs mt-1">
-                Crea tu primer proyecto para comenzar a gestionar tareas
+              <p className="text-muted-foreground text-xs mt-1 mb-6">
+                Crea tu primer proyecto manualmente o genéralo en segundos con Inteligencia Artificial
               </p>
-              <div className="mt-6">
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <GenerateProjectWithAiModal />
                 <Link
                   href="/projects"
-                  className="inline-flex items-center gap-2 bg-primary hover:opacity-90 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-md shadow-primary/20 transition-all"
+                  className="inline-flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-medium text-xs px-4 py-2.5 rounded-xl border border-border transition-all"
                 >
                   Ir a Proyectos
                 </Link>

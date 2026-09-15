@@ -116,6 +116,75 @@ export const create = mutation({
   },
 });
 
+export const createWithTasks = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    tasks: v.array(
+      v.object({
+        title: v.string(),
+        position: v.number(),
+      })
+    ),
+  },
+  returns: projectWithTasksValidator,
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const name = args.name.trim();
+
+    if (!name) {
+      throw new DomainException("INVALID_INPUT", "Project name is required");
+    }
+
+    const duplicate = await ctx.db
+      .query("projects")
+      .withIndex("by_owner_and_name", (q) =>
+        q.eq("ownerId", user._id).eq("name", name)
+      )
+      .unique();
+
+    if (duplicate) {
+      throw new DomainException(
+        "DUPLICATE_ENTITY",
+        `Ya tienes un proyecto con el nombre '${name}'`
+      );
+    }
+
+    const projectId = await ctx.db.insert("projects", {
+      ownerId: user._id,
+      name,
+      description: args.description?.trim() || undefined,
+    });
+
+    const createdTasks = [];
+    for (const task of args.tasks) {
+      const taskTitle = task.title.trim();
+      if (taskTitle) {
+        const taskId = await ctx.db.insert("tasks", {
+          projectId,
+          title: taskTitle,
+          isCompleted: false,
+          position: task.position,
+        });
+        const createdTask = await ctx.db.get(taskId);
+        if (createdTask) {
+          createdTasks.push(createdTask);
+        }
+      }
+    }
+
+    const project = await ctx.db.get(projectId);
+    if (!project) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Failed to create project");
+    }
+
+    return {
+      ...project,
+      tasks: createdTasks.sort((a, b) => a.position - b.position),
+    };
+  },
+});
+
 export const remove = mutation({
   args: { projectId: v.id("projects") },
   returns: v.null(),

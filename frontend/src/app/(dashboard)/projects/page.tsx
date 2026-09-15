@@ -7,6 +7,7 @@ import { ProjectCard } from '@/domains/projects/components/ProjectCard';
 import { Sidebar } from '@/shared/components/layout/Sidebar';
 import { useProjects, useCreateProject, useDeleteProject } from '@/domains/projects/hooks/useProjects';
 import { Loader2, AlertCircle, PlusCircle, FolderKanban, Trash2, Search } from 'lucide-react';
+import { GenerateProjectWithAiModal } from '@/domains/projects/components/GenerateProjectWithAiModal';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
@@ -80,16 +81,19 @@ export function ProjectsContent() {
               <h2 className="text-2xl font-bold text-foreground mb-1">Proyectos</h2>
               <p className="text-xs text-muted-foreground">Gestiona, organiza y monitorea todos tus proyectos</p>
             </div>
-            <Button
-              onClick={() => {
-                setShowForm(true);
-                setFormError('');
-              }}
-              className="bg-primary hover:opacity-90 text-white font-medium text-xs rounded-xl shadow-md shadow-primary/20 transition-all"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nuevo Proyecto
-            </Button>
+            <div className="flex items-center gap-3">
+              <GenerateProjectWithAiModal />
+              <Button
+                onClick={() => {
+                  setShowForm(true);
+                  setFormError('');
+                }}
+                className="bg-primary hover:opacity-90 text-white font-medium text-xs rounded-xl shadow-md shadow-primary/20 transition-all"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nuevo Proyecto
+              </Button>
+            </div>
           </div>
 
           {/* Formulario de creación */}
@@ -163,9 +167,23 @@ export function ProjectsContent() {
             <div className="text-center py-20 bg-card border border-border rounded-2xl p-12 shadow-sm">
               <FolderKanban className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
               <p className="text-foreground text-base font-medium">No hay proyectos aún</p>
-              <p className="text-muted-foreground text-xs mt-1">
-                Haz clic en <span className="font-semibold text-primary">Nuevo Proyecto</span> para comenzar
+              <p className="text-muted-foreground text-xs mt-1 mb-6">
+                Crea tu primer proyecto o genéralo automáticamente con IA
               </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <GenerateProjectWithAiModal />
+                <Button
+                  onClick={() => {
+                    setShowForm(true);
+                    setFormError('');
+                  }}
+                  variant="outline"
+                  className="border-border text-foreground text-xs rounded-xl"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Crear Manualmente
+                </Button>
+              </div>
             </div>
           )}
 
