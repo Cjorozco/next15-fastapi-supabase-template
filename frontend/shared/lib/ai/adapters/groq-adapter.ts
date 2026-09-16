@@ -9,11 +9,13 @@ import {
   AIException,
 } from '../ai-errors';
 
-export const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
+export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
 export const GROQ_FALLBACK_MODELS = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'mixtral-8x7b-32768',
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'groq/compound-mini',
+  'groq/compound',
+  'qwen/qwen3.8-27b',
 ];
 
 export class GroqProviderClient implements AiProviderClient {
@@ -103,7 +105,7 @@ export class GroqProviderClient implements AiProviderClient {
         // Model not found / invalid model: try next model in fallback
         if (
           response.status === 404 ||
-          (response.status === 400 && errorDetail.includes('model'))
+          (response.status === 400 && (errorDetail.includes('model') || errorDetail.includes('not found') || errorDetail.includes('does not exist')))
         ) {
           continue;
         }

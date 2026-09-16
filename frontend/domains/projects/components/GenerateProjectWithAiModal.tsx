@@ -260,7 +260,7 @@ export function GenerateProjectWithAiModal({
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Groq (Llama 3.3)
+                  Groq (GPT-OSS)
                 </button>
               </div>
             </div>
