@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -16,10 +16,10 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Sparkles, Loader2, Key, AlertCircle, CheckCircle2, PlusCircle } from 'lucide-react';
 import {
   generateProjectWithAi,
-  getStoredApiKey,
-  setStoredApiKey,
   mapAIErrorToUserMessage,
 } from '@/shared/lib/ai/gemini-client';
+import { useAiClient } from '@/shared/lib/ai/useAiClient';
+import { AiProviderId } from '@/shared/lib/ai/types';
 import { useCreateProjectWithTasks } from '@/domains/projects/hooks/useProjects';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -45,37 +45,33 @@ export function GenerateProjectWithAiModal({
   const setIsOpen = setControlledOpen || setInternalOpen;
 
   const [prompt, setPrompt] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [hasSavedKey, setHasSavedKey] = useState(false);
-  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [inputKey, setInputKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const { provider, setProvider, apiKey, setApiKey, hasApiKey } = useAiClient();
   const { mutate: createProjectWithTasks } = useCreateProjectWithTasks();
 
-  // Cargar API Key de localStorage al abrir
-  useEffect(() => {
-    if (isOpen) {
-      const stored = getStoredApiKey();
-      if (stored) {
-        setApiKey(stored);
-        setHasSavedKey(true);
-        setShowKeyInput(false);
-      } else {
-        setHasSavedKey(false);
-        setShowKeyInput(true);
-      }
-      setErrorMessage(null);
-    }
-  }, [isOpen]);
-
   const handleSaveApiKey = () => {
-    if (apiKey.trim()) {
-      setStoredApiKey(apiKey.trim());
-      setHasSavedKey(true);
-      setShowKeyInput(false);
-      toast.success('API Key guardada localmente (BYOK)');
+    if (inputKey.trim()) {
+      setApiKey(inputKey.trim());
+      setShowConfig(false);
+      toast.success(`API Key de ${provider === 'gemini' ? 'Google Gemini' : 'Groq'} guardada localmente (BYOK)`);
     }
+  };
+
+  const handleToggleConfig = () => {
+    if (!showConfig) {
+      setInputKey(apiKey || '');
+    }
+    setShowConfig((prev) => !prev);
+  };
+
+  const handleProviderChange = (newProvider: AiProviderId) => {
+    setProvider(newProvider);
+    setErrorMessage(null);
+    setInputKey('');
   };
 
   const handleManualFallback = () => {
@@ -97,24 +93,26 @@ export function GenerateProjectWithAiModal({
       return;
     }
 
-    const activeApiKey = apiKey.trim() || getStoredApiKey();
-    if (!activeApiKey) {
-      setShowKeyInput(true);
-      setErrorMessage('Se requiere una Google Gemini API Key para generar con IA.');
+    const currentKey = inputKey.trim() || apiKey.trim();
+    if (!currentKey) {
+      setShowConfig(true);
+      setErrorMessage(`Se requiere una Google Gemini API Key para generar con IA.`);
       return;
     }
 
-    // Persistir clave en localStorage (BYOK)
-    setStoredApiKey(activeApiKey);
-    setHasSavedKey(true);
+    // Persistir clave si se editó
+    if (currentKey !== apiKey) {
+      setApiKey(currentKey);
+    }
 
     setIsGenerating(true);
 
     try {
-      // 1. Llamada directa al LLM desde el cliente con intercepción y validación obligatoria
+      // 1. Invocar AI Gateway con validación defensiva automática Zod
       const aiProject = await generateProjectWithAi({
         prompt: activePrompt,
-        apiKey: activeApiKey,
+        apiKey: currentKey,
+        provider,
       });
 
       // 2. Ejecución de la mutación atómica de Convex
@@ -140,7 +138,7 @@ export function GenerateProjectWithAiModal({
         }
       );
     } catch (err: unknown) {
-      // Intercepción tipada de errores (429, timeout, red, invalid-json/ZodError)
+      // Intercepción tipada de errores (429, timeout de 8s, red, invalid-json/ZodError)
       setIsGenerating(false);
       const { message: friendlyMessage } = mapAIErrorToUserMessage(err);
       setErrorMessage(friendlyMessage);
@@ -219,38 +217,69 @@ export function GenerateProjectWithAiModal({
             </div>
           </div>
 
-          {/* Configuración BYOK API Key */}
+          {/* Configuración Multi-Provider BYOK */}
           <div className="border border-border/60 rounded-xl p-3 bg-muted/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                 <Key className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>API Key (BYOK en localStorage)</span>
+                <span>Proveedor & Clave (BYOK)</span>
               </div>
               <button
                 type="button"
                 disabled={isGenerating}
-                onClick={() => setShowKeyInput(!showKeyInput)}
+                onClick={handleToggleConfig}
                 className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
               >
-                {showKeyInput ? 'Ocultar' : hasSavedKey ? 'Cambiar Clave' : 'Configurar Clave'}
+                {showConfig || !hasApiKey ? 'Ocultar' : 'Cambiar Clave'}
               </button>
             </div>
 
-            {hasSavedKey && !showKeyInput && (
-              <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
+            {/* Selector de proveedor */}
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[11px] text-muted-foreground">Motor:</span>
+              <div className="inline-flex rounded-lg border border-border bg-background p-0.5">
+                <button
+                  type="button"
+                  disabled={isGenerating}
+                  onClick={() => handleProviderChange('gemini')}
+                  className={`px-2 py-0.5 text-[11px] rounded-md font-medium transition-colors cursor-pointer ${
+                    provider === 'gemini'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Google Gemini
+                </button>
+                <button
+                  type="button"
+                  disabled={isGenerating}
+                  onClick={() => handleProviderChange('groq')}
+                  className={`px-2 py-0.5 text-[11px] rounded-md font-medium transition-colors cursor-pointer ${
+                    provider === 'groq'
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Groq (Llama 3.3)
+                </button>
+              </div>
+            </div>
+
+            {hasApiKey && !showConfig && (
+              <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>API Key configurada en tu navegador (privada y segura)</span>
+                <span>Clave configurada en tu navegador para {provider === 'gemini' ? 'Gemini' : 'Groq'}</span>
               </div>
             )}
 
-            {showKeyInput && (
+            {(showConfig || !hasApiKey) && (
               <div className="mt-2.5 space-y-2 animate-in fade-in duration-150">
                 <div className="flex gap-2">
                   <Input
                     type="password"
-                    placeholder="AIzaSy..."
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={provider === 'gemini' ? 'AIzaSy...' : 'gsk_...'}
+                    value={inputKey}
+                    onChange={(e) => setInputKey(e.target.value)}
                     disabled={isGenerating}
                     className="bg-background border-border text-foreground text-xs rounded-xl h-8 placeholder:text-muted-foreground"
                   />
@@ -258,7 +287,7 @@ export function GenerateProjectWithAiModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={isGenerating || !apiKey.trim()}
+                    disabled={isGenerating || !inputKey.trim()}
                     onClick={handleSaveApiKey}
                     className="h-8 text-xs rounded-xl border-border hover:bg-muted"
                   >

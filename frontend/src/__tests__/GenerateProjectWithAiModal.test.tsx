@@ -84,6 +84,7 @@ describe('GenerateProjectWithAiModal', () => {
       expect(generateSpy).toHaveBeenCalledWith({
         prompt: 'Campaña de marketing en 3 semanas',
         apiKey: 'test-key-123',
+        provider: 'gemini',
       });
       expect(mockMutate).toHaveBeenCalledWith(
         {
