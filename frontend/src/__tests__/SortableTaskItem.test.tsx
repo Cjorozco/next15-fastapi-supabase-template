@@ -112,4 +112,21 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
 
     expect(onRemoveSubtask).toHaveBeenCalledWith('task_1', 'sub_1');
   });
+
+  it('displays droppable subtask conversion zone when another task is dragging', () => {
+    render(
+      <SortableTaskItem
+        task={mockTask}
+        isDetailView={true}
+        activeDraggingId="task_2"
+        onUpdateStatus={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText('Soltar aquí para convertir en subtarea')
+    ).toBeInTheDocument();
+  });
 });
+

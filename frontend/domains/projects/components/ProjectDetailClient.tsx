@@ -13,9 +13,10 @@ import {
   useAddSubtask,
   useToggleSubtask,
   useRemoveSubtask,
+  useConvertTaskToSubtask,
 } from '@/domains/tasks/hooks/useTaskMutations';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTaskItem } from './SortableTaskItem';
 import { Plus, ArrowLeft, Loader2, AlertCircle, FolderKanban, Circle, X } from 'lucide-react';
@@ -34,9 +35,11 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { mutate: addSubtask } = useAddSubtask();
   const { mutate: toggleSubtask } = useToggleSubtask();
   const { mutate: removeSubtask } = useRemoveSubtask();
+  const { mutate: convertTaskToSubtask } = useConvertTaskToSubtask();
 
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
+  const [activeDraggingId, setActiveDraggingId] = useState<string | null>(null);
 
   const sortedTasks = project ? [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)) : [];
 
@@ -45,15 +48,36 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDraggingId(String(event.active.id));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDraggingId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+
+    // Detectar si fue soltado en la zona de subtarea de otra tarea
+    if (typeof over.id === 'string' && over.id.startsWith('subtask-target-')) {
+      const targetTaskId = over.id.replace('subtask-target-', '') as Id<'tasks'>;
+      const sourceTaskId = active.id as Id<'tasks'>;
+      if (sourceTaskId !== targetTaskId) {
+        convertTaskToSubtask({ sourceTaskId, targetTaskId });
+      }
+      return;
+    }
 
     const oldIndex = sortedTasks.findIndex((t) => t._id === active.id);
     const newIndex = sortedTasks.findIndex((t) => t._id === over.id);
 
-    const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
-    reorderTasks({ projectId, taskIds: newOrder.map((t) => t._id) });
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
+      reorderTasks({ projectId, taskIds: newOrder.map((t) => t._id) });
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveDraggingId(null);
   };
 
   const handleAddTask = () => {
@@ -194,13 +218,20 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                 )}
 
                 <div className="space-y-1">
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragCancel={handleDragCancel}
+                    onDragEnd={handleDragEnd}
+                  >
                     <SortableContext items={sortedTasks.map((t) => t._id)} strategy={verticalListSortingStrategy}>
                       {sortedTasks.map((task) => (
                         <SortableTaskItem
                           key={task._id}
                           task={task}
                           isDetailView={true}
+                          activeDraggingId={activeDraggingId}
                           onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
                           onDelete={(taskId) => deleteTask(taskId)}
                           onAddSubtask={(taskId, title) => addSubtask({ taskId, title })}

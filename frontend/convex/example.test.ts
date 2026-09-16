@@ -219,4 +219,44 @@ test("subtasks lifecycle and auto-complete parent task", async () => {
   expect(afterRemove.isCompleted).toBe(true);
 });
 
+test("convert existing task into a subtask of another task", async () => {
+  const t = authed();
+
+  await t.mutation(api.users.store, {});
+  const project = await t.mutation(api.projects.create, {
+    name: "Convert Task Project",
+  });
+
+  const task1 = await t.mutation(api.tasks.create, {
+    projectId: project._id,
+    title: "Tarea Padre",
+  });
+
+  const task2 = await t.mutation(api.tasks.create, {
+    projectId: project._id,
+    title: "Tarea a Convertir",
+  });
+
+  // Verify initial state
+  const initialProject = await t.query(api.projects.get, { projectId: project._id });
+  expect(initialProject?.tasks).toHaveLength(2);
+
+  // Convert task2 into a subtask of task1
+  const updatedTarget = await t.mutation(api.tasks.convertTaskToSubtask, {
+    sourceTaskId: task2._id,
+    targetTaskId: task1._id,
+  });
+
+  expect(updatedTarget._id).toBe(task1._id);
+  expect(updatedTarget.subtasks).toHaveLength(1);
+  expect(updatedTarget.subtasks?.[0].title).toBe("Tarea a Convertir");
+
+  // Verify task2 is no longer in top-level tasks
+  const afterConvertProject = await t.query(api.projects.get, { projectId: project._id });
+  expect(afterConvertProject?.tasks).toHaveLength(1);
+  expect(afterConvertProject?.tasks[0].title).toBe("Tarea Padre");
+  expect(afterConvertProject?.tasks[0].subtasks).toHaveLength(1);
+});
+
+
 

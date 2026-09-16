@@ -134,3 +134,32 @@ export const useRemoveSubtask = () => {
   };
 };
 
+export const useConvertTaskToSubtask = () => {
+  const convert = useMutation(api.tasks.convertTaskToSubtask);
+
+  return {
+    mutate: (
+      {
+        sourceTaskId,
+        targetTaskId,
+      }: {
+        sourceTaskId: Id<'tasks'>;
+        targetTaskId: Id<'tasks'>;
+      },
+      options?: { onSuccess?: () => void }
+    ) => {
+      convert({ sourceTaskId, targetTaskId })
+        .then(() => {
+          toast.success('Tarea convertida en subtarea');
+          options?.onSuccess?.();
+        })
+        .catch((err: unknown) => {
+          toast.error(
+            mapErrorToUserMessage(err, 'Error al convertir la tarea en subtarea')
+          );
+        });
+    },
+  };
+};
+
+

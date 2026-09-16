@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { X, GripVertical, CheckCircle2, ChevronRight, ChevronDown, Plus, CornerDownRight } from 'lucide-react';
@@ -16,6 +17,7 @@ interface SortableTaskItemProps {
   onToggleSubtask?: (taskId: Id<'tasks'>, subtaskId: string, isCompleted: boolean) => void;
   onRemoveSubtask?: (taskId: Id<'tasks'>, subtaskId: string) => void;
   isDetailView?: boolean;
+  activeDraggingId?: string | null;
 }
 
 export function SortableTaskItem({
@@ -26,6 +28,7 @@ export function SortableTaskItem({
   onToggleSubtask,
   onRemoveSubtask,
   isDetailView = false,
+  activeDraggingId = null,
 }: SortableTaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -34,16 +37,29 @@ export function SortableTaskItem({
   const {
     attributes,
     listeners,
-    setNodeRef,
+    setNodeRef: setSortableRef,
     transform,
     transition,
     isDragging,
   } = useSortable({ id: task._id });
 
+  // Droppable zone for converting another dragged task into a subtask of this task
+  const {
+    isOver: isOverSubtaskDrop,
+    setNodeRef: setSubtaskDropRef,
+  } = useDroppable({
+    id: `subtask-target-${task._id}`,
+    data: {
+      type: 'subtask-target',
+      targetTaskId: task._id,
+    },
+    disabled: !isDetailView || !activeDraggingId || activeDraggingId === task._id,
+  });
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 10 : 1,
   };
 
@@ -63,13 +79,19 @@ export function SortableTaskItem({
     setIsExpanded(true);
   };
 
+  const isAnotherTaskDragging = isDetailView && activeDraggingId && activeDraggingId !== task._id;
+
   if (isDetailView) {
     return (
       <div
-        ref={setNodeRef}
+        ref={setSortableRef}
         style={style}
-        className={`rounded-xl border border-transparent transition-colors ${
-          isDragging ? 'bg-card shadow-md border-primary/40' : 'hover:bg-muted/30'
+        className={`rounded-xl border transition-all duration-150 ${
+          isDragging
+            ? 'bg-card shadow-lg border-primary/40'
+            : isOverSubtaskDrop
+            ? 'bg-primary/5 border-primary shadow-sm'
+            : 'border-transparent hover:bg-muted/30'
         }`}
       >
         <div className="flex items-center gap-3 p-3 group">
@@ -149,6 +171,27 @@ export function SortableTaskItem({
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Zona visual de Drop para convertir la tarea arrastrada en subtarea */}
+        {isAnotherTaskDragging && (
+          <div
+            ref={setSubtaskDropRef}
+            className={`mx-3 mb-2.5 p-2 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 text-xs select-none ${
+              isOverSubtaskDrop
+                ? 'border-primary bg-primary/20 text-primary font-semibold shadow-sm ring-2 ring-primary/20 scale-[1.01]'
+                : 'border-primary/40 bg-primary/5 text-primary/80 hover:border-primary/70 hover:bg-primary/10'
+            }`}
+          >
+            <CornerDownRight
+              className={`w-3.5 h-3.5 ${isOverSubtaskDrop ? 'animate-bounce text-primary' : 'text-primary/70'}`}
+            />
+            <span>
+              {isOverSubtaskDrop
+                ? '¡Soltar para convertir en subtarea!'
+                : 'Soltar aquí para convertir en subtarea'}
+            </span>
+          </div>
+        )}
 
         {/* Sección desplegable de subtareas */}
         {isExpanded && (
@@ -243,7 +286,7 @@ export function SortableTaskItem({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setSortableRef}
       style={style}
       className={`flex items-center gap-2 py-1 group/task relative ${
         isDragging ? 'bg-card rounded-lg shadow-xs border border-primary/40 indent-1' : ''
