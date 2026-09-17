@@ -212,6 +212,117 @@ export const remove = mutation({
   },
 });
 
+export const applyAiRefinement = mutation({
+  args: {
+    projectId: v.id("projects"),
+    updatedDescription: v.optional(v.string()),
+    newTasks: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          subtasks: v.optional(v.array(v.string())),
+        })
+      )
+    ),
+    newSubtasksForExistingTasks: v.optional(
+      v.array(
+        v.object({
+          taskId: v.string(),
+          subtaskTitles: v.array(v.string()),
+        })
+      )
+    ),
+  },
+  returns: projectWithTasksValidator,
+  handler: async (ctx, args) => {
+    await requireProjectOwner(ctx, args.projectId);
+
+    // 1. Actualizar descripción si se especificó
+    if (args.updatedDescription !== undefined) {
+      const cleanDesc = args.updatedDescription.trim();
+      await ctx.db.patch(args.projectId, {
+        description: cleanDesc ? cleanDesc : undefined,
+      });
+    }
+
+    // 2. Inyectar nuevas subtareas a tareas existentes
+    if (args.newSubtasksForExistingTasks && args.newSubtasksForExistingTasks.length > 0) {
+      for (const item of args.newSubtasksForExistingTasks) {
+        try {
+          const taskId = ctx.db.normalizeId("tasks", item.taskId);
+          if (taskId) {
+            const task = await ctx.db.get(taskId);
+            if (task && task.projectId === args.projectId) {
+              const currentSubtasks = task.subtasks || [];
+              const generatedNewSubtasks = item.subtaskTitles
+                .map((t) => t.trim())
+                .filter(Boolean)
+                .map((title) => ({
+                  id: `subtask_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                  title,
+                  isCompleted: false,
+                }));
+
+              if (generatedNewSubtasks.length > 0) {
+                const mergedSubtasks = [...currentSubtasks, ...generatedNewSubtasks];
+                await ctx.db.patch(taskId, {
+                  subtasks: mergedSubtasks,
+                  isCompleted: false,
+                });
+              }
+            }
+          }
+        } catch {
+          // Si el ID no era válido, continuar de forma segura
+        }
+      }
+    }
+
+    // 3. Añadir nuevas tareas al proyecto
+    if (args.newTasks && args.newTasks.length > 0) {
+      const currentTasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .collect();
+
+      let nextPosition = currentTasks.reduce((max, t) => Math.max(max, t.position), -1) + 1;
+
+      for (const newTask of args.newTasks) {
+        const title = newTask.title.trim();
+        if (title) {
+          const subtasks = (newTask.subtasks || [])
+            .map((st) => st.trim())
+            .filter(Boolean)
+            .map((stTitle) => ({
+              id: `subtask_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+              title: stTitle,
+              isCompleted: false,
+            }));
+
+          await ctx.db.insert("tasks", {
+            projectId: args.projectId,
+            title,
+            isCompleted: false,
+            position: nextPosition++,
+            subtasks,
+          });
+        }
+      }
+    }
+
+    const updatedProject = await ctx.db.get(args.projectId);
+    if (!updatedProject) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Project not found");
+    }
+
+    const finalTasks = await getTasksForProject(ctx, args.projectId);
+    return {
+      ...updatedProject,
+      tasks: finalTasks,
+    };
+  },
+});
+
 export const cleanupAll = mutation({
   args: {},
   returns: v.null(),

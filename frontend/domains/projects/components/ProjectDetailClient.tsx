@@ -18,6 +18,7 @@ import {
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { RefineProjectWithAiModal } from './RefineProjectWithAiModal';
 import { SortableTaskItem } from './SortableTaskItem';
 import { Plus, ArrowLeft, Loader2, AlertCircle, FolderKanban, Circle, X } from 'lucide-react';
 import { Id } from '@/convex/_generated/dataModel';
@@ -141,16 +142,24 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
           {project && (
             <div className="space-y-6">
               <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary mt-0.5 flex-shrink-0">
-                    <FolderKanban className="w-5 h-5" />
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-primary/10 text-primary mt-0.5 flex-shrink-0">
+                      <FolderKanban className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-bold text-foreground">{project.name}</h1>
+                      {project.description && (
+                        <p className="text-xs text-muted-foreground mt-1">{project.description}</p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h1 className="text-xl font-bold text-foreground">{project.name}</h1>
-                    {project.description && (
-                      <p className="text-xs text-muted-foreground mt-1">{project.description}</p>
-                    )}
-                  </div>
+                  <RefineProjectWithAiModal
+                    projectId={project._id}
+                    projectName={project.name}
+                    projectDescription={project.description}
+                    tasks={project.tasks}
+                  />
                 </div>
 
                 <div className="mt-4">

@@ -120,3 +120,39 @@ export const useDeleteProject = () => {
     isPending,
   };
 };
+
+export const useApplyAiRefinement = () => {
+  const refine = useMutation(api.projects.applyAiRefinement);
+  const [isPending, setIsPending] = useState(false);
+
+  return {
+    mutate: (
+      params: {
+        projectId: Parameters<typeof refine>[0]['projectId'];
+        updatedDescription?: string;
+        newTasks?: Array<{ title: string; subtasks?: string[] }>;
+        newSubtasksForExistingTasks?: Array<{ taskId: string; subtaskTitles: string[] }>;
+      },
+      options?: {
+        onSuccess?: (data: unknown) => void;
+        onError?: (err: Error) => void;
+      }
+    ) => {
+      setIsPending(true);
+      void refine(params)
+        .then((data) => {
+          options?.onSuccess?.(data);
+        })
+        .catch((err: unknown) => {
+          const message = mapErrorToUserMessage(err, 'Error al aplicar mejoras con IA');
+          toast.error(message);
+          options?.onError?.(err instanceof Error ? err : new Error(message));
+        })
+        .finally(() => {
+          setIsPending(false);
+        });
+    },
+    isPending,
+  };
+};
+
