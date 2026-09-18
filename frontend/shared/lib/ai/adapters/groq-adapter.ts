@@ -10,13 +10,22 @@ import {
 } from '../ai-errors';
 
 export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
-export const GROQ_FALLBACK_MODELS = [
+
+/**
+ * Modelos oficiales vigentes y ordenados de GroqCloud.
+ * Se eliminó 'groq/compound-mini' de forma preventiva.
+ */
+export const GROQ_MODELS = [
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
-  'groq/compound-mini',
   'groq/compound',
   'qwen/qwen3.8-27b',
-];
+  'openai/gpt-oss-safeguard-20b',
+  'meta-llama/llama-prompt-guard-2-86m',
+  'meta-llama/llama-prompt-guard-2-22m',
+] as const;
+
+export const GROQ_FALLBACK_MODELS: string[] = [...GROQ_MODELS];
 
 export class GroqProviderClient implements AiProviderClient {
   readonly providerId = 'groq' as const;
@@ -76,6 +85,7 @@ export class GroqProviderClient implements AiProviderClient {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey}`,
+            'Groq-Beta': 'inference-metrics',
           },
           body: JSON.stringify(requestBody),
           signal: controller.signal,

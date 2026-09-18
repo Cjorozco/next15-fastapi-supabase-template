@@ -63,7 +63,7 @@ describe('RefineProjectWithAiModal Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /refinar con ia/i }));
 
     expect(screen.getByText('Copiloto IA: Refinar Proyecto')).toBeInTheDocument();
-    expect(screen.getByText(/"Mi Proyecto SaaS"/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mi Proyecto SaaS/i)).toBeInTheDocument();
     expect(screen.getByText(/Agregar subtareas detalladas/i)).toBeInTheDocument();
   });
 

@@ -4,6 +4,7 @@ export * from './safe-ai-parser';
 export * from './ai-storage';
 export * from './adapters/gemini-adapter';
 export * from './adapters/groq-adapter';
+export * from './config';
 export * from './ai-factory';
 export * from './ai-gateway';
 export * from './useAiClient';
