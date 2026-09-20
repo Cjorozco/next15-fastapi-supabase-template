@@ -258,5 +258,26 @@ test("convert existing task into a subtask of another task", async () => {
   expect(afterConvertProject?.tasks[0].subtasks).toHaveLength(1);
 });
 
+test("cannot reorder tasks belonging to another project", async () => {
+  const t = authed();
 
+  await t.mutation(api.users.store, {});
+  const project1 = await t.mutation(api.projects.create, { name: "Proyecto 1" });
+  const project2 = await t.mutation(api.projects.create, { name: "Proyecto 2" });
 
+  const t1 = await t.mutation(api.tasks.create, {
+    projectId: project1._id,
+    title: "P1 Tarea",
+  });
+  const t2 = await t.mutation(api.tasks.create, {
+    projectId: project2._id,
+    title: "P2 Tarea",
+  });
+
+  await expect(
+    t.mutation(api.tasks.reorder, {
+      projectId: project1._id,
+      taskIds: [t2._id, t1._id],
+    })
+  ).rejects.toThrow("Task not found in project");
+});

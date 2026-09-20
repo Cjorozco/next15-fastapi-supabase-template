@@ -12,60 +12,24 @@ Convex agent skills for common tasks can be installed by running
 
 <!-- convex-ai-end -->
 
-# Project Manager SaaS — Guía para Agentes
+# Project Manager SaaS — Guía para agentes
 
-Documentación de arquitectura completa: [`ARCHITECTURE.md`](../ARCHITECTURE.md).
+Documentación: [`ARCHITECTURE.md`](../ARCHITECTURE.md).
 
-## Reglas del Proyecto
+## Capa de IA
 
-- **Antigravity (Nativo en `.agents/rules/`):**
-  - Arquitectura y límites de dominio: [`.agents/rules/architecture.md`](./.agents/rules/architecture.md)
-  - Convenciones y seguridad de Convex: [`.agents/rules/convex-conventions.md`](./.agents/rules/convex-conventions.md)
-  - Heurísticas UX y frontend: [`.agents/rules/ux-principles.md`](./.agents/rules/ux-principles.md)
-  - Validación de IA con Zod (Zero-Trust Boundary): [`../docs/adr/002-ai-response-validation-with-zod.md`](../docs/adr/002-ai-response-validation-with-zod.md)
+**Común:** `.agents/rules/working-style.md` + `.agents/rules/ux-principles.md`  
+(Cursor: `.cursor/rules/working-style.mdc` + `ux-principles.mdc`)
 
-## Stack Principal
-- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4.
-- **Backend & DB:** Convex 1.31+.
-- **Auth:** Supabase Auth (JWT ES256 → Convex customJwt JWKS).
-- **Validación & AI Boundary:** Zod 3.x (`safeParseAIResponse`, `parseAIWithFallback`).
-- **Componentes UI:** shadcn/ui + Radix UI + Lucide Icons.
-- **Drag & Drop:** `@dnd-kit/core`, `@dnd-kit/sortable`.
-- **Notificaciones:** Sonner.
-- **Gráficas:** Recharts.
-- **Testing:** Vitest + Testing Library (Unitario frontend y Convex), Cypress (E2E).
-- **Filosofía:** UI tonta / backend fuerte; lógica de negocio, validaciones y autorización en Convex. Límite de Cero Confianza para respuestas de IA (Zod interceptors antes de DB o UI).
+**Este producto:** `.agents/rules/architecture.md` · Convex: `.agents/rules/convex-conventions.md` · IA: `.agents/rules/ai-validation-zod.md`  
+Skills Convex en `.agents/skills/` (pertenecen a este frontend).
 
-## Estructura de Directorios
+## Stack
 
-```text
-frontend/
-├── convex/
-│   ├── schema.ts              # Esquema de users, projects, tasks
-│   ├── auth.config.ts         # Verificación JWT Supabase
-│   ├── lib/
-│   │   ├── authorization.ts   # requireAuthenticatedUser
-│   │   └── errors.ts          # DomainException, DomainErrorCode
-│   ├── projects/              # mutations.ts, queries.ts
-│   ├── tasks/                 # mutations.ts, queries.ts
-│   └── users/                 # mutations.ts, queries.ts
-├── domains/
-│   ├── projects/              # components/, hooks/, types.ts
-│   ├── tasks/                 # hooks/, types.ts
-│   └── dashboard/             # components/
-├── shared/
-│   ├── components/
-│   │   ├── ui/                # shadcn primitives
-│   │   └── layout/            # Header, Sidebar
-│   ├── context/               # AuthContext
-│   └── lib/                   # convex-provider, supabase, utils, userFacingError
-│       └── ai/                # safe-ai-parser (Zod validation & sanitization)
-└── src/
-    ├── app/
-    │   ├── (auth)/            # login, register
-    │   ├── (dashboard)/       # page, projects, projects/[id]
-    │   ├── layout.tsx
-    │   └── globals.css
-    ├── proxy.ts               # Network-level boundary Next.js 16 (auth guards)
-    └── __tests__/             # Unit tests Vitest (UI, Convex, AI parser)
-```
+- **Frontend:** Next.js App Router, React 19, TypeScript, Tailwind v4, shadcn
+- **Backend & DB:** Convex
+- **Auth:** Supabase Auth (JWT ES256 → Convex customJwt JWKS)
+- **IA:** Zod (`safeParseAIResponse`, `parseAIWithFallback`) en `shared/lib/ai/`
+- **Filosofía:** UI tonta / backend fuerte
+
+`backend/` del monorepo es FastAPI histórico — no es este cwd.

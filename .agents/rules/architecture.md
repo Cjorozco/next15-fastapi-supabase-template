@@ -4,7 +4,7 @@
 > `backend/` (FastAPI) es **archivo histórico**. No lo extiendas salvo petición explícita.  
 > No copies reglas de Ecosistemas (aceite, snapshot de precio, roles admin/operador de campo).
 
-Este proyecto cuenta con documentación de arquitectura completa en [`ARCHITECTURE.md`](../../../ARCHITECTURE.md) (raíz del repositorio).
+Este proyecto cuenta con documentación de arquitectura completa en [`ARCHITECTURE.md`](../ARCHITECTURE.md) (raíz del repositorio).
 **Consúltalo antes de proponer cualquier tabla, mutation, query o componente nuevo.**
 
 ---

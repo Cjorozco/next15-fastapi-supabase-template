@@ -1,3 +1,9 @@
+---
+description: Validaci�n Zod de salidas de IA (Project Manager)
+globs: frontend/shared/lib/ai/**/*.ts,shared/lib/ai/**/*.ts
+alwaysApply: false
+---
+
 # Regla: Límite de Cero Confianza para Salidas de IA (Validación con Zod)
 
 ## Principio Esencial

@@ -1,3 +1,8 @@
+---
+description: Arquitectura Project Manager (Convex + Supabase Auth)
+alwaysApply: true
+---
+
 # Project Manager SaaS — Reglas de Arquitectura
 
 > Código vivo: `frontend/` (Next.js + Convex + Supabase Auth).  

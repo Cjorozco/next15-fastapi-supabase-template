@@ -317,6 +317,13 @@ export const reorder = mutation({
 
     for (let index = 0; index < args.taskIds.length; index++) {
       const taskId = args.taskIds[index];
+      const task = await ctx.db.get(taskId);
+      if (!task || task.projectId !== args.projectId) {
+        throw new DomainException(
+          "ENTITY_NOT_FOUND",
+          "Task not found in project"
+        );
+      }
       await ctx.db.patch(taskId, { position: index });
     }
 

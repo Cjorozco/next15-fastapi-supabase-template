@@ -11,3 +11,11 @@ Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+Lee **`AGENTS.md`** en este `frontend/`.
+
+- Forma de trabajar: `.agents/rules/working-style.md`
+- UX: `.agents/rules/ux-principles.md`
+- Producto: `.agents/rules/architecture.md`
+- Convex: `.agents/rules/convex-conventions.md` y `convex/_generated/ai/guidelines.md`
+- IA/Zod: `.agents/rules/ai-validation-zod.md`
