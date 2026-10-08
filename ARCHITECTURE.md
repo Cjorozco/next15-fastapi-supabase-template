@@ -25,7 +25,7 @@ graph LR
     subgraph Backend["Backend & Base de Datos (Convex)"]
         AuthConf["auth.config.ts (JWKS verification)"]
         AuthLib["lib/authorization.ts + lib/errors.ts"]
-        DomainFns["projects/, tasks/, users/ (mutations & queries)"]
+        DomainFns["projects.ts, tasks.ts, users.ts (queries & mutations)"]
         DB[(Document DB & Indexes)]
     end
 
@@ -57,7 +57,9 @@ graph LR
 | **Drag & Drop** | `@dnd-kit` | 6.3 / 10.0 | Reordenamiento interactivo de tareas |
 | **Notificaciones** | Sonner | 2.0.7 | Toasts no intrusivos |
 | **Visualización** | Recharts | 3.7.0 | Gráficas de progreso del proyecto |
-| **Testing** | Vitest + RTL + Cypress | -- | Pruebas unitarias y E2E |
+| **Validación** | Zod | 4.x | Validación de respuestas de IA y formularios |
+| **IA (BYOK)** | Gemini + Groq (cliente) | -- | Generación y refinamiento de proyectos |
+| **Testing** | Vitest + RTL | 3.x | Pruebas unitarias y de componentes (Cypress fue retirado) |
 
 ---
 
@@ -70,23 +72,20 @@ frontend/
 ├── convex/                          # Backend en la nube reactivo
 │   ├── _generated/                  # Tipos autogenerados de Convex
 │   ├── auth.config.ts               # Proveedor JWT Supabase (JWKS)
-│   ├── schema.ts                    # Esquema de users, projects, tasks
+│   ├── schema.ts                    # Esquema de users, projects, tasks (subtasks embebidas)
 │   ├── lib/
-│   │   ├── authorization.ts         # requireAuthenticatedUser()
+│   │   ├── authorization.ts         # requireAuthenticatedUser(), requireProjectOwner()
 │   │   └── errors.ts                # DomainException y DomainErrorCode
-│   ├── projects/
-│   │   ├── mutations.ts             # create, remove, cleanupAll
-│   │   └── queries.ts               # list, get
-│   ├── tasks/
-│   │   ├── mutations.ts             # create, update, remove, reorder
-│   │   └── queries.ts               # (queries de tareas)
-│   └── users/
-│       ├── mutations.ts             # store
-│       └── queries.ts               # me
+│   ├── projects.ts                  # list, get, create, createWithTasks, applyAiRefinement, remove, cleanupAll
+│   ├── tasks.ts                     # create, update, remove, reorder, addSubtask, toggleSubtask,
+│   │                                #   removeSubtask, convertTaskToSubtask
+│   └── users.ts                     # me, store
 ├── domains/                         # Código modularizado por dominio de negocio
 │   ├── projects/
-│   │   ├── components/              # ProjectCard, CreateProjectModal, etc.
-│   │   ├── hooks/                   # useProjects, useProject, useProjectMutations
+│   │   ├── components/              # ProjectCard, CreateProjectModal, ProjectDetailClient, SortableTaskItem,
+│   │   │                            #   ProjectProgressChart, GenerateProjectWithAiModal, RefineProjectWithAiModal
+│   │   ├── hooks/                   # useProjects, useProject
+│   │   ├── schemas/                 # ai-project.schema.ts, ai-refine.schema.ts (Zod)
 │   │   └── types.ts                 # Project, ProjectWithTasks
 │   ├── tasks/
 │   │   ├── hooks/                   # useTaskMutations
@@ -98,10 +97,18 @@ frontend/
 │   │   ├── layout/                  # Header, Sidebar
 │   │   └── ui/                      # button, card, dialog, input, etc. (shadcn)
 │   ├── context/
-│   │   └── AuthContext.tsx          # Sesión de usuario Supabase
+│   │   ├── AuthContext.tsx          # Sesión de usuario Supabase
+│   │   └── ThemeContext.tsx         # Tema claro (default) / oscuro
 │   └── lib/
+│       ├── ai/                      # Gateway multi-proveedor (ver sección 8)
+│       │   ├── adapters/            # gemini-adapter.ts, groq-adapter.ts
+│       │   ├── ai-gateway.ts, ai-factory.ts, ai-storage.ts, ai-errors.ts
+│       │   ├── config.ts            # Metadatos de modelos
+│       │   ├── safe-ai-parser.ts    # Sanitización + validación Zod
+│       │   └── useAiClient.ts       # Hook de acceso al cliente de IA
 │       ├── convex-provider.tsx      # ConvexProviderWithAuth bridge
 │       ├── supabase.ts              # Cliente browser de Supabase
+│       ├── themeEngine.ts           # Motor de armonía de color dinámico
 │       ├── userFacingError.ts       # Mapeo de errores de backend a mensajes amigables
 │       └── utils.ts                 # cn() y helpers
 └── src/
@@ -117,7 +124,7 @@ frontend/
     │   ├── layout.tsx               # Root layout con providers globales
     │   └── globals.css              # Variables de tema y tokens
     ├── proxy.ts                     # Network boundary Next.js 16 (middleware)
-    └── __tests__/                   # Pruebas unitarias de UI
+    └── __tests__/                   # Pruebas unitarias y de componentes (Vitest)
 ```
 
 ---
@@ -144,6 +151,7 @@ erDiagram
         string title
         boolean isCompleted
         number position "Índice para reordenamiento"
+        array subtasks "opcional: {id, title, isCompleted}[]"
     }
 
     users ||--o{ projects : "posee"
@@ -179,6 +187,8 @@ sequenceDiagram
 ### Autorización Server-side
 Toda operación sensible invoca `requireAuthenticatedUser(ctx)` en `convex/lib/authorization.ts`. En caso de sesión inválida o faltante, arroja un `DomainException` con código `DomainErrorCode.NOT_AUTHENTICATED`.
 
+**Aislamiento entre tenants:** autenticarse no basta. Toda mutación o query que reciba un `projectId` o `taskId` debe verificar que el proyecto pertenezca al usuario autenticado (`requireProjectOwner` en `convex/lib/authorization.ts`, usado por `convex/tasks.ts` y `convex/projects.ts`) y que las tareas pertenezcan a ese proyecto. `tasks.reorder` carecía de esta comprobación (IDOR entre tenants) y se corrigió en `990d109`; toda función nueva debe seguir el mismo patrón.
+
 ---
 
 ## 7. Middleware y Frontera de Red (`src/proxy.ts`)
@@ -193,14 +203,49 @@ En Next.js 16+, la convención recomendada de red es `proxy.ts`. Este archivo:
 
 ## 8. Principios de Integración de IA y Validación con Zod (Zero-Trust Boundary)
 
-Para futuras capacidades de IA generativa (Gemini, OpenAI, agentes autónomos), el sistema implementa una política de **Límite de Cero Confianza (Zero-Trust AI Boundary)**:
+### 8.1 Arquitectura: BYOK en el cliente
 
-1. **Entrada No Confiable por Defecto:** Las salidas de modelos de lenguaje son probabilísticas y nunca deben insertarse de forma cruda en la base de datos de Convex ni mutar el estado de React sin validación previa.
-2. **Intercepción y Sanitización:** Los payloads generados por LLMs son procesados con `safeParseAIResponse` (`frontend/shared/lib/ai/safe-ai-parser.ts`), eliminando bloques de markdown (` ```json `) y extrayendo el JSON estructurado.
-3. **Validación Estricta con Zod:** Se aplican esquemas con descarte de campos extra (`.strip()`), coerciones seguras (`z.coerce.*`) y defaults defensivos.
-4. **Flujo Convex Action -> Internal Mutation:**
-   - La llamada a la API del proveedor de IA se realiza dentro de una **Convex Action**.
-   - La acción valida el payload con Zod.
-   - **Únicamente tras una validación exitosa**, se ejecuta la mutación interna (`internalMutation`) para persistir los datos.
-5. **Resiliencia y Degradación Elegante:** En caso de discrepancia de esquema, se extraen los problemas (`formatZodIssuesForPrompt`) para reintento/autocorrección por el LLM o se activa un fallback seguro (`parseAIWithFallback`) impidiendo fallos de renderizado en la UI.
+Las llamadas a IA se hacen **desde el navegador** con la API key del propio usuario (BYOK, *Bring Your Own Key*). La key se guarda solo en `localStorage` (`frontend/shared/lib/ai/ai-storage.ts`) y **no pasa por el backend de Convex**. Convex solo recibe el resultado ya validado, a través de mutaciones normales.
+
+```mermaid
+graph LR
+    UI[Modal de IA] --> Hook[useAiClient]
+    Hook --> GW[ai-gateway]
+    GW --> F[ai-factory]
+    F --> G[gemini-adapter]
+    F --> Q[groq-adapter]
+    G & Q -->|API key del usuario| LLM[Proveedor LLM]
+    LLM --> P[safeParseAIResponse + Zod]
+    P -->|payload validado| M[Mutación Convex]
+```
+
+Módulos en `frontend/shared/lib/ai/`:
+
+| Archivo | Responsabilidad |
+| :--- | :--- |
+| `ai-gateway.ts` / `ai-factory.ts` | Gateway multi-proveedor; resuelve proveedor y key y entrega el adaptador. |
+| `adapters/gemini-adapter.ts` | Adaptador Gemini con modelos de fallback (`GEMINI_FALLBACK_MODELS`). |
+| `adapters/groq-adapter.ts` | Adaptador Groq. |
+| `ai-storage.ts` | Proveedor y API keys en `localStorage`. Proveedor por defecto: `gemini`. |
+| `config.ts` | Metadatos de los modelos disponibles. |
+| `ai-errors.ts` | Errores tipados de IA y mapeo a mensajes para el usuario (ADR 003). |
+| `safe-ai-parser.ts` | Sanitización y validación Zod de respuestas del LLM. |
+| `useAiClient.ts` | Hook de acceso al cliente de IA (proveedor, key, `generateStructured`). |
+
+### 8.2 Funcionalidades
+
+| Funcionalidad | Componente | Esquema Zod | Persistencia |
+| :--- | :--- | :--- | :--- |
+| Generar proyecto | `GenerateProjectWithAiModal` | `domains/projects/schemas/ai-project.schema.ts` | `projects.createWithTasks` |
+| Refinar proyecto (copiloto) | `RefineProjectWithAiModal` | `domains/projects/schemas/ai-refine.schema.ts` | `projects.applyAiRefinement` |
+
+### 8.3 Política de Cero Confianza (Zero-Trust AI Boundary)
+
+1. **Entrada no confiable por defecto:** las salidas de modelos de lenguaje son probabilísticas y nunca se insertan crudas en Convex ni mutan el estado de React sin validación previa.
+2. **Sanitización:** `safeParseAIResponse` (`shared/lib/ai/safe-ai-parser.ts`) elimina bloques markdown (` ```json `) y extrae el JSON.
+3. **Validación estricta con Zod:** los esquemas descartan campos desconocidos (comportamiento por defecto de `z.object`, equivalente a `.strip()`), usan coerciones seguras (`z.coerce.*`) y defaults defensivos.
+4. **Mutación solo con payload validado:** el cliente llama a la mutación de Convex únicamente tras una validación exitosa. La mutación **vuelve a exigir autenticación y propiedad del proyecto** (`requireAuthenticatedUser` / `requireProjectOwner`, sección 6): el cliente no es de confianza.
+5. **Resiliencia y degradación elegante:** ante discrepancias de esquema, `formatZodIssuesForPrompt` extrae los problemas para reintento o autocorrección por el LLM, y `parseAIWithFallback` entrega un fallback seguro que evita fallos de renderizado. Los errores de proveedor se tipifican en `ai-errors.ts`.
+
+Decisiones relacionadas: [ADR 002](docs/adr/002-ai-response-validation-with-zod.md) (validación con Zod) y [ADR 003](docs/adr/003-typed-ai-error-handling-and-resilience.md) (errores tipados y resiliencia).
 

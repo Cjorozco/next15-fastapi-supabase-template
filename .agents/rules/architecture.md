@@ -13,8 +13,8 @@ Este proyecto cuenta con documentación de arquitectura completa en [`ARCHITECTU
 
 1. **Esquema de datos acotado:** Las entidades principales de negocio son `users`, `projects` y `tasks`. Si una tarea parece requerir tablas adicionales, valida con el usuario antes de crearla.
 2. **UI tonta, backend fuerte:** Toda la lógica de negocio, validaciones de integridad y autorizaciones viven en Convex (`convex/`). Los componentes React solo renderizan estado y disparan mutations.
-3. **Autorización server-side obligatoria:** Toda mutation y query protegida debe llamar a `requireAuthenticatedUser(ctx)` desde `convex/lib/authorization.ts`. Nunca confíes en el estado del cliente para autorizar operaciones.
-4. **Manejo de errores tipados:** Utiliza `DomainException` desde `convex/lib/errors.ts` para arrojar errores predecibles con código (`NOT_AUTHENTICATED`, `NOT_FOUND`, `ALREADY_EXISTS`, `UNAUTHORIZED`, `VALIDATION_ERROR`). En el frontend se mapean con `mapErrorToUserMessage()` en `shared/lib/userFacingError.ts`.
+3. **Autorización server-side obligatoria:** Toda mutation y query protegida debe llamar a `requireAuthenticatedUser(ctx)` desde `convex/lib/authorization.ts`. Si recibe un `projectId` o `taskId`, además debe verificar propiedad con `requireProjectOwner(ctx, projectId)` y que cada tarea pertenezca a ese proyecto (IDOR de `tasks.reorder`, corregido en `990d109`). Nunca confíes en el estado del cliente para autorizar operaciones.
+4. **Manejo de errores tipados:** Utiliza `DomainException` desde `convex/lib/errors.ts` para arrojar errores predecibles con código (`NOT_AUTHENTICATED`, `UNAUTHORIZED`, `ENTITY_NOT_FOUND`, `DUPLICATE_ENTITY`, `INVALID_INPUT`). En el frontend se mapean con `mapErrorToUserMessage()` en `shared/lib/userFacingError.ts`.
 5. **Autenticación con Supabase Auth:** Supabase gestiona la identidad del usuario y firma JWTs con ES256 que Convex valida vía JWKS (`convex/auth.config.ts`). No alterar este mecanismo sin consultar.
 6. **Sin sobreingeniería:** Mantener la arquitectura simple y directa. Preferir las abstracciones nativas de Convex y Next.js App Router antes que capas intermedias innecesarias.
 
@@ -27,19 +27,19 @@ Organización basada en dominios de negocio:
 ```text
 convex/
   lib/                 # Utilidades compartidas (authorization.ts, errors.ts)
-  projects/            # mutations.ts, queries.ts
-  tasks/               # mutations.ts, queries.ts
-  users/               # mutations.ts, queries.ts
+  projects.ts          # Rutas planas: api.projects.* (no separar en carpetas)
+  tasks.ts             # api.tasks.*
+  users.ts             # api.users.*
 domains/
-  projects/            # components/, hooks/, types.ts
+  projects/            # components/, hooks/, schemas/ (Zod de IA), types.ts
   tasks/               # hooks/, types.ts
   dashboard/           # components/
 shared/
   components/
     ui/                # Componentes base (shadcn/ui)
     layout/            # Header, Sidebar
-  context/             # AuthContext
-  lib/                 # convex-provider, supabase, utils, userFacingError
+  context/             # AuthContext, ThemeContext
+  lib/                 # ai/ (gateway BYOK), convex-provider, supabase, themeEngine, utils, userFacingError
 src/app/
   (auth)/              # login, register
   (dashboard)/         # page (dashboard), projects/, projects/[id]/
