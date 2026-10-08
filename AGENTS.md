@@ -7,9 +7,10 @@ Lee esto **antes** de explorar.
 ## Capa de IA
 
 **Común:** `.agents/rules/working-style.md` + `.agents/rules/ux-principles.md`  
-(Cursor: `.cursor/rules/working-style.mdc` + `ux-principles.mdc`)
+(Cursor: `.cursor/rules/working-style.mdc` + `ux-principles.mdc`)  
+Fuente: [Principios y forma de trabajo](https://app.notion.com/p/3f3aa39f8dab81bc80fadd7c6515a087) (Notion). Las diferencias deliberadas de este repo están en "Excepciones del proyecto" de `architecture.md`.
 
-**Este producto:** `.agents/rules/architecture.md` y `frontend/.agents/rules/architecture.md`  
+**Este producto:** `.agents/rules/architecture.md` (copia en `frontend/.agents/rules/`)  
 Convex: `frontend/.agents/rules/convex-conventions.md`  
 IA/Zod: `frontend/.agents/rules/ai-validation-zod.md`  
 Skills Convex: `frontend/.agents/skills/` (sí pertenecen: este frontend usa Convex)
