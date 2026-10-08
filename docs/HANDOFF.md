@@ -24,8 +24,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - Tests: Vitest 12 archivos / 77 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-08).
 - No se corrieron lint ni `next build`, ni se probó la app en vivo.
 - `ARCHITECTURE.md` y `CHANGELOG.md` están actualizados con IA, subtareas, tema, fix de seguridad y retiro de Cypress.
-- Las reglas de agentes (`architecture`, `convex-conventions`, `ai-validation-zod`) se corrigieron para reflejar el código real (sección 8).
-- Todos estos cambios y este archivo siguen **sin commit**; verificar con `git status`.
+- Las reglas de agentes se corrigieron para reflejar el código real (commit `f2699e7` en `master`) y luego se alinearon con la capa común (rama `docs/align-common-layer`, sin push ni merge; ver sección 6).
 
 ### Mapa del código
 
@@ -55,45 +54,24 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 5. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
 6. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
 
-## 6. Principios de desarrollo (de `.agents/rules/`)
+## 6. Capa común y excepciones
 
-**Antes de tocar código:** leer `AGENTS.md` y `architecture.md`; usar el stack de `package.json`; no inventar alcance, tablas ni features "por si acaso"; ante duda no cubierta, preguntar.
+Principios, forma de trabajo, librerías por defecto y UX: [Principios y forma de trabajo](https://app.notion.com/p/3f3aa39f8dab81bc80fadd7c6515a087) (Notion), reflejados en `.agents/rules/`. No se repiten aquí.
 
-**Arquitectura (no negociable)**
-- Entidades acotadas: `users`, `projects`, `tasks`. Si parece hacer falta otra tabla, validar con el usuario.
-- UI tonta, backend fuerte: negocio, validaciones y autorización viven en Convex; React solo renderiza y dispara mutations.
-- Toda mutation/query protegida llama a `requireAuthenticatedUser(ctx)`; además se verifica propiedad del recurso (`requireProjectOwner`).
-- Errores con `DomainException` + `DomainErrorCode`; en el frontend se mapean con `mapErrorToUserMessage()` (`shared/lib/userFacingError.ts`).
-- Auth: Supabase ES256 + JWKS en Convex. No alterar sin consultar. Sin sobreingeniería.
-- Convex: `.withIndex()` siempre (evitar `.filter()` sobre `.collect()`); al borrar un proyecto se borran sus tareas; no modificar `schema.ts` sin evaluar impacto en producción.
+Excepciones deliberadas de este proyecto (detalle en `.agents/rules/architecture.md`, sección 3):
+- IA con BYOK en el cliente, no en el backend (ADR 002 y 003).
+- Convex en rutas planas (`projects.ts`, `tasks.ts`, `users.ts`); las carpetas por dominio rompieron `api.*` (`339a26a`).
+- Borrado físico con cascada de proyectos y tareas.
+- Se mantienen Recharts, `@dnd-kit` y Supabase Auth (ADR 001). **TanStack Charts** (`@tanstack/charts`) es el default para gráficas nuevas, pero aún **no está en `frontend/package.json`**: instalarlo antes de usarlo y no migrar `ProjectProgressChart` sin pedirlo.
+- Solo existe `master`.
 
-**Código y UX**
-- TypeScript estricto, sin `any` en código nuevo. Copy de UI en español, directo y sin jerga; código, variables y comentarios en inglés.
-- Reutilizar componentes y patrones del repo. Mobile-first, targets táctiles ≥ 44 px, HTML semántico, `inputMode` en campos numéricos.
-- Feedback inmediato (loading, `disabled`, empty, error) y toasts para acciones importantes. Destructivo: confirmación explícita con el diálogo del repo, no `window.confirm`.
-- Un CTA principal por vista; máximo 3 a 5 opciones a la vez.
+Antes de editar `convex/`, leer `frontend/convex/_generated/ai/guidelines.md`.
 
-**IA**
-- Las claves BYOK viven solo en `localStorage`/Ajustes; nunca en el repo ni en el backend.
-- La salida de un LLM es `unknown`: sanitizar con `safeParseAIResponse`, validar con Zod (`safeParse`, nunca `.parse()` directo), usar `parseAIWithFallback` en UI y `formatZodIssuesForPrompt` para reintentos. Recién entonces llamar la mutación, que vuelve a exigir auth y propiedad (ADR 002 y 003).
+## 7. Pendientes de la capa de reglas
 
-**Respuestas:** código listo para producción con paths exactos; señalar riesgos de arquitectura y costo (no sugerir de pago por defecto); marcar patrones viejos con `⚠️ OUTDATED: [old] → [new]. Reason: [why].`; si cambia arquitectura, deps, API o UX, actualizar los docs de este repo.
+- `docs/adr/002-ai-response-validation-with-zod.md` sigue describiendo el flujo Action → `internalMutation`. Añadir una nota (o un ADR nuevo) de que lo implementado es BYOK en el cliente.
+- Las reglas existen en cuatro copias (`.agents/rules/`, `frontend/.agents/rules/`, `.cursor/rules/`, `frontend/.cursor/rules/`) y hay que mantenerlas sincronizadas a mano. Se decidió mantener las cuatro por ahora.
 
-**Convex en rutas planas:** la separación en subcarpetas rompió `api.*` y se revirtió (`339a26a`). Leer `frontend/convex/_generated/ai/guidelines.md` antes de editar `convex/`.
-
-## 7. Librerías
-
-- **Instaladas (no se reemplazan):** Next 16, React 19, Tailwind v4, shadcn/Radix/Lucide, Convex, Supabase JS, Zod 4, `@dnd-kit`, Sonner, Recharts 3.7, Vitest + RTL.
-- **Gráficas:** se decidió usar [TanStack Charts](https://tanstack.com/charts/latest) para gráficas nuevas. Ojo: **no figura en `frontend/package.json`** (hoy `ProjectProgressChart` usa Recharts). Instalarla antes de usarla y no migrar lo existente sin pedirlo.
-- **Defaults para librerías nuevas** (`working-style.md`, solo si el repo no resuelve el problema): zod, Temporal (fechas), tanstack-table, better-auth, motion, fontsource, zustand, pragmatic-drag-and-drop, nuqs. La regla lista `chart.js` para gráficas; esa fila queda desplazada por TanStack Charts.
-
-## 8. Reglas de agentes: corregidas, pendientes de commit
-
-Se alinearon con el código (rutas planas de Convex, flujo de IA BYOK en el cliente, `requireProjectOwner` y los códigos de `errors.ts`) en `.agents/rules/{architecture,convex-conventions,ai-validation-zod}.md`, sus copias en `frontend/.agents/rules/` y los espejos `.cursor/rules/*.mdc`. Pendiente:
-- `docs/adr/002-ai-response-validation-with-zod.md` sigue describiendo el flujo Action → `internalMutation`. Es un ADR histórico: añadir una nota de que lo implementado es BYOK en el cliente (o un ADR nuevo que lo reemplace).
-- `working-style.md` lista `chart.js` como default de gráficas; actualizarlo a TanStack Charts cuando se instale.
-- `frontend/.cursor/rules/` está vacío; los espejos viven solo en `.cursor/rules/` de la raíz.
-
-## 9. Cómo actualizar este documento
+## 8. Cómo actualizar este documento
 
 Pedirlo en el chat de la sesión: Claude revisa `git log`, el estado del repo y el código, edita este archivo y luego refresca la copia de Notion.
