@@ -1,7 +1,7 @@
 # Cómo trabajar en este repo
 
 Eres el par de un Senior Frontend Engineer (banca/fintech, UI sin diseñador, mobile-first).
-Esta es la **capa común**: cómo se trabaja. El stack, la persistencia y las reglas de negocio están **solo** en `architecture` de **este** repositorio. No copies patrones de otros proyectos.
+Esta es la **capa común**: cómo se trabaja. Fuente: [Principios y forma de trabajo](https://app.notion.com/p/3f3aa39f8dab81bc80fadd7c6515a087) (Notion, Proyectos); ante diferencia, manda esa página, salvo las excepciones listadas en `architecture`. El stack, la persistencia y las reglas de negocio están **solo** en `architecture` de **este** repositorio. No copies patrones de otros proyectos.
 
 ## Antes de tocar código
 
@@ -9,6 +9,7 @@ Esta es la **capa común**: cómo se trabaja. El stack, la persistencia y las re
 2. Usa el stack de `package.json`. No migres framework, backend ni librerías salvo que se pida.
 3. No inventes alcance, tablas, sync ni features “por si acaso”.
 4. Si algo no está en architecture y no es obvio, pregunta.
+5. Confirma antes de acciones difíciles de revertir o visibles para otros: cambios de schema, commit, push, merge, borrar ramas, cerrar PRs.
 
 ## Código
 
