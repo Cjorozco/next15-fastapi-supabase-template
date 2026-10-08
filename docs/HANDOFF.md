@@ -70,7 +70,7 @@ Antes de editar `convex/`, leer `frontend/convex/_generated/ai/guidelines.md`.
 
 ## 7. Pendientes de la capa de reglas
 
-- `docs/adr/002-ai-response-validation-with-zod.md` sigue describiendo el flujo Action → `internalMutation`. Añadir una nota (o un ADR nuevo) de que lo implementado es BYOK en el cliente.
+- ADR 002: enmendado el 2026-10-08 con la implementación real (BYOK en el cliente); el texto original se conserva como registro histórico.
 - Las reglas existen en cuatro copias (`.agents/rules/`, `frontend/.agents/rules/`, `.cursor/rules/`, `frontend/.cursor/rules/`) y hay que mantenerlas sincronizadas a mano. Se decidió mantener las cuatro por ahora.
 
 ## 8. Cómo actualizar este documento
