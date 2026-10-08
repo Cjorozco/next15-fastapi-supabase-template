@@ -1,8 +1,10 @@
 # ADR 002: Intercepción Defensiva y Validación con Zod para Respuestas de IA (Zero-Trust AI Boundary)
 
-- **Estado:** Aceptado
+- **Estado:** Aceptado, con enmienda del 2026-10-08 (ver [Enmienda](#enmienda-2026-10-08-implementación-real-byok-en-el-cliente))
 - **Fecha:** 2026-09-15
 - **Decisores:** Equipo de Desarrollo / Antigravity Pair Programming
+
+> **Nota (2026-10-08):** el principio de este ADR (sanitizar, validar con Zod y persistir solo datos válidos) sigue vigente. El flujo de la sección 3 (`action` + `internalMutation`) **no es el implementado**: la IA se llama desde el navegador con la clave del usuario (BYOK). Ver la enmienda al final.
 
 ---
 
@@ -100,3 +102,22 @@ await ctx.runMutation(internal.tasks.mutations.createFromAI, aiResult.data);
 - **Compromisos:**
   - Requiere definir un esquema Zod para cada payload esperado de IA.
   - Ligero overhead computacional de parseo/validación (insignificante frente a la latencia del LLM).
+
+---
+
+## Enmienda (2026-10-08): implementación real, BYOK en el cliente
+
+El texto original queda como registro histórico. Lo que se implementó difiere en la sección 3 ("Separación de Responsabilidades en Convex y Next.js"):
+
+| ADR original | Implementado |
+|---|---|
+| La llamada al LLM se hace en una `action` de Convex | La llamada se hace desde el navegador con la API key del usuario (BYOK), guardada en `localStorage` (`frontend/shared/lib/ai/ai-storage.ts`). La clave nunca pasa por el backend |
+| La `action` valida con Zod | Se valida en el cliente con `safeParseAIResponse` y los esquemas de `frontend/domains/projects/schemas/` (`ai-project.schema.ts`, `ai-refine.schema.ts`) |
+| `internalMutation` persiste los datos | Mutations públicas de Convex: `projects.createWithTasks` y `projects.applyAiRefinement` |
+| Proveedores: Gemini u OpenAI | Gateway multi-proveedor con Gemini y Groq (`frontend/shared/lib/ai/`) |
+
+Como el cliente no es una frontera de confianza, esas mutations **vuelven a exigir autenticación y propiedad del proyecto** (`requireAuthenticatedUser` y `requireProjectOwner`), lo que cubren los tests de `frontend/convex/authorization.test.ts`.
+
+**Motivo:** con BYOK el usuario paga su propio consumo y sus claves no se almacenan en el servidor. Los errores tipados, timeouts y fallbacks de las llamadas desde el cliente están en el [ADR 003](./003-typed-ai-error-handling-and-resilience.md).
+
+**Se mantiene sin cambios:** las reglas 1, 2 y 4 (sanitización, `safeParse` y degradación elegante). El ejemplo de "Patrón de Referencia" es ilustrativo: `internal.tasks.mutations.createFromAI` no existe en el repo.
