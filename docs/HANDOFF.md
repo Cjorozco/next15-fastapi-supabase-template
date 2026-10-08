@@ -21,8 +21,9 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 ## 3. Estado actual
 
-- Tests: Vitest 13 archivos / 92 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-08).
+- Tests: Vitest 14 archivos / 101 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-08).
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
+- Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
 - `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript y genera las 8 páginas (verificado el 2026-10-08, con `.env.local` y `.env.production` locales).
 - No se probó la app en vivo en el navegador.
 - `ARCHITECTURE.md` y `CHANGELOG.md` están actualizados con IA, subtareas, tema, fix de seguridad y retiro de Cypress.
@@ -52,7 +53,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 1. Probar en navegador los flujos de IA (generador y copiloto) con claves reales.
 2. Cypress E2E fue retirado (`5eca517`): no hay pruebas de extremo a extremo.
 3. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
-4. Los tests de Convex no cubren `users.me`/`store` más allá de lo básico ni `createWithTasks` con posiciones arbitrarias del cliente.
+4. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
 5. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
 
 ## 6. Capa común y excepciones
