@@ -33,12 +33,12 @@ Esta es la **capa común**: cómo se trabaja. Fuente: [Principios y forma de tra
 | Auth | better-auth |
 | Animaciones | motion |
 | Tipografías | fontsource |
-| Gráficas | chart.js |
+| Gráficas | @tanstack/charts |
 | Estado global | zustand |
 | Drag & drop | pragmatic-drag-and-drop |
 | Estado en la URL | nuqs |
 
-`package.json` manda. Lo ya instalado (validators de Convex, Dexie, date-fns, Recharts, etc.) no se reemplaza.
+`package.json` manda. Lo ya instalado (validators de Convex, Dexie, date-fns, Recharts, etc.) no se reemplaza. Las diferencias de este repo con la tabla están en "Excepciones del proyecto" de `architecture`.
 
 ## Cómo responder
 
