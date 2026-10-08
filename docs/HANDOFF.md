@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-08 · **Último commit en `master`:** `990d109` (2026-09-20).
+> **Última actualización:** 2026-10-08 · **Último cambio de código:** `990d109` (2026-09-20); desde entonces solo docs y reglas. Sin push a `origin`.
 
 ## 1. Qué es
 
@@ -24,7 +24,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - Tests: Vitest 12 archivos / 77 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-08).
 - No se corrieron lint ni `next build`, ni se probó la app en vivo.
 - `ARCHITECTURE.md` y `CHANGELOG.md` están actualizados con IA, subtareas, tema, fix de seguridad y retiro de Cypress.
-- Las reglas de agentes se corrigieron para reflejar el código real (commit `f2699e7` en `master`) y luego se alinearon con la capa común (rama `docs/align-common-layer`, sin push ni merge; ver sección 6).
+- Las reglas de agentes se corrigieron para reflejar el código real (commit `f2699e7` en `master`) y luego se alinearon con la capa común (rama `docs/align-common-layer`, fusionada a `master` por fast-forward; ver sección 6). `master` está varios commits por delante de `origin/master`: **falta hacer push**.
 
 ### Mapa del código
 
