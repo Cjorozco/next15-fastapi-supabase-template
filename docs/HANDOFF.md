@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20).
+> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio y `master` un commit por delante de `origin` (sin push).
 
 ## 1. Qué es
 
@@ -22,10 +22,11 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 ## 3. Estado actual
 
 - Tests: Vitest 15 archivos / 107 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-09).
-- Demo de un clic (`c8871be`): botón en `/login` que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
+- Demo de un clic (`c8871be`): botón "Probar demo" en `/login` (visible si existe `NEXT_PUBLIC_DEMO_EMAIL`) que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
-- `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript y genera las 8 páginas (verificado el 2026-10-08, con `.env.local` y `.env.production` locales).
+- Incidente resuelto (2026-10-09): una sesión vio `.git` sin `config` ni `index` (sospecha de sincronización de OneDrive, porque el repo vive dentro de OneDrive). Al revisar después, el remoto y el índice estaban bien y los commits funcionan. Sigue pendiente decidir si se mueve el repo fuera de OneDrive.
+- `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript y e incluye la ruta dinámica `/api/demo-login` (verificado el 2026-10-09 por otra sesión, con `.env.local` y `.env.production` locales).
 - No se probó la app en vivo en el navegador.
 - `ARCHITECTURE.md` y `CHANGELOG.md` están actualizados con IA, subtareas, tema, fix de seguridad y retiro de Cypress.
 - Las reglas de agentes se corrigieron para reflejar el código real (commit `f2699e7` en `master`) y luego se alinearon con la capa común (rama `docs/align-common-layer`, fusionada a `master` por fast-forward y subida a `origin`; ver sección 6).
@@ -35,7 +36,8 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - `frontend/convex/`: `projects.ts`, `tasks.ts`, `users.ts` (rutas planas), `schema.ts`, `lib/authorization.ts` (`requireAuthenticatedUser`, `requireProjectOwner`), `lib/errors.ts`.
 - `frontend/domains/{projects,tasks,dashboard}`: componentes, hooks y esquemas Zod de IA.
 - `frontend/shared/lib/ai/`: gateway multi-proveedor (Gemini, Groq), adaptadores, `config.ts`, `safe-ai-parser.ts`, `ai-errors.ts`, `useAiClient.ts`.
-- `frontend/src/proxy.ts`: guards de auth (frontera de red de Next 16).
+- `frontend/src/proxy.ts`: guards de auth (frontera de red de Next 16); deja pasar `/api/demo-login`.
+- Demo: `convex/demo.ts`, `convex/crons.ts`, `convex/lib/demoData.ts`, `src/app/api/demo-login/route.ts`, `shared/components/layout/DemoBanner.tsx`.
 
 ## 4. Cambios recientes
 
@@ -54,12 +56,14 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 ## 5. Pendientes / deuda conocida
 
-1. Probar en navegador los flujos de IA (generador y copiloto) con claves reales.
-2. Cypress E2E fue retirado (`5eca517`): no hay pruebas de extremo a extremo.
-3. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
-4. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
-5. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
-6. Configurar la demo en producción: crear el usuario demo en Supabase, definir `DEMO_EMAIL` y `DEMO_PASSWORD` en Next, y `DEMO_TOKEN_IDENTIFIER` y `DEMO_EMAIL` en Convex. El flujo no se ha probado en vivo.
+1. Decidir si se mueve el repo fuera de OneDrive (ver sección 3).
+2. Probar en navegador los flujos de IA (generador y copiloto) con claves reales y el login demo.
+3. Demo: documentarla en `CHANGELOG.md` y `ARCHITECTURE.md` (hoy no la mencionan). Configurar en producción: usuario demo en Supabase, `DEMO_EMAIL` y `DEMO_PASSWORD` en Next/Vercel, y `DEMO_TOKEN_IDENTIFIER` y `DEMO_EMAIL` en Convex; confirmar que el cron corre en el despliegue. No verificado. No existe `frontend/.env.example`: valorar crearlo con estas variables.
+4. Demo: `tasks.update` y `toggleSubtask` no actualizan `status`, así que un cambio de `isCompleted` deja `status` desincronizado. Hoy la UI no lo muestra; resolverlo antes de mostrarlo. El límite de intentos del login demo es por instancia, no global.
+5. Cypress E2E fue retirado (`5eca517`): no hay pruebas de extremo a extremo.
+6. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
+7. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
+8. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
 
 ## 6. Capa común y excepciones
 
