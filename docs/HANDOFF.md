@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio; los commits de handoff de esta fecha aún no se han subido a `origin`.
+> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio y sincronizado con `origin`.
 
 ## 1. Qué es
 
