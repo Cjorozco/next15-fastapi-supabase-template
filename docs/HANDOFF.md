@@ -58,7 +58,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 1. Decidir si se mueve el repo fuera de OneDrive (ver sección 3).
 2. Probar en navegador los flujos de IA (generador y copiloto) con claves reales y el login demo.
-3. Demo (documentada en `CHANGELOG.md` y `ARCHITECTURE.md`, sección 9). Configurar en producción: usuario demo en Supabase, `DEMO_EMAIL` y `DEMO_PASSWORD` en Next/Vercel, y `DEMO_TOKEN_IDENTIFIER` y `DEMO_EMAIL` en Convex; confirmar que el cron corre en el despliegue. No verificado. No existe `frontend/.env.example`: valorar crearlo con estas variables.
+3. Demo (documentada en `CHANGELOG.md` y `ARCHITECTURE.md`, sección 9). Configurar en producción: usuario demo en Supabase, `DEMO_EMAIL` y `DEMO_PASSWORD` en Next/Vercel, y `DEMO_TOKEN_IDENTIFIER` y `DEMO_EMAIL` en Convex; confirmar que el cron corre en el despliegue. No verificado. Existe `frontend/.env.example` con estas variables; el formato de `DEMO_TOKEN_IDENTIFIER` (`<SUPABASE_URL>/auth/v1|<uuid>`) se dedujo de `auth.config.ts` y falta contrastarlo con el `tokenIdentifier` real del usuario demo en Convex.
 4. Demo: `tasks.update` y `toggleSubtask` no actualizan `status`, así que un cambio de `isCompleted` deja `status` desincronizado. Hoy la UI no lo muestra; resolverlo antes de mostrarlo. El límite de intentos del login demo es por instancia, no global.
 5. Cypress E2E fue retirado (`5eca517`): no hay pruebas de extremo a extremo.
 6. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
