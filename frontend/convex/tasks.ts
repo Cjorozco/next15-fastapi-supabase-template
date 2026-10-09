@@ -16,6 +16,14 @@ const taskValidator = v.object({
   title: v.string(),
   isCompleted: v.boolean(),
   position: v.number(),
+  status: v.optional(
+    v.union(v.literal("todo"), v.literal("in_progress"), v.literal("done"))
+  ),
+  priority: v.optional(
+    v.union(v.literal("low"), v.literal("medium"), v.literal("high"))
+  ),
+  dueDate: v.optional(v.number()),
+  assignee: v.optional(v.string()),
   subtasks: v.optional(v.array(subtaskValidator)),
 });
 

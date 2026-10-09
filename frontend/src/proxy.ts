@@ -4,6 +4,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 export async function proxy(request: NextRequest) {
+  // El login demo es un endpoint público que gestiona su propia sesión.
+  if (request.nextUrl.pathname === '/api/demo-login') {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

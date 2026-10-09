@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/shared/lib/supabase';
-import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, Eye, EyeOff, Play } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -16,6 +16,22 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const demoEnabled = Boolean(process.env.NEXT_PUBLIC_DEMO_EMAIL);
+
+  const handleDemo = async () => {
+    setIsDemoLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/demo-login', { method: 'POST' });
+      if (!res.ok) throw new Error();
+      // Recarga completa para que el cliente lea la sesión recién creada.
+      window.location.assign('/');
+    } catch {
+      setError('No se pudo iniciar la demo. Inténtalo de nuevo.');
+      setIsDemoLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +119,22 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+
+          {demoEnabled && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDemo}
+              disabled={isDemoLoading || isLoading}
+              className="w-full mt-3 text-xs py-2 rounded-xl"
+            >
+              {isDemoLoading ? (
+                <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Abriendo demo...</>
+              ) : (
+                <><Play className="mr-2 h-3.5 w-3.5" />Probar demo</>
+              )}
+            </Button>
+          )}
 
           <p className="text-center text-xs text-muted-foreground mt-5">
             ¿No tienes cuenta?{' '}

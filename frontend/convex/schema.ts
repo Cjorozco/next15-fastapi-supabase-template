@@ -23,6 +23,15 @@ export default defineSchema({
     title: v.string(),
     isCompleted: v.boolean(),
     position: v.number(),
+    // Metadatos opcionales de gestión (poblados por el seed demo; la UI actual no los muestra).
+    status: v.optional(
+      v.union(v.literal("todo"), v.literal("in_progress"), v.literal("done"))
+    ),
+    priority: v.optional(
+      v.union(v.literal("low"), v.literal("medium"), v.literal("high"))
+    ),
+    dueDate: v.optional(v.number()),
+    assignee: v.optional(v.string()),
     subtasks: v.optional(
       v.array(
         v.object({

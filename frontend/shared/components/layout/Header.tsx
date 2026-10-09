@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useAuth } from '@/shared/context/AuthContext';
 import { ThemeSelector } from './ThemeSelector';
+import { DemoBanner } from './DemoBanner';
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -45,6 +46,8 @@ export function Header() {
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? '??';
 
   return (
+    <>
+    <DemoBanner />
     <header className="bg-card border-b border-border px-8 py-4 text-card-foreground transition-colors">
       <div className="flex items-center justify-between">
         {/* Búsqueda — solo visible en /projects */}
@@ -112,5 +115,6 @@ export function Header() {
         </div>
       </div>
     </header>
+    </>
   );
 }
