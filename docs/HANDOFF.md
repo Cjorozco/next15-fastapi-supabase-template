@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-08 · **Último cambio de código:** `990d109` (2026-09-20); desde entonces solo docs y reglas. `master` sincronizada con `origin`.
+> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20).
 
 ## 1. Qué es
 
@@ -21,7 +21,8 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 ## 3. Estado actual
 
-- Tests: Vitest 14 archivos / 101 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-08).
+- Tests: Vitest 15 archivos / 107 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-09).
+- Demo de un clic (`c8871be`): botón en `/login` que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
 - `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript y genera las 8 páginas (verificado el 2026-10-08, con `.env.local` y `.env.production` locales).
@@ -40,6 +41,9 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 | Commit | Cambio |
 |---|---|
+| `c8871be` | Login demo de un clic con datos sembrados y reinicio diario por cron. |
+| `547b0f8` | Pruebas de `users.me` y `users.store`. |
+| `aa5b392` | Pruebas de autorización y aislamiento entre tenants. |
 | `990d109` | Fix de seguridad: IDOR entre tenants en `tasks.reorder` (exige dueño del proyecto y tareas del proyecto). |
 | `7c856b0` | Lista de modelos Groq depurada y metadatos en `config.ts`. |
 | `89a17f4` | Copiloto de refinamiento con IA (`projects.applyAiRefinement`). |
@@ -55,6 +59,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 3. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
 4. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
 5. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
+6. Configurar la demo en producción: crear el usuario demo en Supabase, definir `DEMO_EMAIL` y `DEMO_PASSWORD` en Next, y `DEMO_TOKEN_IDENTIFIER` y `DEMO_EMAIL` en Convex. El flujo no se ha probado en vivo.
 
 ## 6. Capa común y excepciones
 
