@@ -75,7 +75,10 @@ frontend/
 │   ├── schema.ts                    # Esquema de users, projects, tasks (subtasks embebidas)
 │   ├── lib/
 │   │   ├── authorization.ts         # requireAuthenticatedUser(), requireProjectOwner()
+│   │   ├── demoData.ts              # Datos sembrados de la demo
 │   │   └── errors.ts                # DomainException y DomainErrorCode
+│   ├── crons.ts                     # Reinicio diario de la demo
+│   ├── demo.ts                      # reset (interna): restaura los datos del usuario demo
 │   ├── projects.ts                  # list, get, create, createWithTasks, applyAiRefinement, remove, cleanupAll
 │   ├── tasks.ts                     # create, update, remove, reorder, addSubtask, toggleSubtask,
 │   │                                #   removeSubtask, convertTaskToSubtask
@@ -94,7 +97,7 @@ frontend/
 │       └── components/              # StatsGrid
 ├── shared/                          # Recursos compartidos y agnósticos al dominio
 │   ├── components/
-│   │   ├── layout/                  # Header, Sidebar
+│   │   ├── layout/                  # Header, Sidebar, DemoBanner
 │   │   └── ui/                      # button, card, dialog, input, etc. (shadcn)
 │   ├── context/
 │   │   ├── AuthContext.tsx          # Sesión de usuario Supabase
@@ -113,6 +116,7 @@ frontend/
 │       └── utils.ts                 # cn() y helpers
 └── src/
     ├── app/
+    │   ├── api/demo-login/route.ts  # POST público: login del usuario demo (ver sección 9)
     │   ├── (auth)/                  # Route group de autenticación
     │   │   ├── login/page.tsx
     │   │   └── register/page.tsx
@@ -152,6 +156,10 @@ erDiagram
         boolean isCompleted
         number position "Índice para reordenamiento"
         array subtasks "opcional: {id, title, isCompleted}[]"
+        string status "opcional (demo; la UI no lo muestra)"
+        string priority "opcional (demo)"
+        number dueDate "opcional (demo, timestamp)"
+        string assignee "opcional (demo)"
     }
 
     users ||--o{ projects : "posee"
@@ -198,6 +206,7 @@ En Next.js 16+, la convención recomendada de red es `proxy.ts`. Este archivo:
 2. Refresca automáticamente el token si es necesario.
 3. Redirige usuarios anónimos intentando acceder a rutas protegidas hacia `/login`.
 4. Redirige usuarios ya autenticados que visiten `/login` o `/register` directamente al dashboard `/`.
+5. Deja pasar `/api/demo-login` sin comprobar sesión: esa ruta gestiona la suya (sección 9).
 
 ---
 
@@ -248,4 +257,34 @@ Módulos en `frontend/shared/lib/ai/`:
 5. **Resiliencia y degradación elegante:** ante discrepancias de esquema, `formatZodIssuesForPrompt` extrae los problemas para reintento o autocorrección por el LLM, y `parseAIWithFallback` entrega un fallback seguro que evita fallos de renderizado. Los errores de proveedor se tipifican en `ai-errors.ts`.
 
 Decisiones relacionadas: [ADR 002](docs/adr/002-ai-response-validation-with-zod.md) (validación con Zod) y [ADR 003](docs/adr/003-typed-ai-error-handling-and-resilience.md) (errores tipados y resiliencia).
+
+---
+
+## 9. Demo de un clic
+
+Permite probar la app con datos de ejemplo sin registrarse.
+
+```mermaid
+sequenceDiagram
+    participant U as Visitante
+    participant L as /login (botón "Probar demo")
+    participant R as POST /api/demo-login
+    participant S as Supabase Auth
+    participant C as Convex
+
+    U->>L: Clic (botón visible si existe NEXT_PUBLIC_DEMO_EMAIL)
+    L->>R: POST
+    R->>S: signInWithPassword(DEMO_EMAIL, DEMO_PASSWORD)
+    S-->>R: Sesión (cookies SSR)
+    R-->>L: { ok: true }
+    L->>C: Flujo normal de usuario autenticado
+    Note over C: Cron cada 24 h: internal.demo.reset
+```
+
+- **Credenciales:** `DEMO_EMAIL` y `DEMO_PASSWORD` existen solo en el servidor (sin prefijo `NEXT_PUBLIC`). Si faltan, la ruta responde 404.
+- **Límite de intentos:** 10 por minuto por IP, en memoria de la instancia (best-effort, no global).
+- **Reinicio:** `convex/crons.ts` ejecuta cada 24 h `internal.demo.reset` (`convex/demo.ts`), que borra los proyectos y tareas del usuario demo (lo crea si no existe) y los vuelve a sembrar desde `convex/lib/demoData.ts`. Solo toca al usuario cuyo `tokenIdentifier` es `DEMO_TOKEN_IDENTIFIER`; si la variable falta, no hace nada. `reset` es interna, no se puede llamar desde el cliente.
+- **UI:** `DemoBanner` (en el header) se muestra solo cuando el email de la sesión coincide con `NEXT_PUBLIC_DEMO_EMAIL` y avisa de que los datos se reinician.
+- **Variables:** Next/Vercel: `NEXT_PUBLIC_DEMO_EMAIL`, `DEMO_EMAIL`, `DEMO_PASSWORD`. Convex: `DEMO_TOKEN_IDENTIFIER`, `DEMO_EMAIL`.
+- **Pruebas:** `convex/demo.test.ts`.
 

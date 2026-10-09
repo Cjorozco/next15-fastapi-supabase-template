@@ -8,6 +8,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ## [Unreleased]
 
 ### Added
+- **Demo de un clic:** botón "Probar demo" en `/login` (visible si existe `NEXT_PUBLIC_DEMO_EMAIL`) que llama a `POST /api/demo-login`, ruta pública que inicia sesión con `DEMO_EMAIL`/`DEMO_PASSWORD` (solo servidor; 404 si faltan; 10 intentos por minuto por IP, en memoria de la instancia). `DemoBanner` en el header. Datos sembrados en `convex/lib/demoData.ts` y cron diario (`convex/crons.ts` → `internal.demo.reset`) que los restaura solo para el usuario `DEMO_TOKEN_IDENTIFIER`. Pruebas en `convex/demo.test.ts`.
+- `tasks` admite los campos opcionales `status`, `priority`, `dueDate` y `assignee` (los rellena el seed de la demo; la UI aún no los muestra).
+- **Pruebas de Convex:** autorización y aislamiento entre tenants (`authorization.test.ts`) y `users.me`/`users.store` (`users.test.ts`).
 - **IA generativa con BYOK (cliente):** gateway multi-proveedor (Gemini y Groq) con adaptadores, selección de modelo, fallback automático de modelos Gemini y errores tipados (ADR 002 y 003). La API key del usuario se guarda solo en `localStorage`.
 - **Generador de proyectos con IA:** crea proyecto, tareas y subtareas con validación Zod y la mutación atómica `projects.createWithTasks`.
 - **Copiloto de refinamiento con IA:** cambios quirúrgicos sobre un proyecto existente mediante `projects.applyAiRefinement`.
