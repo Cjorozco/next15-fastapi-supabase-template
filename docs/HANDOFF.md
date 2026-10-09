@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio y `master` un commit por delante de `origin` (sin push).
+> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio; los commits de handoff de esta fecha aún no se han subido a `origin`.
 
 ## 1. Qué es
 
@@ -26,7 +26,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
 - Incidente resuelto (2026-10-09): una sesión vio `.git` sin `config` ni `index` (sospecha de sincronización de OneDrive, porque el repo vive dentro de OneDrive). Al revisar después, el remoto y el índice estaban bien y los commits funcionan. Sigue pendiente decidir si se mueve el repo fuera de OneDrive.
-- `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript y e incluye la ruta dinámica `/api/demo-login` (verificado el 2026-10-09 por otra sesión, con `.env.local` y `.env.production` locales).
+- `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript e incluye la ruta dinámica `/api/demo-login` (verificado el 2026-10-09 por otra sesión, con `.env.local` y `.env.production` locales).
 - No se probó la app en vivo en el navegador.
 - `ARCHITECTURE.md` y `CHANGELOG.md` están actualizados con IA, subtareas, tema, fix de seguridad y retiro de Cypress.
 - Las reglas de agentes se corrigieron para reflejar el código real (commit `f2699e7` en `master`) y luego se alinearon con la capa común (rama `docs/align-common-layer`, fusionada a `master` por fast-forward y subida a `origin`; ver sección 6).
