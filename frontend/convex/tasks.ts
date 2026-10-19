@@ -1,31 +1,21 @@
 import { mutation } from "./_generated/server";
+import { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
-
-const subtaskValidator = v.object({
-  id: v.string(),
-  title: v.string(),
-  isCompleted: v.boolean(),
-});
-
-const taskValidator = v.object({
-  _id: v.id("tasks"),
-  _creationTime: v.number(),
-  projectId: v.id("projects"),
-  title: v.string(),
-  isCompleted: v.boolean(),
-  position: v.number(),
-  status: v.optional(
-    v.union(v.literal("todo"), v.literal("in_progress"), v.literal("done"))
-  ),
-  priority: v.optional(
-    v.union(v.literal("low"), v.literal("medium"), v.literal("high"))
-  ),
-  dueDate: v.optional(v.number()),
-  assignee: v.optional(v.string()),
-  subtasks: v.optional(v.array(subtaskValidator)),
-});
+import {
+  taskPriorityValidator,
+  taskStatusValidator,
+  taskValidator,
+  toTaskDto,
+} from "./lib/taskDto";
+import {
+  MAX_ESTIMATED_HOURS,
+  MAX_TASK_NOTES_LENGTH,
+  MAX_TASK_TITLE_LENGTH,
+  resolveTaskStatus,
+  statusAfterCompletion,
+} from "./lib/taskFields";
 
 export const create = mutation({
   args: {
@@ -53,6 +43,7 @@ export const create = mutation({
       projectId: args.projectId,
       title,
       isCompleted: false,
+      status: "pendiente",
       position: nextPosition,
       subtasks: [],
     });
@@ -62,7 +53,7 @@ export const create = mutation({
       throw new DomainException("ENTITY_NOT_FOUND", "Failed to create task");
     }
 
-    return task;
+    return toTaskDto(task);
   },
 });
 
@@ -88,6 +79,7 @@ export const update = mutation({
 
     await ctx.db.patch(args.taskId, {
       isCompleted: args.isCompleted,
+      status: statusAfterCompletion(resolveTaskStatus(task), args.isCompleted),
       ...(updatedSubtasks ? { subtasks: updatedSubtasks } : {}),
     });
 
@@ -96,7 +88,114 @@ export const update = mutation({
       throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
     }
 
-    return updated;
+    return toTaskDto(updated);
+  },
+});
+
+function requireValidTitle(title: string): string {
+  const trimmed = title.trim();
+  if (!trimmed) {
+    throw new DomainException("INVALID_INPUT", "Task title is required");
+  }
+  if (trimmed.length > MAX_TASK_TITLE_LENGTH) {
+    throw new DomainException(
+      "INVALID_INPUT",
+      `Task title cannot exceed ${MAX_TASK_TITLE_LENGTH} characters`
+    );
+  }
+  return trimmed;
+}
+
+/**
+ * Edits the management fields of a task. For the optional fields, `null` clears the
+ * value and `undefined` (omitted) leaves it untouched. Keeps `isCompleted` and
+ * `status` in sync.
+ */
+export const updateTask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    title: v.optional(v.string()),
+    status: v.optional(taskStatusValidator),
+    dueDate: v.optional(v.union(v.number(), v.null())),
+    estimatedHours: v.optional(v.union(v.number(), v.null())),
+    priority: v.optional(v.union(taskPriorityValidator, v.null())),
+    notes: v.optional(v.union(v.string(), v.null())),
+  },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    const patch: Partial<Doc<"tasks">> = {};
+
+    if (args.title !== undefined) {
+      patch.title = requireValidTitle(args.title);
+    }
+
+    if (args.dueDate !== undefined) {
+      if (args.dueDate !== null && (!Number.isFinite(args.dueDate) || args.dueDate <= 0)) {
+        throw new DomainException("INVALID_INPUT", "Invalid due date");
+      }
+      patch.dueDate = args.dueDate ?? undefined;
+    }
+
+    if (args.estimatedHours !== undefined) {
+      const hours = args.estimatedHours;
+      if (
+        hours !== null &&
+        (!Number.isFinite(hours) || hours < 0 || hours > MAX_ESTIMATED_HOURS)
+      ) {
+        throw new DomainException(
+          "INVALID_INPUT",
+          `Estimated hours must be between 0 and ${MAX_ESTIMATED_HOURS}`
+        );
+      }
+      patch.estimatedHours = hours ?? undefined;
+    }
+
+    if (args.priority !== undefined) {
+      patch.priority = args.priority ?? undefined;
+    }
+
+    if (args.notes !== undefined) {
+      const notes = args.notes?.trim() ?? "";
+      if (notes.length > MAX_TASK_NOTES_LENGTH) {
+        throw new DomainException(
+          "INVALID_INPUT",
+          `Notes cannot exceed ${MAX_TASK_NOTES_LENGTH} characters`
+        );
+      }
+      patch.notes = notes || undefined;
+    }
+
+    if (args.status !== undefined) {
+      const isCompleted = args.status === "completada";
+      patch.status = args.status;
+      patch.isCompleted = isCompleted;
+      // Same rule as the checkbox: completing a task completes its subtasks.
+      if (isCompleted && task.subtasks) {
+        patch.subtasks = task.subtasks.map((subtask) => ({
+          ...subtask,
+          isCompleted: true,
+        }));
+      }
+    } else if (task.status !== resolveTaskStatus(task)) {
+      // Lazily normalize legacy / missing status while the document is being edited.
+      patch.status = resolveTaskStatus(task);
+    }
+
+    await ctx.db.patch(args.taskId, patch);
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
   },
 });
 
@@ -132,6 +231,7 @@ export const addSubtask = mutation({
     await ctx.db.patch(args.taskId, {
       subtasks: newSubtasks,
       isCompleted: false,
+      status: statusAfterCompletion(resolveTaskStatus(task), false),
     });
 
     const updated = await ctx.db.get(args.taskId);
@@ -139,7 +239,7 @@ export const addSubtask = mutation({
       throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
     }
 
-    return updated;
+    return toTaskDto(updated);
   },
 });
 
@@ -170,6 +270,7 @@ export const toggleSubtask = mutation({
     await ctx.db.patch(args.taskId, {
       subtasks: updatedSubtasks,
       isCompleted: allCompleted,
+      status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
     });
 
     const updated = await ctx.db.get(args.taskId);
@@ -177,7 +278,7 @@ export const toggleSubtask = mutation({
       throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
     }
 
-    return updated;
+    return toTaskDto(updated);
   },
 });
 
@@ -205,6 +306,7 @@ export const removeSubtask = mutation({
     await ctx.db.patch(args.taskId, {
       subtasks: updatedSubtasks,
       isCompleted: allCompleted,
+      status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
     });
 
     const updated = await ctx.db.get(args.taskId);
@@ -212,7 +314,7 @@ export const removeSubtask = mutation({
       throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
     }
 
-    return updated;
+    return toTaskDto(updated);
   },
 });
 
@@ -275,6 +377,7 @@ export const convertTaskToSubtask = mutation({
     await ctx.db.patch(args.targetTaskId, {
       subtasks: combinedSubtasks,
       isCompleted: allCompleted,
+      status: statusAfterCompletion(resolveTaskStatus(targetTask), allCompleted),
     });
 
     // 5. Reindexar las posiciones de las tareas restantes del proyecto
@@ -295,7 +398,7 @@ export const convertTaskToSubtask = mutation({
       throw new DomainException("ENTITY_NOT_FOUND", "Failed to update target task");
     }
 
-    return updatedTarget;
+    return toTaskDto(updatedTarget);
   },
 });
 

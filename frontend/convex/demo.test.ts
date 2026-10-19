@@ -26,7 +26,7 @@ describe("demo seed data", () => {
       expect(p.tasks.length).toBeGreaterThanOrEqual(8);
       expect(p.tasks.length).toBeLessThanOrEqual(12);
       expect(new Set(p.tasks.map((t) => t.status))).toEqual(
-        new Set(["todo", "in_progress", "done"])
+        new Set(["pendiente", "en_progreso", "completada"])
       );
       const assignees = new Set(p.tasks.map((t) => t.assignee));
       expect(assignees.size).toBeGreaterThanOrEqual(2);
@@ -44,7 +44,7 @@ describe("resetDemoData", () => {
     expect(projects).toHaveLength(3);
     const tasks = await t.run((ctx) => ctx.db.query("tasks").collect());
     expect(tasks.length).toBe(DEMO_PROJECTS.reduce((n, p) => n + p.tasks.length, 0));
-    expect(tasks.every((x) => x.isCompleted === (x.status === "done"))).toBe(true);
+    expect(tasks.every((x) => x.isCompleted === (x.status === "completada"))).toBe(true);
   });
 
   test("restores a mutated demo account and is idempotent", async () => {

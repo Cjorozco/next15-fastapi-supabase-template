@@ -60,7 +60,7 @@ export async function resetDemoData(
       await ctx.db.insert("tasks", {
         projectId,
         title: task.title,
-        isCompleted: task.status === "done",
+        isCompleted: task.status === "completada",
         position,
         status: task.status,
         priority: task.priority,

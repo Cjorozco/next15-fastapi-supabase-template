@@ -1,4 +1,7 @@
 import { Id } from '@/convex/_generated/dataModel';
+import type { TaskPriority, TaskStatus } from '@/convex/lib/taskFields';
+
+export type { TaskPriority, TaskStatus };
 
 export interface Subtask {
   id: string;
@@ -12,9 +15,12 @@ export interface Task {
   title: string;
   isCompleted: boolean;
   position: number;
-  status?: 'todo' | 'in_progress' | 'done';
-  priority?: 'low' | 'medium' | 'high';
+  /** Missing on old documents: derive it with `resolveTaskStatus`. */
+  status?: TaskStatus;
+  priority?: TaskPriority;
   dueDate?: number;
+  estimatedHours?: number;
+  notes?: string;
   assignee?: string;
   subtasks?: Subtask[];
 }

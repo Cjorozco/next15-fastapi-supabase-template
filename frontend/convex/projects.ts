@@ -3,30 +3,14 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuthenticatedUser, requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
+import { taskValidator, toTaskDto } from "./lib/taskDto";
+import {
+  resolveTaskStatus,
+  statusAfterCompletion,
+} from "./lib/taskFields";
 
-const subtaskValidator = v.object({
-  id: v.string(),
-  title: v.string(),
-  isCompleted: v.boolean(),
-});
-
-const taskValidator = v.object({
-  _id: v.id("tasks"),
-  _creationTime: v.number(),
-  projectId: v.id("projects"),
-  title: v.string(),
-  isCompleted: v.boolean(),
-  position: v.number(),
-  status: v.optional(
-    v.union(v.literal("todo"), v.literal("in_progress"), v.literal("done"))
-  ),
-  priority: v.optional(
-    v.union(v.literal("low"), v.literal("medium"), v.literal("high"))
-  ),
-  dueDate: v.optional(v.number()),
-  assignee: v.optional(v.string()),
-  subtasks: v.optional(v.array(subtaskValidator)),
-});
+const MAX_PROJECT_NAME_LENGTH = 100;
+const MAX_PROJECT_DESCRIPTION_LENGTH = 1000;
 
 const projectWithTasksValidator = v.object({
   _id: v.id("projects"),
@@ -46,7 +30,7 @@ async function getTasksForProject(
     .withIndex("by_project", (q) => q.eq("projectId", projectId))
     .collect();
 
-  return tasks.sort((a, b) => a.position - b.position);
+  return tasks.sort((a, b) => a.position - b.position).map(toTaskDto);
 }
 
 export const list = query({
@@ -179,11 +163,12 @@ export const createWithTasks = mutation({
           projectId,
           title: taskTitle,
           isCompleted: false,
+          status: "pendiente",
           position: task.position,
         });
         const createdTask = await ctx.db.get(taskId);
         if (createdTask) {
-          createdTasks.push(createdTask);
+          createdTasks.push(toTaskDto(createdTask));
         }
       }
     }
@@ -197,6 +182,70 @@ export const createWithTasks = mutation({
       ...project,
       tasks: createdTasks.sort((a, b) => a.position - b.position),
     };
+  },
+});
+
+export const updateProject = mutation({
+  args: {
+    projectId: v.id("projects"),
+    name: v.optional(v.string()),
+    // Empty string clears the description.
+    description: v.optional(v.string()),
+  },
+  returns: projectWithTasksValidator,
+  handler: async (ctx, args) => {
+    const project = await requireProjectOwner(ctx, args.projectId);
+    const patch: { name?: string; description?: string | undefined } = {};
+
+    if (args.name !== undefined) {
+      const name = args.name.trim();
+      if (!name) {
+        throw new DomainException("INVALID_INPUT", "Project name is required");
+      }
+      if (name.length > MAX_PROJECT_NAME_LENGTH) {
+        throw new DomainException(
+          "INVALID_INPUT",
+          `Project name cannot exceed ${MAX_PROJECT_NAME_LENGTH} characters`
+        );
+      }
+
+      if (name !== project.name) {
+        const duplicate = await ctx.db
+          .query("projects")
+          .withIndex("by_owner_and_name", (q) =>
+            q.eq("ownerId", project.ownerId).eq("name", name)
+          )
+          .first();
+
+        if (duplicate && duplicate._id !== project._id) {
+          throw new DomainException(
+            "DUPLICATE_ENTITY",
+            `Ya tienes un proyecto con el nombre '${name}'`
+          );
+        }
+        patch.name = name;
+      }
+    }
+
+    if (args.description !== undefined) {
+      const description = args.description.trim();
+      if (description.length > MAX_PROJECT_DESCRIPTION_LENGTH) {
+        throw new DomainException(
+          "INVALID_INPUT",
+          `Description cannot exceed ${MAX_PROJECT_DESCRIPTION_LENGTH} characters`
+        );
+      }
+      patch.description = description || undefined;
+    }
+
+    await ctx.db.patch(args.projectId, patch);
+
+    const updated = await ctx.db.get(args.projectId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Project not found");
+    }
+
+    return { ...updated, tasks: await getTasksForProject(ctx, updated._id) };
   },
 });
 
@@ -276,6 +325,7 @@ export const applyAiRefinement = mutation({
                 await ctx.db.patch(taskId, {
                   subtasks: mergedSubtasks,
                   isCompleted: false,
+                  status: statusAfterCompletion(resolveTaskStatus(task), false),
                 });
               }
             }
@@ -311,6 +361,7 @@ export const applyAiRefinement = mutation({
             projectId: args.projectId,
             title,
             isCompleted: false,
+            status: "pendiente",
             position: nextPosition++,
             subtasks,
           });
