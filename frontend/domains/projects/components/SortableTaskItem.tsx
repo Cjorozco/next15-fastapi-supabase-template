@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { X, GripVertical, CheckCircle2, ChevronRight, ChevronDown, Plus, CornerDownRight } from 'lucide-react';
-import { Task } from '@/domains/tasks/types';
+import { Task, TaskDetailsInput } from '@/domains/tasks/types';
+import { TaskMeta } from '@/domains/tasks/components/TaskBadges';
+import { TaskEditForm } from '@/domains/tasks/components/TaskEditForm';
+import { resolveTaskStatus } from '@/convex/lib/taskFields';
 import { Id } from '@/convex/_generated/dataModel';
 
 interface SortableTaskItemProps {
@@ -16,17 +19,20 @@ interface SortableTaskItemProps {
   onAddSubtask?: (taskId: Id<'tasks'>, title: string) => void;
   onToggleSubtask?: (taskId: Id<'tasks'>, subtaskId: string, isCompleted: boolean) => void;
   onRemoveSubtask?: (taskId: Id<'tasks'>, subtaskId: string) => void;
+  /** Enables the edit form in the expanded detail view. Resolves true when saved. */
+  onSaveDetails?: (taskId: Id<'tasks'>, input: TaskDetailsInput) => Promise<boolean>;
   isDetailView?: boolean;
   activeDraggingId?: string | null;
 }
 
-export function SortableTaskItem({
+function SortableTaskItemComponent({
   task,
   onUpdateStatus,
   onDelete,
   onAddSubtask,
   onToggleSubtask,
   onRemoveSubtask,
+  onSaveDetails,
   isDetailView = false,
   activeDraggingId = null,
 }: SortableTaskItemProps) {
@@ -79,6 +85,18 @@ export function SortableTaskItem({
     setIsExpanded(true);
   };
 
+  const hasMeta =
+    task.dueDate !== undefined || task.estimatedHours !== undefined || task.priority === 'alta';
+  // Remount the form when the task changes on the server so it never shows stale values.
+  const formKey = [
+    task.title,
+    resolveTaskStatus(task),
+    task.dueDate,
+    task.estimatedHours,
+    task.priority,
+    task.notes,
+  ].join('|');
+
   const isAnotherTaskDragging = isDetailView && activeDraggingId && activeDraggingId !== task._id;
 
   if (isDetailView) {
@@ -108,7 +126,7 @@ export function SortableTaskItem({
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded hover:bg-muted"
-            title={isExpanded ? 'Ocultar subtareas' : 'Ver subtareas'}
+            title={isExpanded ? 'Ocultar detalles' : 'Ver detalles y subtareas'}
           >
             {isExpanded ? (
               <ChevronDown className="w-3.5 h-3.5" />
@@ -172,6 +190,10 @@ export function SortableTaskItem({
           </button>
         </div>
 
+        <div className="pl-[4.5rem] pr-3 pb-2 -mt-1">
+          <TaskMeta task={task} />
+        </div>
+
         {/* Zona visual de Drop para convertir la tarea arrastrada en subtarea */}
         {isAnotherTaskDragging && (
           <div
@@ -194,6 +216,18 @@ export function SortableTaskItem({
         )}
 
         {/* Sección desplegable de subtareas */}
+        {isExpanded && (
+          <div className="animate-in fade-in-50 duration-150">
+            {onSaveDetails && (
+              <TaskEditForm
+                key={formKey}
+                task={task}
+                onSave={(input) => onSaveDetails(task._id, input)}
+              />
+            )}
+          </div>
+        )}
+
         {isExpanded && (
           <div className="pl-11 pr-4 pb-3 space-y-1.5 animate-in fade-in-50 duration-150">
             {subtasks.map((subtask) => {
@@ -288,45 +322,51 @@ export function SortableTaskItem({
     <div
       ref={setSortableRef}
       style={style}
-      className={`flex items-center gap-2 py-1 group/task relative ${
+      className={`py-1 group/task relative ${
         isDragging ? 'bg-card rounded-lg shadow-xs border border-primary/40 indent-1' : ''
       }`}
     >
-      <button
-        className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground shrink-0"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="w-3.5 h-3.5" />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground shrink-0"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
 
-      <Checkbox
-        id={statusLabelId}
-        checked={task.isCompleted}
-        onCheckedChange={(checked) => onUpdateStatus(task._id, !!checked)}
-      />
-      <label
-        htmlFor={statusLabelId}
-        className={`flex-1 text-xs cursor-pointer ${
-          task.isCompleted ? 'line-through text-muted-foreground/60' : 'text-foreground'
-        }`}
-      >
-        {task.title}
-      </label>
+        <Checkbox
+          id={statusLabelId}
+          checked={task.isCompleted}
+          onCheckedChange={(checked) => onUpdateStatus(task._id, !!checked)}
+        />
+        <label
+          htmlFor={statusLabelId}
+          className={`flex-1 text-xs cursor-pointer ${
+            task.isCompleted ? 'line-through text-muted-foreground/60' : 'text-foreground'
+          }`}
+        >
+          {task.title}
+        </label>
 
-      {totalSubtasksCount > 0 && (
-        <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.2 rounded font-medium border border-border/50">
-          {completedSubtasksCount}/{totalSubtasksCount}
-        </span>
-      )}
+        {totalSubtasksCount > 0 && (
+          <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.2 rounded font-medium border border-border/50">
+            {completedSubtasksCount}/{totalSubtasksCount}
+          </span>
+        )}
 
-      <button
-        onClick={() => onDelete(task._id)}
-        className="opacity-0 group-hover/task:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 rounded"
-        title="Borrar tarea"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
+        <button
+          onClick={() => onDelete(task._id)}
+          className="opacity-0 group-hover/task:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 rounded"
+          title="Borrar tarea"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {hasMeta && <TaskMeta task={task} compact />}
     </div>
   );
 }
+
+export const SortableTaskItem = memo(SortableTaskItemComponent);

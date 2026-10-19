@@ -42,7 +42,7 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
     );
 
     // Click expand button
-    const expandBtn = screen.getByTitle('Ver subtareas');
+    const expandBtn = screen.getByTitle('Ver detalles y subtareas');
     fireEvent.click(expandBtn);
 
     expect(screen.getByText('Subtarea 1')).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Ver subtareas'));
+    fireEvent.click(screen.getByTitle('Ver detalles y subtareas'));
 
     // Check subtask 2
     const subtask2Label = screen.getByText('Subtarea 2');
@@ -105,7 +105,7 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Ver subtareas'));
+    fireEvent.click(screen.getByTitle('Ver detalles y subtareas'));
 
     const deleteSubtaskBtns = screen.getAllByTitle('Eliminar subtarea');
     fireEvent.click(deleteSubtaskBtns[0]);

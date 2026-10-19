@@ -25,3 +25,13 @@ export interface Task {
   subtasks?: Subtask[];
 }
 
+
+/** Payload of the task edit form. `null` clears an optional value. */
+export interface TaskDetailsInput {
+  title: string;
+  status: TaskStatus;
+  dueDate: number | null;
+  estimatedHours: number | null;
+  priority: TaskPriority | null;
+  notes: string | null;
+}
