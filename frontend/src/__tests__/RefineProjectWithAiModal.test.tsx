@@ -67,41 +67,18 @@ describe('RefineProjectWithAiModal Component', () => {
     expect(screen.getByText(/Agregar subtareas detalladas/i)).toBeInTheDocument();
   });
 
-  it('executes AI refinement and calls Convex mutation on submit', async () => {
-    localStorage.setItem('gemini_api_key', 'test-gemini-key');
-
-    const mockAiResponse = {
-      candidates: [
-        {
-          content: {
-            parts: [
-              {
-                text: JSON.stringify({
-                  summary: 'Se agregaron 2 subtareas técnicas.',
-                  updatedDescription: 'Descripción mejorada con métricas.',
-                  newTasks: [],
-                  newSubtasksForExistingTasks: [
-                    {
-                      taskId: 'task_1',
-                      subtaskTitles: ['Configurar índices', 'Añadir seed data'],
-                    },
-                  ],
-                }),
-              },
-            ],
-          },
-        },
-      ],
-    };
-
+  const mockSuccessfulAiResponse = (payload: unknown) => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => mockAiResponse,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(payload) }] } }],
+      }),
     } as Response);
+  };
 
-    mockApplyRefinement.mockImplementation((_params, options) => {
-      options?.onSuccess?.();
-    });
+  const renderAndGenerate = async (payload: unknown) => {
+    localStorage.setItem('gemini_api_key', 'test-gemini-key');
+    mockSuccessfulAiResponse(payload);
 
     render(
       <RefineProjectWithAiModal
@@ -113,29 +90,91 @@ describe('RefineProjectWithAiModal Component', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: /refinar con ia/i }));
+    fireEvent.change(screen.getByLabelText(/¿Qué deseas agregar o mejorar\?/i), {
+      target: { value: 'Agrega subtareas a la base de datos' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /generar propuesta/i }));
 
-    const textarea = screen.getByLabelText(/¿Qué deseas agregar o mejorar\?/i);
-    fireEvent.change(textarea, { target: { value: 'Agrega subtareas a la base de datos' } });
+    await screen.findByTestId('refinement-preview');
+  };
 
-    const submitBtn = screen.getByRole('button', { name: /aplicar mejoras con ia/i });
-    fireEvent.click(submitBtn);
+  const proposal = {
+    summary: 'Se agregaron 2 subtareas técnicas.',
+    updatedDescription: 'Descripción mejorada con métricas.',
+    newTasks: [{ title: 'Pruebas de carga', subtasks: ['Definir escenarios'] }],
+    newSubtasksForExistingTasks: [
+      { taskId: 'task_1', subtaskTitles: ['Configurar índices', 'Añadir seed data'] },
+    ],
+  };
+
+  it('shows a preview of the changes and does NOT save anything before confirming', async () => {
+    await renderAndGenerate(proposal);
+
+    expect(screen.getByText('Descripción existente')).toBeInTheDocument();
+    expect(screen.getByText('Descripción mejorada con métricas.')).toBeInTheDocument();
+    expect(screen.getByText('Pruebas de carga')).toBeInTheDocument();
+    expect(screen.getByText('Diseño de Base de Datos')).toBeInTheDocument();
+    expect(screen.getByText('Configurar índices')).toBeInTheDocument();
+    expect(mockApplyRefinement).not.toHaveBeenCalled();
+  });
+
+  it('applies exactly the reviewed changes after confirming', async () => {
+    mockApplyRefinement.mockImplementation((_params, options) => {
+      options?.onSuccess?.();
+    });
+    await renderAndGenerate(proposal);
+
+    fireEvent.click(screen.getByRole('button', { name: /aplicar cambios/i }));
 
     await waitFor(() => {
       expect(mockApplyRefinement).toHaveBeenCalledWith(
         {
           projectId: dummyProjectId,
           updatedDescription: 'Descripción mejorada con métricas.',
-          newTasks: [],
+          newTasks: [{ title: 'Pruebas de carga', subtasks: ['Definir escenarios'] }],
           newSubtasksForExistingTasks: [
-            {
-              taskId: 'task_1',
-              subtaskTitles: ['Configurar índices', 'Añadir seed data'],
-            },
+            { taskId: 'task_1', subtaskTitles: ['Configurar índices', 'Añadir seed data'] },
           ],
         },
         expect.anything()
       );
       expect(toast.success).toHaveBeenCalledWith('Se agregaron 2 subtareas técnicas.');
     });
+  });
+
+  it('discarding the preview returns to the form without saving', async () => {
+    await renderAndGenerate(proposal);
+
+    fireEvent.click(screen.getByRole('button', { name: /descartar/i }));
+
+    expect(screen.queryByTestId('refinement-preview')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/¿Qué deseas agregar o mejorar\?/i)).toHaveValue(
+      'Agrega subtareas a la base de datos'
+    );
+    expect(mockApplyRefinement).not.toHaveBeenCalled();
+  });
+
+  it('never wipes the description when the AI returns an empty one', async () => {
+    mockApplyRefinement.mockImplementation((_params, options) => {
+      options?.onSuccess?.();
+    });
+    await renderAndGenerate({
+      summary: 'Solo subtareas',
+      updatedDescription: '',
+      newSubtasksForExistingTasks: [{ taskId: 'task_1', subtaskTitles: ['Una'] }],
+    });
+
+    expect(screen.queryByLabelText('Cambio en la descripción')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /aplicar cambios/i }));
+
+    await waitFor(() => expect(mockApplyRefinement).toHaveBeenCalled());
+    expect(mockApplyRefinement.mock.calls[0][0]).not.toHaveProperty('updatedDescription');
+  });
+
+  it('offers no apply button when the AI proposes nothing', async () => {
+    await renderAndGenerate({ summary: 'Nada que cambiar' });
+
+    expect(screen.getByText(/no propuso cambios/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /aplicar cambios/i })).not.toBeInTheDocument();
   });
 });

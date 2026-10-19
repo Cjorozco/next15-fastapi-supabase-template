@@ -20,6 +20,12 @@ import {
   type AiRefinement,
 } from '@/domains/projects/schemas/ai-refine.schema';
 import { useApplyAiRefinement } from '@/domains/projects/hooks/useProjects';
+import {
+  buildRefinementPreview,
+  toApplyPayload,
+  type RefinementPreview,
+} from '@/domains/projects/lib/refinement-preview';
+import { RefinementPreviewPanel } from './RefinementPreviewPanel';
 import { Id } from '@/convex/_generated/dataModel';
 import { toast } from 'sonner';
 
@@ -90,6 +96,9 @@ export function RefineProjectWithAiModal({
   const [inputKey, setInputKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // The AI proposal waits here until the user confirms it; nothing is saved before that.
+  const [preview, setPreview] = useState<RefinementPreview | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
 
   const { provider, setProvider, apiKey, setApiKey, hasApiKey, generateStructured } = useAiClient();
   const { mutate: applyRefinement } = useApplyAiRefinement();
@@ -169,30 +178,9 @@ ${activeInstruction}`;
         SURGICAL_REFINEMENT_SYSTEM_INSTRUCTION
       );
 
-      // 3. Ejecutar mutación atómica en Convex
-      applyRefinement(
-        {
-          projectId,
-          updatedDescription: refinementResult.updatedDescription,
-          newTasks: refinementResult.newTasks,
-          newSubtasksForExistingTasks: refinementResult.newSubtasksForExistingTasks,
-        },
-        {
-          onSuccess: () => {
-            setIsGenerating(false);
-            setIsOpen(false);
-            setPrompt('');
-            toast.success(refinementResult.summary || 'Proyecto enriquecido con IA con éxito');
-            onSuccess?.();
-          },
-          onError: (err) => {
-            setIsGenerating(false);
-            const userMsg = err.message || 'Error al aplicar los cambios en la base de datos';
-            setErrorMessage(userMsg);
-            toast.error(userMsg);
-          },
-        }
-      );
+      // 3. Mostrar vista previa: no se guarda nada hasta que el usuario confirme
+      setPreview(buildRefinementPreview(refinementResult, { description: projectDescription, tasks }));
+      setIsGenerating(false);
     } catch (err: unknown) {
       setIsGenerating(false);
       const { message: friendlyMessage } = mapAIErrorToUserMessage(err);
@@ -201,8 +189,39 @@ ${activeInstruction}`;
     }
   };
 
+  const handleConfirm = () => {
+    if (!preview) return;
+
+    setIsApplying(true);
+    applyRefinement(
+      { projectId, ...toApplyPayload(preview) },
+      {
+        onSuccess: () => {
+          setIsApplying(false);
+          setIsOpen(false);
+          setPrompt('');
+          setPreview(null);
+          toast.success(preview.summary || 'Proyecto enriquecido con IA con éxito');
+          onSuccess?.();
+        },
+        onError: (err) => {
+          setIsApplying(false);
+          // Back to the form with the error; the user can retry without losing the prompt.
+          setPreview(null);
+          setErrorMessage(err.message || 'Error al aplicar los cambios en la base de datos');
+        },
+      }
+    );
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (isGenerating || isApplying) return;
+    if (!open) setPreview(null);
+    setIsOpen(open);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !isGenerating && setIsOpen(open)}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       {trigger ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
@@ -229,10 +248,22 @@ ${activeInstruction}`;
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs text-muted-foreground">
-            La IA leerá tu proyecto <strong className="text-foreground">&ldquo;{projectName}&rdquo;</strong> ({tasks.length} tareas) y aplicará mejoras quirúrgicas sin borrar tu progreso.
+            {preview ? (
+              <>Revisa los cambios que la IA propone para <strong className="text-foreground">&ldquo;{projectName}&rdquo;</strong>. Solo se aplicarán si confirmas.</>
+            ) : (
+              <>La IA leerá tu proyecto <strong className="text-foreground">&ldquo;{projectName}&rdquo;</strong> ({tasks.length} tareas) y te mostrará una vista previa de las mejoras antes de aplicarlas.</>
+            )}
           </DialogDescription>
         </DialogHeader>
 
+        {preview ? (
+          <RefinementPreviewPanel
+            preview={preview}
+            isApplying={isApplying}
+            onConfirm={handleConfirm}
+            onBack={() => setPreview(null)}
+          />
+        ) : (
         <form onSubmit={handleRefine} className="space-y-4 pt-2">
           {/* Instrucción del usuario */}
           <div className="space-y-2">
@@ -383,17 +414,18 @@ ${activeInstruction}`;
               {isGenerating ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                  <span>Aplicando mejoras...</span>
+                  <span>Analizando proyecto...</span>
                 </>
               ) : (
                 <>
                   <Wand2 className="w-3.5 h-3.5 mr-2 text-amber-300" />
-                  <span>Aplicar Mejoras con IA</span>
+                  <span>Generar propuesta</span>
                 </>
               )}
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
