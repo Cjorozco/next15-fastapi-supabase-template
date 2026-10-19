@@ -175,7 +175,7 @@ erDiagram
 
 `isCompleted` sigue siendo la fuente de verdad histórica y `status` se mantiene sincronizado en el servidor (checkbox, subtareas, `updateTask`): `completada` ⇔ `isCompleted`. Si una tarea no tiene `status`, `resolveTaskStatus()` (`convex/lib/taskFields.ts`) lo deriva del booleano; las queries devuelven siempre `status` y `priority` normalizados (`toTaskDto`).
 
-La primera versión del seed demo guardó valores en inglés (`todo`/`in_progress`/`done`, `low`/`medium`/`high`). El schema los acepta mientras dure la migración (*widen → migrate → narrow*): `npx convex run migrations:backfillTaskFields --prod` los reescribe y rellena `status`; después se quitan del schema.
+La primera versión del seed demo guardó valores en inglés (`todo`/`in_progress`/`done`, `low`/`medium`/`high`). Se migraron con *widen → migrate → narrow* (`migrations:backfillTaskFields`) y el schema ya solo acepta los valores en español.
 
 ### Índices de Rendimiento
 - **users:** `by_token(tokenIdentifier)`, `by_email(email)`

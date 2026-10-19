@@ -1,26 +1,13 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// Widen phase of widen-migrate-narrow: the legacy English literals written by the
-// first demo seed stay valid until `migrations:backfillTaskFields` has normalized
-// every task in production. Remove them in the follow-up "narrow" deploy.
-const taskStatusStored = v.union(
+const taskStatus = v.union(
   v.literal("pendiente"),
   v.literal("en_progreso"),
-  v.literal("completada"),
-  v.literal("todo"),
-  v.literal("in_progress"),
-  v.literal("done")
+  v.literal("completada")
 );
 
-const taskPriorityStored = v.union(
-  v.literal("baja"),
-  v.literal("media"),
-  v.literal("alta"),
-  v.literal("low"),
-  v.literal("medium"),
-  v.literal("high")
-);
+const taskPriority = v.union(v.literal("baja"), v.literal("media"), v.literal("alta"));
 
 export default defineSchema({
   users: defineTable({
@@ -45,8 +32,8 @@ export default defineSchema({
     // Historical source of truth; `status` is kept in sync with it.
     isCompleted: v.boolean(),
     position: v.number(),
-    status: v.optional(taskStatusStored),
-    priority: v.optional(taskPriorityStored),
+    status: v.optional(taskStatus),
+    priority: v.optional(taskPriority),
     dueDate: v.optional(v.number()),
     estimatedHours: v.optional(v.number()),
     notes: v.optional(v.string()),

@@ -49,25 +49,6 @@ describe("task status compatibility", () => {
     expect(byTitle["Vieja"]).toBe("completada");
     expect(byTitle["Vieja 2"]).toBe("pendiente");
   });
-
-  test("legacy English values are exposed as Spanish", async () => {
-    const { base, owner, project } = await setup();
-    await base.run(async (ctx) => {
-      await ctx.db.insert("tasks", {
-        projectId: project._id,
-        title: "Demo",
-        isCompleted: false,
-        position: 9,
-        status: "in_progress",
-        priority: "high",
-      });
-    });
-
-    const loaded = await owner.query(api.projects.get, { projectId: project._id });
-    const demo = loaded!.tasks.find((t) => t.title === "Demo");
-    expect(demo?.status).toBe("en_progreso");
-    expect(demo?.priority).toBe("alta");
-  });
 });
 
 describe("tasks.updateTask", () => {
@@ -198,19 +179,11 @@ describe("migrations.backfillTaskFields", () => {
     await base.run(async (ctx) => {
       await ctx.db.insert("tasks", { projectId: project._id, title: "sin status", isCompleted: false, position: 1 });
       await ctx.db.insert("tasks", { projectId: project._id, title: "hecha", isCompleted: true, position: 2 });
-      await ctx.db.insert("tasks", {
-        projectId: project._id,
-        title: "legacy",
-        isCompleted: false,
-        position: 3,
-        status: "in_progress",
-        priority: "low",
-      });
     });
     return { base, project };
   }
 
-  test("fills status and rewrites legacy values without touching isCompleted", async () => {
+  test("fills missing status without touching isCompleted", async () => {
     const { base } = await seedLegacy();
 
     const result = await base.mutation(internal.migrations.backfillTaskFields, {});
@@ -220,7 +193,6 @@ describe("migrations.backfillTaskFields", () => {
     const byTitle = Object.fromEntries(tasks.map((t) => [t.title, t]));
     expect(byTitle["sin status"]).toMatchObject({ status: "pendiente", isCompleted: false });
     expect(byTitle["hecha"]).toMatchObject({ status: "completada", isCompleted: true });
-    expect(byTitle["legacy"]).toMatchObject({ status: "en_progreso", priority: "baja", isCompleted: false });
   });
 
   test("is idempotent", async () => {
