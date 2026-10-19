@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Project } from '@/domains/projects/types';
 import { useUpdateTask, useCreateTask, useDeleteTask, useReorderTasks } from '@/domains/tasks/hooks/useTaskMutations';
@@ -8,13 +8,16 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTaskItem } from './SortableTaskItem';
-import { Plus, Loader2 } from 'lucide-react';
+import { EditProjectDialog } from './EditProjectDialog';
+import { NewTaskForm } from '@/domains/tasks/components/NewTaskForm';
+import { Plus } from 'lucide-react';
+import { Id } from '@/convex/_generated/dataModel';
 
 interface ProjectCardProps {
   project: Project;
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+function ProjectCardComponent({ project }: ProjectCardProps) {
   const completedTasks = project.tasks.filter((task) => task.isCompleted).length;
   const totalTasks = project.tasks.length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -23,10 +26,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { mutate: deleteTask } = useDeleteTask();
   const { mutate: reorderTasks } = useReorderTasks();
 
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
 
-  const sortedTasks = [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const sortedTasks = useMemo(
+    () => [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
+    [project.tasks]
+  );
+  const sortableIds = useMemo(() => sortedTasks.map((t) => t._id), [sortedTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -39,38 +45,46 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
     const oldIndex = sortedTasks.findIndex((t) => t._id === active.id);
     const newIndex = sortedTasks.findIndex((t) => t._id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
     const newOrder = arrayMove(sortedTasks, oldIndex, newIndex);
     reorderTasks({ projectId: project._id, taskIds: newOrder.map(t => t._id) });
   };
 
-  const handleAddTask = () => {
-    const title = newTaskTitle.trim();
-    if (!title) return;
+  const projectId = project._id;
+  const handleCreateTask = useCallback(
+    (title: string, onCreated: () => void) => {
+      createTask(
+        { projectId, title },
+        {
+          onSuccess: () => {
+            onCreated();
+            setShowInput(false);
+          },
+        }
+      );
+    },
+    [createTask, projectId]
+  );
+  const handleCancelCreate = useCallback(() => setShowInput(false), []);
 
-    createTask(
-      { projectId: project._id, title },
-      {
-        onSuccess: () => {
-          setNewTaskTitle('');
-          setShowInput(false);
-        },
-      }
-    );
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleAddTask();
-    if (e.key === 'Escape') {
-      setShowInput(false);
-      setNewTaskTitle('');
-    }
-  };
+  const handleUpdateStatus = useCallback(
+    (taskId: Id<'tasks'>, isCompleted: boolean) => updateTask({ taskId, isCompleted }),
+    [updateTask]
+  );
+  const handleDeleteTask = useCallback((taskId: Id<'tasks'>) => deleteTask(taskId), [deleteTask]);
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all shadow-sm">
+    <div className="relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all shadow-sm">
+      <EditProjectDialog
+        projectId={project._id}
+        name={project.name}
+        description={project.description}
+        className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-muted transition-colors"
+      />
+
       <Link href={`/projects/${project._id}`} className="block group cursor-pointer">
-        <div className="mb-4">
+        <div className="mb-4 pr-8">
           <h3 className="text-base font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
             {project.name}
           </h3>
@@ -100,13 +114,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
         ) : (
           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={sortedTasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                 {sortedTasks.map((task) => (
                   <SortableTaskItem
                     key={task._id}
                     task={task}
-                    onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
-                    onDelete={(taskId) => deleteTask(taskId)}
+                    onUpdateStatus={handleUpdateStatus}
+                    onDelete={handleDeleteTask}
                   />
                 ))}
               </SortableContext>
@@ -115,31 +129,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
         )}
 
         {showInput ? (
-          <div className="flex items-center gap-2 mt-3">
-            <input
-              autoFocus
-              type="text"
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Nombre de la tarea..."
-              className="flex-1 text-xs bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors"
-              disabled={isCreating}
-            />
-            <button
-              onClick={handleAddTask}
-              disabled={isCreating || !newTaskTitle.trim()}
-              className="text-xs bg-primary text-white font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-1 shadow-xs"
-            >
-              {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Agregar'}
-            </button>
-            <button
-              onClick={() => { setShowInput(false); setNewTaskTitle(''); }}
-              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors"
-            >
-              Cancelar
-            </button>
-          </div>
+          <NewTaskForm
+            isCreating={isCreating}
+            onSubmit={handleCreateTask}
+            onCancel={handleCancelCreate}
+          />
         ) : (
           <button
             onClick={() => setShowInput(true)}
@@ -153,3 +147,5 @@ export function ProjectCard({ project }: ProjectCardProps) {
     </div>
   );
 }
+
+export const ProjectCard = memo(ProjectCardComponent);

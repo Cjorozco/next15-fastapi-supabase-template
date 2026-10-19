@@ -45,4 +45,33 @@ describe('StatsGrid', () => {
     // 2 completed out of 3 total = 67%
     expect(screen.getByText('67%')).toBeInTheDocument();
   });
+
+  it('counts both pendiente and en_progreso as pending tasks', () => {
+    const projectId = 'project_9' as Id<'projects'>;
+    const make = (n: number, extra: Partial<Project['tasks'][number]>) => ({
+      _id: `task_${n}` as Id<'tasks'>,
+      title: `T${n}`,
+      isCompleted: false,
+      position: n,
+      projectId,
+      ...extra,
+    });
+    const projects: Project[] = [
+      {
+        _id: projectId,
+        name: 'P',
+        ownerId: 'user_1' as Id<'users'>,
+        tasks: [
+          make(1, { status: 'pendiente' }),
+          make(2, { status: 'en_progreso' }),
+          make(3, { status: 'completada', isCompleted: true }),
+          make(4, {}),
+        ],
+      },
+    ];
+
+    render(<StatsGrid projects={projects} />);
+    // pendiente + en_progreso + (legacy task without status) = 3
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
 });

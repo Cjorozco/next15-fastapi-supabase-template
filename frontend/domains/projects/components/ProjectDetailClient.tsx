@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/shared/components/layout/Header';
 import { Sidebar } from '@/shared/components/layout/Sidebar';
@@ -14,13 +14,17 @@ import {
   useToggleSubtask,
   useRemoveSubtask,
   useConvertTaskToSubtask,
+  useUpdateTaskDetails,
 } from '@/domains/tasks/hooks/useTaskMutations';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { RefineProjectWithAiModal } from './RefineProjectWithAiModal';
 import { SortableTaskItem } from './SortableTaskItem';
-import { Plus, ArrowLeft, Loader2, AlertCircle, FolderKanban, Circle, X } from 'lucide-react';
+import { EditProjectDialog } from './EditProjectDialog';
+import { ProjectMetricsPanel } from './ProjectMetricsPanel';
+import { NewTaskForm } from '@/domains/tasks/components/NewTaskForm';
+import { Plus, ArrowLeft, Loader2, AlertCircle, FolderKanban, Circle } from 'lucide-react';
 import { Id } from '@/convex/_generated/dataModel';
 
 interface ProjectDetailClientProps {
@@ -37,12 +41,16 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { mutate: toggleSubtask } = useToggleSubtask();
   const { mutate: removeSubtask } = useRemoveSubtask();
   const { mutate: convertTaskToSubtask } = useConvertTaskToSubtask();
+  const { mutate: saveTaskDetails } = useUpdateTaskDetails();
 
-  const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showInput, setShowInput] = useState(false);
   const [activeDraggingId, setActiveDraggingId] = useState<string | null>(null);
 
-  const sortedTasks = project ? [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)) : [];
+  const sortedTasks = useMemo(
+    () => (project ? [...project.tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)) : []),
+    [project]
+  );
+  const sortableIds = useMemo(() => sortedTasks.map((t) => t._id), [sortedTasks]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -81,25 +89,40 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     setActiveDraggingId(null);
   };
 
-  const handleAddTask = () => {
-    const title = newTaskTitle.trim();
-    if (!title) return;
+  const handleCreateTask = useCallback(
+    (title: string, onCreated: () => void) => {
+      createTask(
+        { projectId, title },
+        {
+          onSuccess: () => {
+            onCreated();
+            setShowInput(false);
+          },
+        }
+      );
+    },
+    [createTask, projectId]
+  );
+  const handleCancelCreate = useCallback(() => setShowInput(false), []);
 
-    createTask(
-      { projectId, title },
-      {
-        onSuccess: () => {
-          setNewTaskTitle('');
-          setShowInput(false);
-        },
-      }
-    );
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleAddTask();
-    if (e.key === 'Escape') { setShowInput(false); setNewTaskTitle(''); }
-  };
+  const handleUpdateStatus = useCallback(
+    (taskId: Id<'tasks'>, isCompleted: boolean) => updateTask({ taskId, isCompleted }),
+    [updateTask]
+  );
+  const handleDeleteTask = useCallback((taskId: Id<'tasks'>) => deleteTask(taskId), [deleteTask]);
+  const handleAddSubtask = useCallback(
+    (taskId: Id<'tasks'>, title: string) => addSubtask({ taskId, title }),
+    [addSubtask]
+  );
+  const handleToggleSubtask = useCallback(
+    (taskId: Id<'tasks'>, subtaskId: string, isCompleted: boolean) =>
+      toggleSubtask({ taskId, subtaskId, isCompleted }),
+    [toggleSubtask]
+  );
+  const handleRemoveSubtask = useCallback(
+    (taskId: Id<'tasks'>, subtaskId: string) => removeSubtask({ taskId, subtaskId }),
+    [removeSubtask]
+  );
 
   const completedTasks = project?.tasks.filter((t) => t.isCompleted).length ?? 0;
   const totalTasks = project?.tasks.length ?? 0;
@@ -148,7 +171,14 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                       <FolderKanban className="w-5 h-5" />
                     </div>
                     <div>
-                      <h1 className="text-xl font-bold text-foreground">{project.name}</h1>
+                      <div className="flex items-center gap-1.5">
+                        <h1 className="text-xl font-bold text-foreground">{project.name}</h1>
+                        <EditProjectDialog
+                          projectId={project._id}
+                          name={project.name}
+                          description={project.description}
+                        />
+                      </div>
                       {project.description && (
                         <p className="text-xs text-muted-foreground mt-1">{project.description}</p>
                       )}
@@ -177,6 +207,8 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   </div>
                   <p className="text-right text-[11px] text-muted-foreground mt-1">{Math.round(progress)}%</p>
                 </div>
+
+                <ProjectMetricsPanel tasks={project.tasks} />
               </div>
 
               <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -192,31 +224,12 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                 </div>
 
                 {showInput && (
-                  <div className="flex items-center gap-2 mb-4 p-3 bg-muted/40 rounded-xl border border-border">
-                    <input
-                      autoFocus
-                      type="text"
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Nombre de la tarea..."
-                      className="flex-1 text-xs bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
-                      disabled={isCreating}
-                    />
-                    <button
-                      onClick={handleAddTask}
-                      disabled={isCreating || !newTaskTitle.trim()}
-                      className="text-xs bg-primary text-white font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-1 shadow-xs"
-                    >
-                      {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Agregar'}
-                    </button>
-                    <button
-                      onClick={() => { setShowInput(false); setNewTaskTitle(''); }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <NewTaskForm
+                    variant="detail"
+                    isCreating={isCreating}
+                    onSubmit={handleCreateTask}
+                    onCancel={handleCancelCreate}
+                  />
                 )}
 
                 {project.tasks.length === 0 && !showInput && (
@@ -234,22 +247,19 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                     onDragCancel={handleDragCancel}
                     onDragEnd={handleDragEnd}
                   >
-                    <SortableContext items={sortedTasks.map((t) => t._id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
                       {sortedTasks.map((task) => (
                         <SortableTaskItem
                           key={task._id}
                           task={task}
                           isDetailView={true}
                           activeDraggingId={activeDraggingId}
-                          onUpdateStatus={(taskId, isCompleted) => updateTask({ taskId, isCompleted })}
-                          onDelete={(taskId) => deleteTask(taskId)}
-                          onAddSubtask={(taskId, title) => addSubtask({ taskId, title })}
-                          onToggleSubtask={(taskId, subtaskId, isCompleted) =>
-                            toggleSubtask({ taskId, subtaskId, isCompleted })
-                          }
-                          onRemoveSubtask={(taskId, subtaskId) =>
-                            removeSubtask({ taskId, subtaskId })
-                          }
+                          onUpdateStatus={handleUpdateStatus}
+                          onDelete={handleDeleteTask}
+                          onAddSubtask={handleAddSubtask}
+                          onToggleSubtask={handleToggleSubtask}
+                          onRemoveSubtask={handleRemoveSubtask}
+                          onSaveDetails={saveTaskDetails}
                         />
                       ))}
                     </SortableContext>

@@ -1,5 +1,6 @@
 import { Card } from "@/shared/components/ui/card";
 import { Project } from "@/domains/projects/types";
+import { countOpenTasks } from "@/domains/projects/lib/metrics";
 import { CheckCircle2, ListTodo, LayoutGrid } from "lucide-react";
 
 export function StatsGrid({ projects }: { projects: Project[] }) {
@@ -7,11 +8,13 @@ export function StatsGrid({ projects }: { projects: Project[] }) {
   const completedTasks = projects.reduce(
     (acc, p) => acc + p.tasks.filter((t) => t.isCompleted).length, 0
   );
+  // "Pendientes" = pendiente + en_progreso
+  const pendingTasks = projects.reduce((acc, p) => acc + countOpenTasks(p.tasks), 0);
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const stats = [
     { name: "Progreso Total", value: `${completionRate}%`, icon: CheckCircle2 },
-    { name: "Tareas Pendientes", value: totalTasks - completedTasks, icon: ListTodo },
+    { name: "Tareas Pendientes", value: pendingTasks, icon: ListTodo },
     { name: "Proyectos Activos", value: projects.length, icon: LayoutGrid },
   ];
 

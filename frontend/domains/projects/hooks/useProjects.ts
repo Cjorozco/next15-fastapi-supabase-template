@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { Id } from '@/convex/_generated/dataModel';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 
 export const useProjects = () => {
@@ -91,6 +92,36 @@ export const useCreateProjectWithTasks = () => {
     },
     isPending,
   };
+};
+
+export const useUpdateProject = () => {
+  const update = useMutation(api.projects.updateProject);
+  const [isPending, setIsPending] = useState(false);
+
+  const mutate = useCallback(
+    (
+      params: { projectId: Id<'projects'>; name?: string; description?: string },
+      options?: { onSuccess?: () => void; onError?: (message: string) => void }
+    ) => {
+      setIsPending(true);
+      void update(params)
+        .then(() => {
+          toast.success('Proyecto actualizado');
+          options?.onSuccess?.();
+        })
+        .catch((err: unknown) => {
+          const message = mapErrorToUserMessage(err, 'Error al actualizar el proyecto');
+          toast.error(message);
+          options?.onError?.(message);
+        })
+        .finally(() => {
+          setIsPending(false);
+        });
+    },
+    [update]
+  );
+
+  return { mutate, isPending };
 };
 
 export const useDeleteProject = () => {
