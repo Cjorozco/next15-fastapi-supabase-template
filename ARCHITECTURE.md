@@ -76,12 +76,15 @@ frontend/
 │   ├── lib/
 │   │   ├── authorization.ts         # requireAuthenticatedUser(), requireProjectOwner()
 │   │   ├── demoData.ts              # Datos sembrados de la demo
-│   │   └── errors.ts                # DomainException y DomainErrorCode
+│   │   ├── errors.ts                # DomainException y DomainErrorCode
+│   │   ├── taskDto.ts               # Validadores y toTaskDto(): status/priority siempre normalizados
+│   │   └── taskFields.ts            # Estados, prioridades, resolveTaskStatus() (compartido con la UI)
 │   ├── crons.ts                     # Reinicio diario de la demo
 │   ├── demo.ts                      # reset (interna): restaura los datos del usuario demo
-│   ├── projects.ts                  # list, get, create, createWithTasks, applyAiRefinement, remove, cleanupAll
-│   ├── tasks.ts                     # create, update, remove, reorder, addSubtask, toggleSubtask,
-│   │                                #   removeSubtask, convertTaskToSubtask
+│   ├── migrations.ts                # backfillTaskFields (idempotente), countTasksPendingBackfill
+│   ├── projects.ts                  # list, get, create, createWithTasks, updateProject, applyAiRefinement, remove, cleanupAll
+│   ├── tasks.ts                     # create, update (checkbox), updateTask (formulario), remove, reorder,
+│   │                                #   addSubtask, toggleSubtask, removeSubtask, convertTaskToSubtask
 │   └── users.ts                     # me, store
 ├── domains/                         # Código modularizado por dominio de negocio
 │   ├── projects/
@@ -156,15 +159,23 @@ erDiagram
         boolean isCompleted
         number position "Índice para reordenamiento"
         array subtasks "opcional: {id, title, isCompleted}[]"
-        string status "opcional (demo; la UI no lo muestra)"
-        string priority "opcional (demo)"
-        number dueDate "opcional (demo, timestamp)"
+        string status "opcional: pendiente | en_progreso | completada (si falta, se deriva de isCompleted)"
+        string priority "opcional: baja | media | alta"
+        number dueDate "opcional (timestamp, medianoche local)"
+        number estimatedHours "opcional"
+        string notes "opcional"
         string assignee "opcional (demo)"
     }
 
     users ||--o{ projects : "posee"
     projects ||--o{ tasks : "contiene"
 ```
+
+### Estado de las tareas
+
+`isCompleted` sigue siendo la fuente de verdad histórica y `status` se mantiene sincronizado en el servidor (checkbox, subtareas, `updateTask`): `completada` ⇔ `isCompleted`. Si una tarea no tiene `status`, `resolveTaskStatus()` (`convex/lib/taskFields.ts`) lo deriva del booleano; las queries devuelven siempre `status` y `priority` normalizados (`toTaskDto`).
+
+La primera versión del seed demo guardó valores en inglés (`todo`/`in_progress`/`done`, `low`/`medium`/`high`). El schema los acepta mientras dure la migración (*widen → migrate → narrow*): `npx convex run migrations:backfillTaskFields --prod` los reescribe y rellena `status`; después se quitan del schema.
 
 ### Índices de Rendimiento
 - **users:** `by_token(tokenIdentifier)`, `by_email(email)`

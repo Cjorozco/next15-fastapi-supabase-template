@@ -60,6 +60,17 @@ npx convex dev
 npx convex deploy
 ```
 
+#### Migraciones de datos
+
+Cuando un cambio de schema necesita reescribir datos (p. ej. `status` de tareas), usa *widen → migrate → narrow*: despliega primero el schema ampliado, ejecuta la migración y solo después quita lo antiguo.
+
+```bash
+npx convex run migrations:backfillTaskFields --prod        # idempotente
+npx convex run migrations:countTasksPendingBackfill --prod # debe devolver pending: 0
+```
+
+Orden recomendado: `npx convex deploy` → migración → `git push`, para que el frontend nuevo nunca llame a funciones que aún no existen.
+
 ### Paso 2: Desplegar Frontend a Vercel
 
 El repositorio está vinculado automáticamente a Vercel. Un `git push` a la rama principal (`master` / `main`) dispara un despliegue automático:
