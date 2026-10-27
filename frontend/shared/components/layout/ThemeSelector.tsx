@@ -12,6 +12,7 @@ export function ThemeSelector() {
 
   // Sincroniza el customHex si cambia el color base
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el borrador con la prop
     setCustomHex(baseColor);
   }, [baseColor]);
 

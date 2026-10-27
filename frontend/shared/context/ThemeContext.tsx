@@ -44,6 +44,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const savedPreset = localStorage.getItem(STORAGE_KEY_PRESET);
 
       if (savedMode === 'dark' || savedMode === 'light') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación desde localStorage (solo cliente)
         setModeState(savedMode);
       }
       if (savedColor) {

@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Project SaaS Manager",
-  description: "Manage your projects and tasks efficiently",
+  title: "Gestor de proyectos",
+  description: "Gestiona tus proyectos y tareas en tiempo real",
 };
 
 export default function RootLayout({
@@ -22,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider>
           <ConvexClientProvider>

@@ -84,8 +84,25 @@ git push origin master
 1. Abrir la URL de producción o de vista previa de Vercel.
 2. Comprobar que la consola del navegador no presente errores de WebSocket o cookies.
 3. Iniciar sesión y validar la carga en tiempo real del dashboard y los proyectos.
-4. Ejecutar la suite de tests E2E si corresponde:
-   ```bash
-   cd frontend
-   npx cypress run --e2e
-   ```
+4. Comprobar cabeceras: `curl -I https://<url>/login` debe incluir `Content-Security-Policy`, `X-Content-Type-Options` y `X-Frame-Options`.
+
+> No hay pruebas E2E (Cypress se retiró). La CI (`.github/workflows/ci.yml`) corre lint, `tsc`, Vitest, build y `npm audit --omit=dev`.
+
+---
+
+## 5. Demo (opcional)
+
+| Dónde | Variables |
+|---|---|
+| Vercel | `NEXT_PUBLIC_DEMO_EMAIL`, `DEMO_EMAIL`, `DEMO_PASSWORD` (solo servidor) |
+| Convex | `DEMO_EMAIL`, `DEMO_TOKEN_IDENTIFIER` |
+
+Sin `DEMO_EMAIL`/`DEMO_PASSWORD`, `/api/demo-login` responde 404. Para apagar la demo en producción, elimina esas variables y redespliega.
+
+---
+
+## 6. Rollback
+
+- **Frontend:** en Vercel, *Deployments* → despliegue anterior estable → *Promote to Production*.
+- **Backend:** Convex no revierte solo; redesplegar el commit previo con `npx convex deploy`. Para datos, restaurar desde un backup de Convex (*Settings > Backups*); la restauración aún no se ha probado.
+- Respetar el orden `convex deploy` → migración → `git push` también al volver atrás.

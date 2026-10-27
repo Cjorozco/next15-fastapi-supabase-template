@@ -21,7 +21,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 ## 3. Estado actual
 
-- Tests: Vitest 15 archivos / 107 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-09).
+- Tests: Vitest 19 archivos / 146 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-26).
 - Demo de un clic (`c8871be`): botón "Probar demo" en `/login` (visible si existe `NEXT_PUBLIC_DEMO_EMAIL`) que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
@@ -38,6 +38,8 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - `frontend/shared/lib/ai/`: gateway multi-proveedor (Gemini, Groq), adaptadores, `config.ts`, `safe-ai-parser.ts`, `ai-errors.ts`, `useAiClient.ts`.
 - `frontend/src/proxy.ts`: guards de auth (frontera de red de Next 16); deja pasar `/api/demo-login`.
 - Demo: `convex/demo.ts`, `convex/crons.ts`, `convex/lib/demoData.ts`, `src/app/api/demo-login/route.ts`, `shared/components/layout/DemoBanner.tsx`.
+
+- Auditoría de publicación (2026-10-26): Next 16.4.3 y zod 4.6.x (`npm audit --omit=dev` en 0), cabeceras de seguridad (CSP, nosniff, X-Frame-Options, Referrer, Permissions) en `next.config.ts`, `not-found.tsx`, `error.tsx`, `robots.ts`, cliente Supabase perezoso (`shared/lib/supabase.ts`) y CI en `.github/workflows/ci.yml`. La CSP no se ha probado en navegador: revisar la consola tras desplegar. Pendiente humano: monitoreo de errores/uptime, prueba de backup de Convex, aviso de privacidad, límite global del login demo, Lighthouse.
 
 ## 4. Cambios recientes
 
