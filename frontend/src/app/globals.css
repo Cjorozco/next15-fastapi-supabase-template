@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -26,6 +26,8 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -66,6 +68,8 @@
   --accent: #6366F1;
   --accent-foreground: #FFFFFF;
   --destructive: #DC2626;
+  --success: #047857;
+  --warning: #B45309;
   --border: #E2E8F0;
   --input: #E2E8F0;
   --ring: #6366F1;
@@ -101,6 +105,8 @@
   --accent: #6366F1;
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
+  --success: #34D399;
+  --warning: #FBBF24;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
   --ring: #6366F1;
@@ -125,5 +131,17 @@
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-200;
+  }
+}
+
+/* Reduced motion: drop entrance animations and smooth scrolling. Colour transitions stay,
+   so hover/focus/state feedback is preserved; spinners keep spinning (they signal loading). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [class*="animate-in"],
+  [class*="animate-out"] {
+    animation: none !important;
   }
 }

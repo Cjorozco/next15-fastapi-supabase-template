@@ -23,10 +23,17 @@ export function ThemeSelector() {
         setIsOpen(false);
       }
     };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isOpen]);
 
   const handleHexChange = (value: string) => {
@@ -40,25 +47,27 @@ export function ThemeSelector() {
     <div className="flex items-center gap-2" ref={popoverRef}>
       {/* Botón rápido Modo Claro / Oscuro */}
       <button
+        type="button"
         onClick={toggleMode}
-        className="p-2 rounded-xl border border-border bg-card/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-xs"
-        title={mode === 'light' ? 'Cambiar a Modo Oscuro' : 'Cambiar a Modo Claro'}
-        aria-label="Toggle Light/Dark Mode"
+        className="p-2.5 rounded-xl border border-border bg-card/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shadow-xs"
+        aria-label={mode === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'}
       >
         {mode === 'light' ? (
-          <Moon className="w-4 h-4 text-slate-700 dark:text-slate-200" />
+          <Moon className="w-4 h-4 text-foreground" aria-hidden="true" />
         ) : (
-          <Sun className="w-4 h-4 text-amber-400" />
+          <Sun className="w-4 h-4 text-warning" aria-hidden="true" />
         )}
       </button>
 
       {/* Botón trigger Selector de Gama */}
       <div className="relative">
         <button
+          type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-card/60 hover:bg-muted text-foreground/80 hover:text-foreground transition-all text-xs font-medium shadow-xs"
-          title="Personalizar Gama de Colores"
-          aria-label="Personalizar Gama de Colores"
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
+          className="flex items-center gap-2 px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-xl border border-border bg-card/60 hover:bg-muted text-foreground/80 hover:text-foreground transition-colors text-xs font-medium shadow-xs"
+          aria-label="Personalizar gama de colores"
         >
           <div
             className="w-3.5 h-3.5 rounded-full border border-black/10 dark:border-white/20 shadow-xs"
@@ -82,11 +91,11 @@ export function ThemeSelector() {
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-foreground">Paleta Inteligente</h4>
-                  <p className="text-[11px] text-muted-foreground">Armonía cromática automática</p>
+                  <p className="text-xs text-muted-foreground">Armonía cromática automática</p>
                 </div>
               </div>
               <span
-                className="text-[10px] font-mono px-2 py-0.5 rounded-md border border-border bg-muted/50 text-foreground/70"
+                className="text-xs font-mono px-2 py-0.5 rounded-md border border-border bg-muted/50 text-foreground/70"
               >
                 {baseColor.toUpperCase()}
               </span>
@@ -101,8 +110,10 @@ export function ThemeSelector() {
                   return (
                     <button
                       key={preset.id}
+                      type="button"
+                      aria-pressed={isSelected}
                       onClick={() => setPreset(preset.id)}
-                      className={`flex items-center gap-2.5 p-2 rounded-xl text-left text-xs transition-all border ${
+                      className={`flex items-center gap-2.5 p-2 rounded-xl text-left text-xs transition-colors border ${
                         isSelected
                           ? 'border-primary/50 bg-primary/10 text-foreground font-medium shadow-xs'
                           : 'border-border/40 hover:border-border hover:bg-muted text-muted-foreground hover:text-foreground'
@@ -132,7 +143,7 @@ export function ThemeSelector() {
                     value={baseColor}
                     onChange={(e) => setBaseColor(e.target.value)}
                     className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border border-border p-0.5"
-                    title="Seleccionar color"
+                    aria-label="Seleccionar color base"
                   />
                 </div>
                 <input
@@ -148,7 +159,7 @@ export function ThemeSelector() {
 
             {/* Previsualizador de la Armonía Generada */}
             <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-[11px] text-muted-foreground mb-1.5">Gama armónica derivada</p>
+              <p className="text-xs text-muted-foreground mb-1.5">Gama armónica derivada</p>
               <div className="flex items-center gap-1.5 h-4 w-full rounded-md overflow-hidden p-0.5 bg-muted/40 border border-border">
                 <div className="h-full flex-1 rounded-xs" style={{ backgroundColor: theme.chart1 }} title="Primario" />
                 <div className="h-full flex-1 rounded-xs" style={{ backgroundColor: theme.chart2 }} title="Análogo" />

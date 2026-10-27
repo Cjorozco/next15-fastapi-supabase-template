@@ -64,7 +64,7 @@ export const NewTaskForm = memo(function NewTaskForm({
         type="button"
         onClick={submit}
         disabled={isCreating || !title.trim()}
-        className="text-xs bg-primary text-white font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-1 shadow-xs"
+        className="text-xs bg-primary text-primary-foreground font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors flex items-center gap-1 shadow-xs"
       >
         {isCreating ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Agregar'}
       </button>

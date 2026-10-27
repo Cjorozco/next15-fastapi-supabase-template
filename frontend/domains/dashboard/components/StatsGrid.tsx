@@ -21,7 +21,7 @@ export function StatsGrid({ projects }: { projects: Project[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-8">
       {stats.map((item) => (
-        <Card key={item.name} className="p-6 bg-card border-border hover:border-primary/40 transition-all shadow-sm">
+        <Card key={item.name} className="p-6 bg-card border-border hover:border-primary/40 transition-colors shadow-sm">
           <div className="flex items-center space-x-4">
             <div className="p-3 rounded-xl bg-primary/10 text-primary">
               <item.icon size={24} />

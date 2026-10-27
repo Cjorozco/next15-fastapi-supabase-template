@@ -114,7 +114,7 @@ function SortableTaskItemComponent({
       <div
         ref={setSortableRef}
         style={style}
-        className={`rounded-xl border transition-all duration-150 ${
+        className={`rounded-xl border transition-colors duration-150 ${
           isDragging
             ? 'bg-card shadow-lg border-primary/40'
             : isOverSubtaskDrop
@@ -168,7 +168,7 @@ function SortableTaskItemComponent({
             <span
               className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${
                 completedSubtasksCount === totalSubtasksCount
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  ? 'bg-success/10 text-success border border-success/20'
                   : 'bg-muted text-muted-foreground border border-border'
               }`}
             >
@@ -212,9 +212,9 @@ function SortableTaskItemComponent({
         {isAnotherTaskDragging && (
           <div
             ref={setSubtaskDropRef}
-            className={`mx-3 mb-2.5 p-2 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-2 text-xs select-none ${
+            className={`mx-3 mb-2.5 p-2 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center gap-2 text-xs select-none ${
               isOverSubtaskDrop
-                ? 'border-primary bg-primary/20 text-primary font-semibold shadow-sm ring-2 ring-primary/20 scale-[1.01]'
+                ? 'border-primary bg-primary/20 text-primary font-semibold shadow-sm ring-2 ring-primary/20'
                 : 'border-primary/40 bg-primary/5 text-primary/80 hover:border-primary/70 hover:bg-primary/10'
             }`}
           >

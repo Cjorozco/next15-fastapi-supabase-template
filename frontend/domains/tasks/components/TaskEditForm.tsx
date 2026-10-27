@@ -81,7 +81,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
       aria-label={`Editar tarea ${task.title}`}
     >
       <div className="space-y-1">
-        <Label htmlFor={`${idPrefix}-title`} className="text-[11px] text-muted-foreground">
+        <Label htmlFor={`${idPrefix}-title`} className="text-xs text-muted-foreground">
           Título
         </Label>
         <Input
@@ -95,7 +95,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-status`} className="text-[11px] text-muted-foreground">
+          <Label htmlFor={`${idPrefix}-status`} className="text-xs text-muted-foreground">
             Estado
           </Label>
           <NativeSelect
@@ -113,7 +113,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-priority`} className="text-[11px] text-muted-foreground">
+          <Label htmlFor={`${idPrefix}-priority`} className="text-xs text-muted-foreground">
             Prioridad
           </Label>
           <NativeSelect
@@ -132,7 +132,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-due`} className="text-[11px] text-muted-foreground">
+          <Label htmlFor={`${idPrefix}-due`} className="text-xs text-muted-foreground">
             Fecha límite
           </Label>
           <Input
@@ -145,7 +145,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-hours`} className="text-[11px] text-muted-foreground">
+          <Label htmlFor={`${idPrefix}-hours`} className="text-xs text-muted-foreground">
             Horas estimadas
           </Label>
           <Input
@@ -164,7 +164,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor={`${idPrefix}-notes`} className="text-[11px] text-muted-foreground">
+        <Label htmlFor={`${idPrefix}-notes`} className="text-xs text-muted-foreground">
           Notas
         </Label>
         <Textarea
@@ -178,7 +178,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
       </div>
 
       {error && (
-        <p role="alert" className="text-[11px] text-red-500">
+        <p role="alert" className="text-xs text-destructive">
           {error}
         </p>
       )}
@@ -187,7 +187,7 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
         <button
           type="submit"
           disabled={isSaving}
-          className="text-xs bg-primary text-white font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1 shadow-xs"
+          className="text-xs bg-primary text-primary-foreground font-medium px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1 shadow-xs"
         >
           {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Guardar cambios'}
         </button>

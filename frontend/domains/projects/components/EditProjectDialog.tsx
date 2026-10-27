@@ -88,7 +88,7 @@ function EditProjectForm({ projectId, name, description, onDone }: EditProjectFo
         />
       </div>
       {error && (
-        <p role="alert" className="text-xs text-red-500">
+        <p role="alert" className="text-xs text-destructive">
           {error}
         </p>
       )}
@@ -105,7 +105,7 @@ function EditProjectForm({ projectId, name, description, onDone }: EditProjectFo
         <Button
           type="submit"
           disabled={isPending || !draftName.trim()}
-          className="flex-1 bg-primary hover:opacity-90 text-white font-medium text-xs rounded-xl"
+          className="flex-1 bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs rounded-xl"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar cambios'}
         </Button>
@@ -122,14 +122,13 @@ export function EditProjectDialog({ className, ...project }: EditProjectDialogPr
       <DialogTrigger asChild>
         <button
           type="button"
-          title="Editar proyecto"
           aria-label={`Editar proyecto ${project.name}`}
           className={
             className ??
             'text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-muted transition-colors'
           }
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-card border-border text-foreground rounded-2xl shadow-2xl">

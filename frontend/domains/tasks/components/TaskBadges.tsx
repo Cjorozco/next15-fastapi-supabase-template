@@ -13,10 +13,10 @@ import { useNow } from '@/shared/lib/useNow';
 const STATUS_STYLES: Record<TaskStatus, string> = {
   pendiente: 'bg-muted text-muted-foreground border-border',
   en_progreso: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  completada: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  completada: 'bg-success/10 text-success border-success/20',
 };
 
-const PILL = 'inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium border';
+const PILL = 'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border';
 
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`${PILL} ${STATUS_STYLES[status]}`}>{TASK_STATUS_LABELS[status]}</span>;
@@ -25,7 +25,7 @@ export function TaskStatusBadge({ status }: { status: TaskStatus }) {
 export function TaskPriorityBadge({ priority }: { priority: Task['priority'] }) {
   if (priority !== 'alta') return null;
   return (
-    <span className={`${PILL} bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20`}>
+    <span className={`${PILL} bg-destructive/10 text-destructive border-destructive/20`}>
       <Flag className="w-2.5 h-2.5" />
       Prioridad {TASK_PRIORITY_LABELS[priority].toLowerCase()}
     </span>
@@ -52,7 +52,7 @@ export const TaskMeta = memo(function TaskMeta({ task, compact = false }: TaskMe
         <span
           className={`${PILL} ${
             overdue
-              ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30'
+              ? 'bg-destructive/10 text-destructive border-destructive/30'
               : 'bg-muted/60 text-muted-foreground border-border'
           }`}
           title={overdue ? 'Fecha límite vencida' : 'Fecha límite'}

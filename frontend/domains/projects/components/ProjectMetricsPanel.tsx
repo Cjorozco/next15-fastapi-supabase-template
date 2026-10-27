@@ -29,7 +29,7 @@ export function ProjectMetricsPanel({ tasks }: { tasks: Task[] }) {
       label: 'Próxima fecha límite',
       value: metrics.nextDueDate !== undefined ? formatDueDate(metrics.nextDueDate, now) : 'Sin fecha',
       icon: CalendarClock,
-      tone: isNextOverdue ? 'text-red-600 dark:text-red-400' : 'text-foreground',
+      tone: isNextOverdue ? 'text-destructive' : 'text-foreground',
     },
   ];
 
@@ -41,11 +41,11 @@ export function ProjectMetricsPanel({ tasks }: { tasks: Task[] }) {
             <item.icon className="w-4 h-4" />
           </div>
           <div>
-            <dt className="text-[11px] text-muted-foreground">{item.label}</dt>
+            <dt className="text-xs text-muted-foreground">{item.label}</dt>
             <dd className={`text-sm font-semibold ${item.tone}`}>
               {item.value}
               {item.label === 'Próxima fecha límite' && isNextOverdue && (
-                <span className="text-[10px] font-medium ml-1">(vencida)</span>
+                <span className="text-xs font-medium ml-1">(vencida)</span>
               )}
             </dd>
           </div>

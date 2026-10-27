@@ -8,7 +8,9 @@ import type { Project } from '@/domains/projects/types';
 import { useTheme } from '@/shared/context/ThemeContext';
 
 export function ProjectProgressChart({ projects }: { projects: Project[] }) {
-  const { theme, mode } = useTheme();
+  const { theme } = useTheme();
+  const prefersReducedMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Transformamos los datos para la gráfica
   const data = projects.map((project, index) => {
@@ -27,43 +29,46 @@ export function ProjectProgressChart({ projects }: { projects: Project[] }) {
     };
   });
 
-  const isDark = mode === 'dark';
-
   return (
     <Card className="p-6 mt-8 bg-card border-border shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-base font-semibold text-foreground">Progreso por Proyecto (%)</h3>
         <span className="text-xs text-muted-foreground">{projects.length} proyectos registrados</span>
       </div>
-      <div className="h-72 w-full" style={{ minWidth: 0 }}>
+      <div
+        className="h-72 w-full"
+        style={{ minWidth: 0 }}
+        role="img"
+        aria-label={`Progreso por proyecto: ${data.map((d) => `${d.name} ${d.progress}%`).join(', ')}`}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20 }}>
             <CartesianGrid
               strokeDasharray="3 3"
               horizontal={true}
               vertical={false}
-              stroke={isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}
+              stroke="var(--border)"
             />
             <XAxis type="number" domain={[0, 100]} hide />
             <YAxis
               dataKey="name"
               type="category"
               width={150}
-              tick={{ fontSize: 12, fill: isDark ? '#94A3B8' : '#64748B' }}
+              tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
+              cursor={{ fill: 'var(--muted)', opacity: 0.5 }}
               contentStyle={{
-                backgroundColor: isDark ? '#111827' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#E2E8F0',
+                backgroundColor: 'var(--popover)',
+                borderColor: 'var(--border)',
                 borderRadius: '12px',
-                color: isDark ? '#FFFFFF' : '#0F172A',
+                color: 'var(--popover-foreground)',
                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
               }}
             />
-            <Bar dataKey="progress" radius={[0, 6, 6, 0]} barSize={24}>
+            <Bar dataKey="progress" isAnimationActive={!prefersReducedMotion} radius={[0, 6, 6, 0]} barSize={24}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
