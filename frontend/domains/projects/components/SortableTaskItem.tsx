@@ -12,6 +12,16 @@ import { TaskEditForm } from '@/domains/tasks/components/TaskEditForm';
 import { resolveTaskStatus } from '@/convex/lib/taskFields';
 import { Id } from '@/convex/_generated/dataModel';
 
+// Hover-only controls must also appear on keyboard focus and on touch (no hover).
+const REVEAL_ROW =
+  'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
+const REVEAL_SUBTASK =
+  'opacity-0 group-hover/subtask:opacity-100 group-focus-within/subtask:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
+const REVEAL_COMPACT =
+  'opacity-0 group-hover/task:opacity-100 group-focus-within/task:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100';
+const FOCUS_RING =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
 interface SortableTaskItemProps {
   task: Task;
   onUpdateStatus: (taskId: Id<'tasks'>, isCompleted: boolean) => void;
@@ -114,24 +124,27 @@ function SortableTaskItemComponent({
       >
         <div className="flex items-center gap-3 p-3 group">
           <button
-            className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground"
+            type="button"
+            aria-label={`Reordenar tarea ${task.title}`}
+            className={`cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground rounded p-1.5 -m-1.5 touch-none ${FOCUS_RING}`}
             {...attributes}
             {...listeners}
           >
-            <GripVertical className="w-4 h-4" />
+            <GripVertical className="w-4 h-4" aria-hidden="true" />
           </button>
 
           {/* Toggle expand subtasks */}
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded hover:bg-muted"
-            title={isExpanded ? 'Ocultar detalles' : 'Ver detalles y subtareas'}
+            className={`text-muted-foreground hover:text-foreground transition-colors p-1.5 -m-1 rounded hover:bg-muted ${FOCUS_RING}`}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? 'Ocultar detalles' : 'Ver detalles y subtareas'}
           >
             {isExpanded ? (
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
             ) : (
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
             )}
           </button>
 
@@ -144,7 +157,7 @@ function SortableTaskItemComponent({
           <label
             htmlFor={statusLabelId}
             className={`flex-1 text-xs cursor-pointer font-medium ${
-              task.isCompleted ? 'line-through text-muted-foreground/60' : 'text-foreground'
+              task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
             }`}
           >
             {task.title}
@@ -153,7 +166,7 @@ function SortableTaskItemComponent({
           {/* Badge de subtareas */}
           {totalSubtasksCount > 0 && (
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+              className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${
                 completedSubtasksCount === totalSubtasksCount
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                   : 'bg-muted text-muted-foreground border border-border'
@@ -164,7 +177,7 @@ function SortableTaskItemComponent({
           )}
 
           {task.isCompleted && (
-            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
           )}
 
           {/* Botón rápido para añadir subtarea */}
@@ -174,19 +187,20 @@ function SortableTaskItemComponent({
               setIsExpanded(true);
               setShowSubtaskInput(true);
             }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-muted-foreground hover:text-primary flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-muted"
-            title="Añadir subtarea"
+            className={`${REVEAL_ROW} transition-opacity text-xs text-muted-foreground hover:text-primary flex items-center gap-1 px-2 py-1.5 rounded hover:bg-muted ${FOCUS_RING}`}
+            aria-label={`Añadir subtarea a ${task.title}`}
           >
-            <Plus className="w-3 h-3" />
-            <span className="text-[10px]">Subtarea</span>
+            <Plus className="w-3 h-3" aria-hidden="true" />
+            <span className="text-xs">Subtarea</span>
           </button>
 
           <button
+            type="button"
             onClick={() => onDelete(task._id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-1 rounded"
-            title="Eliminar tarea"
+            className={`${REVEAL_ROW} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1 rounded ${FOCUS_RING}`}
+            aria-label={`Eliminar tarea ${task.title}`}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
 
@@ -205,7 +219,8 @@ function SortableTaskItemComponent({
             }`}
           >
             <CornerDownRight
-              className={`w-3.5 h-3.5 ${isOverSubtaskDrop ? 'animate-bounce text-primary' : 'text-primary/70'}`}
+              aria-hidden="true"
+              className={`w-3.5 h-3.5 ${isOverSubtaskDrop ? 'text-primary' : 'text-primary/70'}`}
             />
             <span>
               {isOverSubtaskDrop
@@ -237,7 +252,7 @@ function SortableTaskItemComponent({
                   key={subtask.id}
                   className="flex items-center gap-2.5 py-1 px-2 rounded-lg hover:bg-muted/50 group/subtask transition-colors"
                 >
-                  <CornerDownRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                  <CornerDownRight className="w-3 h-3 text-muted-foreground shrink-0" aria-hidden="true" />
                   <Checkbox
                     id={subtaskCheckboxId}
                     checked={subtask.isCompleted}
@@ -247,10 +262,10 @@ function SortableTaskItemComponent({
                   />
                   <label
                     htmlFor={subtaskCheckboxId}
-                    className={`flex-1 text-[11px] cursor-pointer ${
+                    className={`flex-1 text-xs cursor-pointer ${
                       subtask.isCompleted
-                        ? 'line-through text-muted-foreground/60'
-                        : 'text-foreground/90'
+                        ? 'line-through text-muted-foreground'
+                        : 'text-foreground'
                     }`}
                   >
                     {subtask.title}
@@ -258,10 +273,10 @@ function SortableTaskItemComponent({
                   <button
                     type="button"
                     onClick={() => onRemoveSubtask?.(task._id, subtask.id)}
-                    className="opacity-0 group-hover/subtask:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 rounded"
-                    title="Eliminar subtarea"
+                    className={`${REVEAL_SUBTASK} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1.5 rounded ${FOCUS_RING}`}
+                    aria-label={`Eliminar subtarea ${subtask.title}`}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3 h-3" aria-hidden="true" />
                   </button>
                 </div>
               );
@@ -273,6 +288,7 @@ function SortableTaskItemComponent({
                 <input
                   type="text"
                   autoFocus
+                  aria-label="Nombre de la subtarea"
                   placeholder="Nombre de la subtarea..."
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
@@ -282,12 +298,12 @@ function SortableTaskItemComponent({
                       setNewSubtaskTitle('');
                     }
                   }}
-                  className="flex-1 text-[11px] bg-muted/40 border border-border rounded-lg px-2.5 py-1 text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+                  className="flex-1 text-xs bg-muted/40 border border-border rounded-lg px-2.5 py-1.5 text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50"
                 />
                 <button
                   type="submit"
                   disabled={!newSubtaskTitle.trim()}
-                  className="text-[10px] bg-primary text-white font-medium px-2 py-1 rounded-md hover:opacity-90 disabled:opacity-50"
+                  className={`text-xs bg-primary text-primary-foreground font-medium px-2.5 py-1.5 rounded-md hover:opacity-90 disabled:opacity-50 ${FOCUS_RING}`}
                 >
                   Guardar
                 </button>
@@ -297,18 +313,19 @@ function SortableTaskItemComponent({
                     setShowSubtaskInput(false);
                     setNewSubtaskTitle('');
                   }}
-                  className="text-muted-foreground hover:text-foreground text-xs"
+                  className={`text-muted-foreground hover:text-foreground text-xs p-2 -m-1 rounded ${FOCUS_RING}`}
+                  aria-label="Cancelar nueva subtarea"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </form>
             ) : (
               <button
                 type="button"
                 onClick={() => setShowSubtaskInput(true)}
-                className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors py-1 pl-5 font-medium"
+                className={`flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors py-1.5 pl-5 font-medium rounded ${FOCUS_RING}`}
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-3 h-3" aria-hidden="true" />
                 <span>Añadir subtarea</span>
               </button>
             )}
@@ -328,11 +345,13 @@ function SortableTaskItemComponent({
     >
       <div className="flex items-center gap-2">
         <button
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground shrink-0"
+          type="button"
+          aria-label={`Reordenar tarea ${task.title}`}
+          className={`cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0 rounded p-1.5 -m-1.5 touch-none ${FOCUS_RING}`}
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="w-3.5 h-3.5" />
+          <GripVertical className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
 
         <Checkbox
@@ -343,24 +362,28 @@ function SortableTaskItemComponent({
         <label
           htmlFor={statusLabelId}
           className={`flex-1 text-xs cursor-pointer ${
-            task.isCompleted ? 'line-through text-muted-foreground/60' : 'text-foreground'
+            task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
           }`}
         >
           {task.title}
         </label>
 
         {totalSubtasksCount > 0 && (
-          <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.2 rounded font-medium border border-border/50">
+          <span
+            className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium border border-border/50"
+            aria-label={`${completedSubtasksCount} de ${totalSubtasksCount} subtareas completadas`}
+          >
             {completedSubtasksCount}/{totalSubtasksCount}
           </span>
         )}
 
         <button
+          type="button"
           onClick={() => onDelete(task._id)}
-          className="opacity-0 group-hover/task:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 rounded"
-          title="Borrar tarea"
+          className={`${REVEAL_COMPACT} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1 rounded ${FOCUS_RING}`}
+          aria-label={`Eliminar tarea ${task.title}`}
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       </div>
 

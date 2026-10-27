@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, LogOut, ChevronDown } from 'lucide-react';
+import { Search, LogOut, ChevronDown } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -16,17 +16,35 @@ export function Header() {
   const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const signOutRef = useRef<HTMLButtonElement>(null);
 
-  // Cierra el dropdown al hacer clic fuera
+  // Cierra el dropdown al hacer clic fuera o con Escape (devolviendo el foco al botón)
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    if (!dropdownOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDropdownOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [dropdownOpen]);
+
+  // Al abrir el menú, el foco pasa a su primer elemento
+  useEffect(() => {
+    if (dropdownOpen) signOutRef.current?.focus();
+  }, [dropdownOpen]);
 
   // Actualiza el query param ?q= en la URL para filtrar proyectos
   const handleSearch = useCallback(
@@ -54,10 +72,11 @@ export function Header() {
         <div className="flex-1 max-w-xl">
           {pathname === '/projects' && (
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <input
                 id="global-search"
-                type="text"
+                type="search"
+                aria-label="Buscar proyectos"
                 value={query}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Buscar proyectos..."
@@ -71,42 +90,47 @@ export function Header() {
           {/* Selector de Tema Inteligente y Modo */}
           <ThemeSelector />
 
-          {/* Notificaciones */}
-          <button
-            className="p-2 hover:bg-muted rounded-xl transition-colors relative text-muted-foreground hover:text-foreground"
-            title="Notificaciones"
-            onClick={() => { }}
-          >
-            <Bell className="w-4 h-4" />
-          </button>
-
           {/* Usuario — dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
               id="user-menu-button"
+              ref={menuButtonRef}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={dropdownOpen}
+              aria-controls="user-menu"
+              aria-label={`Menú de usuario${user?.email ? `: ${user.email}` : ''}`}
               onClick={() => setDropdownOpen((v) => !v)}
-              className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted rounded-xl border border-border transition-colors text-foreground"
+              className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted rounded-xl border border-border transition-colors text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-              <div className="w-7 h-7 bg-primary text-white rounded-full flex items-center justify-center shadow-xs">
+              <div className="w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-xs" aria-hidden="true">
                 <span className="text-xs font-bold">{initials}</span>
               </div>
               <span className="text-xs font-medium text-foreground max-w-[140px] truncate">
                 {user?.email ?? 'Usuario'}
               </span>
-              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown aria-hidden="true" className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100 text-popover-foreground">
-                <div className="px-4 py-2.5 border-b border-border">
-                  <p className="text-[11px] text-muted-foreground">Conectado como</p>
+              <div
+                id="user-menu"
+                role="menu"
+                aria-labelledby="user-menu-button"
+                className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100 text-popover-foreground"
+              >
+                <div role="none" className="px-4 py-2.5 border-b border-border">
+                  <p className="text-xs text-muted-foreground">Conectado como</p>
                   <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
                 </div>
                 <button
+                  ref={signOutRef}
+                  type="button"
+                  role="menuitem"
                   onClick={async () => { setDropdownOpen(false); await signOut(); }}
-                  className="flex items-center gap-2 w-full px-4 py-2.5 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-xs text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
                   Cerrar sesión
                 </button>
               </div>

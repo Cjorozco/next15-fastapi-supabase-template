@@ -42,7 +42,8 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
     );
 
     // Click expand button
-    const expandBtn = screen.getByTitle('Ver detalles y subtareas');
+    const expandBtn = screen.getByRole('button', { name: 'Ver detalles y subtareas' });
+    expect(expandBtn).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(expandBtn);
 
     expect(screen.getByText('Subtarea 1')).toBeInTheDocument();
@@ -61,7 +62,7 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Ver detalles y subtareas'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles y subtareas' }));
 
     // Check subtask 2
     const subtask2Label = screen.getByText('Subtarea 2');
@@ -82,7 +83,9 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Añadir subtarea'));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Añadir subtarea a Tarea con subtareas' })
+    );
 
     const input = screen.getByPlaceholderText('Nombre de la subtarea...');
     fireEvent.change(input, { target: { value: 'Nueva Subtarea 3' } });
@@ -105,10 +108,9 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle('Ver detalles y subtareas'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles y subtareas' }));
 
-    const deleteSubtaskBtns = screen.getAllByTitle('Eliminar subtarea');
-    fireEvent.click(deleteSubtaskBtns[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar subtarea Subtarea 1' }));
 
     expect(onRemoveSubtask).toHaveBeenCalledWith('task_1', 'sub_1');
   });

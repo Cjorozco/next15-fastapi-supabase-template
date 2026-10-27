@@ -40,13 +40,14 @@ export function Sidebar() {
 
       <div className="pt-6 border-t border-sidebar-border">
         <button
+          type="button"
           onClick={signOut}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-full"
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-full rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <LogOut className="w-4 h-4" />
           Cerrar sesión
         </button>
-        <p className="text-[11px] text-muted-foreground/60 mt-3">© 2026 Project Manager SaaS</p>
+        <p className="text-xs text-muted-foreground mt-3">© 2026 Project Manager SaaS</p>
       </div>
     </aside>
   );
