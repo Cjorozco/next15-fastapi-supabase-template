@@ -47,7 +47,7 @@ export default function RegisterPage() {
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center justify-center w-full bg-primary hover:opacity-90 text-white font-medium py-2 rounded-xl shadow-md shadow-primary/20 transition-all text-xs"
+            className="inline-flex items-center justify-center w-full bg-primary hover:opacity-90 text-primary-foreground font-medium py-2 rounded-xl shadow-md shadow-primary/20 transition-colors text-xs"
           >
             Volver al login
           </Link>
@@ -107,14 +107,14 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <p className="text-xs text-red-500 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
+              <p className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
 
             <Button
               type="submit"
-              className="w-full bg-primary hover:opacity-90 text-white font-medium text-xs py-2 rounded-xl shadow-md shadow-primary/20 transition-all"
+              className="w-full bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs py-2 rounded-xl shadow-md shadow-primary/20 transition-colors"
               disabled={isLoading}
             >
               {isLoading ? (

@@ -57,10 +57,10 @@ export function CreateProjectForm({ onClose }: CreateProjectFormProps) {
             placeholder="Ej: Rediseño de Plataforma"
             required
             autoFocus
-            className={`bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground text-xs rounded-xl focus-visible:ring-primary ${formError ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+            className={`bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground text-xs rounded-xl focus-visible:ring-primary ${formError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
           />
           {formError && (
-            <p className="text-xs text-red-500 flex items-center gap-1">
+            <p className="text-xs text-destructive flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5" />
               {formError}
             </p>
@@ -81,7 +81,7 @@ export function CreateProjectForm({ onClose }: CreateProjectFormProps) {
           <Button
             type="submit"
             disabled={isPending || !name.trim()}
-            className="bg-primary hover:opacity-90 text-white font-medium text-xs rounded-xl"
+            className="bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs rounded-xl"
           >
             {isPending ? (
               <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Guardando...</>

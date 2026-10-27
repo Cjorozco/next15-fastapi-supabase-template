@@ -75,12 +75,12 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
   const handleDeleteTask = useCallback((taskId: Id<'tasks'>) => deleteTask(taskId), [deleteTask]);
 
   return (
-    <div className="relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all shadow-sm">
+    <div className="relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors shadow-sm">
       <EditProjectDialog
         projectId={project._id}
         name={project.name}
         description={project.description}
-        className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-muted transition-colors"
+        className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-primary p-2.5 rounded-lg hover:bg-muted transition-colors"
       />
 
       <Link href={`/projects/${project._id}`} className="block group cursor-pointer">
@@ -100,7 +100,7 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
           </div>
           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
             <div
-              className="bg-primary h-1.5 rounded-full transition-all duration-300 shadow-xs"
+              className="bg-primary h-1.5 rounded-full transition-[width] duration-300 motion-reduce:transition-none shadow-xs"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -110,7 +110,7 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
       <div className="space-y-2">
         <h4 className="text-xs font-semibold text-foreground/80 mb-3">Tareas</h4>
         {project.tasks.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60 italic">No hay tareas aún</p>
+          <p className="text-xs text-muted-foreground italic">No hay tareas aún</p>
         ) : (
           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

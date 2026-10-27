@@ -39,11 +39,11 @@ describe('TaskMeta', () => {
   it('marks an overdue open task in red but not a completed one', () => {
     const lastWeek = Date.now() - 7 * DAY_MS;
     const { rerender } = render(<TaskMeta task={{ ...baseTask, dueDate: lastWeek }} />);
-    expect(screen.getByTitle('Fecha límite vencida').className).toContain('text-red-600');
+    expect(screen.getByTitle('Fecha límite vencida').className).toContain('text-destructive');
 
     rerender(<TaskMeta task={{ ...baseTask, dueDate: lastWeek, isCompleted: true }} />);
     expect(screen.queryByTitle('Fecha límite vencida')).not.toBeInTheDocument();
-    expect(screen.getByTitle('Fecha límite').className).not.toContain('text-red-600');
+    expect(screen.getByTitle('Fecha límite').className).not.toContain('text-destructive');
   });
 });
 

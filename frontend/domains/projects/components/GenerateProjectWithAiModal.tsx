@@ -154,9 +154,9 @@ export function GenerateProjectWithAiModal({
         <DialogTrigger asChild>
           <Button
             type="button"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-primary hover:opacity-90 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs px-4 py-2.5 rounded-xl shadow-md shadow-primary/20 transition-colors cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 animate-pulse text-amber-300" />
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
             <span>✨ Generar con IA</span>
           </Button>
         </DialogTrigger>
@@ -165,7 +165,7 @@ export function GenerateProjectWithAiModal({
       <DialogContent className="sm:max-w-[480px] bg-card border-border text-foreground rounded-2xl shadow-2xl">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <DialogTitle className="text-foreground text-lg font-bold">
@@ -198,7 +198,7 @@ export function GenerateProjectWithAiModal({
             />
             {/* Chips de sugerencias rápidas */}
             <div className="flex flex-wrap gap-1.5 pt-1">
-              <span className="text-[10px] text-muted-foreground self-center mr-1">Sugerencias:</span>
+              <span className="text-xs text-muted-foreground self-center mr-1">Sugerencias:</span>
               {[
                 'Campaña de marketing en 3 semanas',
                 'Lanzamiento MVP SaaS',
@@ -209,7 +209,7 @@ export function GenerateProjectWithAiModal({
                   type="button"
                   disabled={isGenerating}
                   onClick={() => setPrompt(sug)}
-                  className="text-[10px] bg-muted hover:bg-muted/80 text-foreground/80 px-2 py-0.5 rounded-lg border border-border transition-colors cursor-pointer"
+                  className="text-xs bg-muted hover:bg-muted/80 text-foreground/80 px-2 py-0.5 rounded-lg border border-border transition-colors cursor-pointer"
                 >
                   {sug}
                 </button>
@@ -228,7 +228,7 @@ export function GenerateProjectWithAiModal({
                 type="button"
                 disabled={isGenerating}
                 onClick={handleToggleConfig}
-                className="text-[11px] text-primary hover:underline font-medium cursor-pointer"
+                className="text-xs text-primary hover:underline font-medium cursor-pointer"
               >
                 {showConfig || !hasApiKey ? 'Ocultar' : 'Cambiar Clave'}
               </button>
@@ -236,13 +236,13 @@ export function GenerateProjectWithAiModal({
 
             {/* Selector de proveedor */}
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-[11px] text-muted-foreground">Motor:</span>
+              <span className="text-xs text-muted-foreground">Motor:</span>
               <div className="inline-flex rounded-lg border border-border bg-background p-0.5">
                 <button
                   type="button"
                   disabled={isGenerating}
                   onClick={() => handleProviderChange('gemini')}
-                  className={`px-2 py-0.5 text-[11px] rounded-md font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 text-xs rounded-md font-medium transition-colors cursor-pointer ${
                     provider === 'gemini'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -254,7 +254,7 @@ export function GenerateProjectWithAiModal({
                   type="button"
                   disabled={isGenerating}
                   onClick={() => handleProviderChange('groq')}
-                  className={`px-2 py-0.5 text-[11px] rounded-md font-medium transition-colors cursor-pointer ${
+                  className={`px-2 py-0.5 text-xs rounded-md font-medium transition-colors cursor-pointer ${
                     provider === 'groq'
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -266,7 +266,7 @@ export function GenerateProjectWithAiModal({
             </div>
 
             {hasApiKey && !showConfig && (
-              <div className="flex items-center gap-1.5 mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-1.5 mt-2 text-xs text-success">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Clave configurada en tu navegador para {provider === 'gemini' ? 'Gemini' : 'Groq'}</span>
               </div>
@@ -294,7 +294,7 @@ export function GenerateProjectWithAiModal({
                     Guardar
                   </Button>
                 </div>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Tu clave nunca se envía a servidores de backend. Se llama al LLM directo desde tu navegador.
                 </p>
               </div>
@@ -303,9 +303,9 @@ export function GenerateProjectWithAiModal({
 
           {/* Mensaje de error con opción de fallback manual */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs space-y-2">
+            <div className="p-3 rounded-xl bg-warning/10 border border-warning/20 text-foreground text-xs space-y-2">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-warning" />
                 <span className="leading-relaxed">{errorMessage}</span>
               </div>
               <div className="pt-1 flex justify-end">
@@ -314,7 +314,7 @@ export function GenerateProjectWithAiModal({
                   variant="outline"
                   size="sm"
                   onClick={handleManualFallback}
-                  className="text-xs h-7 rounded-lg border-amber-500/30 hover:bg-amber-500/20 text-foreground"
+                  className="text-xs h-7 rounded-lg border-warning/30 hover:bg-warning/20 text-foreground"
                 >
                   <PlusCircle className="w-3 h-3 mr-1.5" />
                   Crear proyecto manualmente
@@ -337,7 +337,7 @@ export function GenerateProjectWithAiModal({
             <Button
               type="submit"
               disabled={isGenerating || !prompt.trim()}
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white font-medium text-xs rounded-xl h-9 shadow-md shadow-purple-500/20 cursor-pointer"
+              className="flex-1 bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs rounded-xl h-9 shadow-md shadow-primary/20 cursor-pointer"
             >
               {isGenerating ? (
                 <>
@@ -346,7 +346,7 @@ export function GenerateProjectWithAiModal({
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3.5 h-3.5 mr-2 text-amber-300" />
+                  <Sparkles className="w-3.5 h-3.5 mr-2 text-primary-foreground" />
                   <span>Generar Proyecto</span>
                 </>
               )}

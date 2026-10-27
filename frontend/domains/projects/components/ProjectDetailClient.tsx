@@ -132,10 +132,10 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     <div className="flex min-h-screen bg-background text-foreground transition-colors">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         <Header />
 
-        <main className="flex-1 p-8 max-w-3xl mx-auto w-full">
+        <main className="flex-1 p-4 sm:p-8 pb-24 md:pb-8 max-w-3xl mx-auto w-full">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
             <Link href="/projects" className="flex items-center gap-1 hover:text-foreground transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
@@ -156,7 +156,7 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
           )}
 
           {error && (
-            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <p className="font-semibold text-xs">Proyecto no encontrado</p>
             </div>
@@ -201,11 +201,11 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   </div>
                   <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-primary h-2 rounded-full transition-all duration-500 shadow-xs"
+                      className="bg-primary h-2 rounded-full transition-[width] duration-500 motion-reduce:transition-none shadow-xs"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-right text-[11px] text-muted-foreground mt-1">{Math.round(progress)}%</p>
+                  <p className="text-right text-xs text-muted-foreground mt-1">{Math.round(progress)}%</p>
                 </div>
 
                 <ProjectMetricsPanel tasks={project.tasks} />

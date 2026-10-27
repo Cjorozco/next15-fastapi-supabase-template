@@ -18,11 +18,11 @@ function DashboardContent() {
     <div className="flex min-h-screen bg-background text-foreground transition-colors">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         <Header />
 
-        <main className="flex-1 p-8">
-          <div className="mb-8 flex items-center justify-between">
+        <main className="flex-1 p-4 sm:p-8 pb-24 md:pb-8">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-2xl font-bold text-foreground mb-1">
                 Dashboard
@@ -60,7 +60,7 @@ function DashboardContent() {
                 <GenerateProjectWithAiModal />
                 <Link
                   href="/projects"
-                  className="inline-flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-medium text-xs px-4 py-2.5 rounded-xl border border-border transition-all"
+                  className="inline-flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground font-medium text-xs px-4 py-2.5 rounded-xl border border-border transition-colors"
                 >
                   Ir a Proyectos
                 </Link>

@@ -36,7 +36,7 @@ export function CreateProjectModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:opacity-90 text-white font-medium shadow-md shadow-primary/20 rounded-xl">
+        <Button className="bg-primary hover:opacity-90 text-primary-foreground font-medium shadow-md shadow-primary/20 rounded-xl">
           <PlusCircle className="mr-2 h-4 w-4" />
           Nuevo Proyecto
         </Button>
@@ -67,7 +67,7 @@ export function CreateProjectModal() {
           </div>
           <Button
             type="submit"
-            className="w-full bg-primary hover:opacity-90 text-white font-medium rounded-xl text-xs py-2 shadow-xs"
+            className="w-full bg-primary hover:opacity-90 text-primary-foreground font-medium rounded-xl text-xs py-2 shadow-xs"
             disabled={isPending}
           >
             {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Guardar Proyecto'}

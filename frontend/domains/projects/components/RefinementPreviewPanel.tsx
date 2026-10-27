@@ -23,7 +23,7 @@ export function RefinementPreviewPanel({
       )}
 
       {!preview.hasChanges && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-warning/10 border border-warning/20 text-xs text-foreground">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>La IA no propuso cambios para este proyecto. Prueba con otra instrucción.</span>
         </div>
@@ -34,13 +34,13 @@ export function RefinementPreviewPanel({
           <section className="space-y-1.5" aria-label="Cambio en la descripción">
             <h4 className="text-xs font-semibold text-foreground">Descripción</h4>
             <div className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Antes</p>
-              <p className="text-muted-foreground line-through decoration-red-500/50">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Antes</p>
+              <p className="text-muted-foreground line-through decoration-destructive/50">
                 {preview.description.before || 'Sin descripción'}
               </p>
             </div>
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5 text-xs">
-              <p className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1">
+            <div className="rounded-xl border border-success/30 bg-success/5 p-2.5 text-xs">
+              <p className="text-xs uppercase tracking-wide text-success mb-1">
                 Después
               </p>
               <p className="text-foreground">{preview.description.after}</p>
@@ -57,7 +57,7 @@ export function RefinementPreviewPanel({
               {preview.newTasks.map((task, index) => (
                 <li key={`${task.title}-${index}`} className="text-xs">
                   <div className="flex items-start gap-1.5 text-foreground">
-                    <Plus className="w-3 h-3 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <Plus className="w-3 h-3 mt-0.5 text-success shrink-0" />
                     <span>{task.title}</span>
                   </div>
                   {task.subtasks.length > 0 && (
@@ -86,7 +86,7 @@ export function RefinementPreviewPanel({
                   <ul className="pl-3 mt-1 space-y-0.5">
                     {item.subtaskTitles.map((subtask, i) => (
                       <li key={`${subtask}-${i}`} className="flex items-start gap-1.5 text-muted-foreground">
-                        <Plus className="w-3 h-3 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <Plus className="w-3 h-3 mt-0.5 text-success shrink-0" />
                         <span>{subtask}</span>
                       </li>
                     ))}
@@ -98,14 +98,14 @@ export function RefinementPreviewPanel({
         )}
 
         {preview.skippedCount > 0 && (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {preview.skippedCount} propuesta(s) apuntaban a tareas que no existen y se omitieron.
           </p>
         )}
       </div>
 
       {preview.hasChanges && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           No se borra ninguna tarea. Revisa los cambios y confirma para aplicarlos.
         </p>
       )}
@@ -126,7 +126,7 @@ export function RefinementPreviewPanel({
             type="button"
             disabled={isApplying}
             onClick={onConfirm}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white font-medium text-xs rounded-xl h-9 shadow-md shadow-purple-500/20"
+            className="flex-1 bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs rounded-xl h-9 shadow-md shadow-primary/20"
           >
             {isApplying ? (
               <>
