@@ -20,6 +20,7 @@ Esta es la **capa común**: cómo se trabaja. Fuente: [Principios y forma de tra
 - Hotfix urgente: rama desde `master`, PR a `master` y, el mismo día, PR `master` → `develop`. Es el único caso en que `master` vuelve a `develop`.
 - Nada de push forzado. Push o merge solo cuando el usuario lo pida.
 - Conventional Commits: tipo en inglés y descripción en español (ej. `feat: agrega sección de precios`).
+- Sin protección de rama en el host (requiere plan de pago): el flujo se sostiene por convención, no por bloqueo técnico. Respétalo aunque nada impida un push directo.
 - Detalle y motivos: `docs/adr/004-flujo-de-ramas-develop-master.md`.
 
 ## Código

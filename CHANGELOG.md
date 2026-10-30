@@ -9,6 +9,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### Added
 - **Flujo de ramas `develop` → `master`:** regla única en `.agents/rules/working-style.md` y ADR 004; la CI corre en PR hacia `develop` y `master` y en push a ambas. Solo documentación y CI, sin cambio de versión.
+- **Sin protección de rama a propósito:** enmienda al ADR 004; el flujo se sostiene por convención porque la protección del host requiere plan de pago.
 - **Gestión de tareas:** `status` (`pendiente` / `en_progreso` / `completada`), `dueDate`, `estimatedHours`, `priority` (`baja` / `media` / `alta`) y `notes`. Formulario de edición al expandir una tarea (`tasks.updateTask`), badges de estado y prioridad alta, fecha límite en rojo si está vencida y horas estimadas. El checkbox sigue funcionando y sincroniza el estado.
 - **Edición de proyectos:** `projects.updateProject` (valida nombre, descripción y propiedad) con diálogo desde la tarjeta y el detalle.
 - **Métricas del proyecto:** horas estimadas, horas completadas y fecha límite más próxima. El Dashboard cuenta como "Tareas Pendientes" las `pendiente` + `en_progreso`.
