@@ -11,6 +11,18 @@ Esta es la **capa común**: cómo se trabaja. Fuente: [Principios y forma de tra
 4. Si algo no está en architecture y no es obvio, pregunta.
 5. Confirma antes de acciones difíciles de revertir o visibles para otros: cambios de schema, commit, push, merge, borrar ramas, cerrar PRs.
 
+## Flujo de ramas y commits
+
+- `master` es producción; `develop` es integración (ambiente de desarrollo/preview). Ningún cambio llega a `master` sin pasar antes por `develop`.
+- Antes de ramificar: `git fetch origin develop` (otras sesiones también publican).
+- Cada cambio sale en una rama nueva desde `develop` (`feat/*`, `fix/*`, `docs/*`, `chore/*`) y vuelve a `develop` con PR y **squash merge**.
+- Publicar: PR `develop` → `master` con **merge commit** (no squash, para que `develop` no diverja de `master`). Que `master` tenga de más el merge commit de cada publicación es normal y no se sincroniza de vuelta.
+- Hotfix urgente: rama desde `master`, PR a `master` y, el mismo día, PR `master` → `develop`. Es el único caso en que `master` vuelve a `develop`.
+- Nada de push forzado. Push o merge solo cuando el usuario lo pida.
+- Conventional Commits: tipo en inglés y descripción en español (ej. `feat: agrega sección de precios`).
+- Sin protección de rama en el host (requiere plan de pago): el flujo se sostiene por convención, no por bloqueo técnico. Respétalo aunque nada impida un push directo.
+- Detalle y motivos: `docs/adr/004-flujo-de-ramas-develop-master.md`.
+
 ## Código
 
 - TypeScript estricto. Evita `any` en código nuevo.

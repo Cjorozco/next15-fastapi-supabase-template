@@ -69,15 +69,16 @@ npx convex run migrations:backfillTaskFields --prod        # idempotente
 npx convex run migrations:countTasksPendingBackfill --prod # debe devolver pending: 0
 ```
 
-Orden recomendado: `npx convex deploy` → migración → `git push`, para que el frontend nuevo nunca llame a funciones que aún no existen.
+Orden recomendado: `npx convex deploy` → migración → merge del PR a `master`, para que el frontend nuevo nunca llame a funciones que aún no existen.
 
 ### Paso 2: Desplegar Frontend a Vercel
 
-El repositorio está vinculado automáticamente a Vercel. Un `git push` a la rama principal (`master` / `main`) dispara un despliegue automático:
+El repositorio está vinculado automáticamente a Vercel. Flujo de ramas: `.agents/rules/working-style.md` y ADR 004.
 
-```bash
-git push origin master
-```
+- **Preview:** cada rama y PR (incluida `develop`) genera un despliegue Preview.
+- **Producción:** solo `master`, y únicamente mediante el PR `develop` → `master` (merge commit). No se hace push directo a `master`.
+
+Configuración requerida en Vercel (Project Settings > Git): Production Branch = `master`. Las variables de entorno de Preview deben apuntar a un Convex y un Supabase de desarrollo, no a producción.
 
 ### Paso 3: Verificación Post-Deploy
 
@@ -105,4 +106,4 @@ Sin `DEMO_EMAIL`/`DEMO_PASSWORD`, `/api/demo-login` responde 404. Para apagar la
 
 - **Frontend:** en Vercel, *Deployments* → despliegue anterior estable → *Promote to Production*.
 - **Backend:** Convex no revierte solo; redesplegar el commit previo con `npx convex deploy`. Para datos, restaurar desde un backup de Convex (*Settings > Backups*); la restauración aún no se ha probado.
-- Respetar el orden `convex deploy` → migración → `git push` también al volver atrás.
+- Respetar el orden `convex deploy` → migración → merge a `master` también al volver atrás.
