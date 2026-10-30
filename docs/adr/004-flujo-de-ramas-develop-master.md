@@ -28,3 +28,16 @@ El repositorio trabajaba con una sola rama (`master`) y despliegue directo: `doc
   - Convex: `npx convex deploy` sigue siendo manual y va a producción; no hay despliegue automático por rama.
   - GitHub: proteger `master` y `develop` (PR obligatorio, check `check` de CI, sin push forzado).
 - **Enmiendas:** ningún ADR anterior trataba el flujo de ramas, por lo que no hay enmienda que añadir.
+
+## Enmiendas
+
+### 2026-10-30: sin protección de rama en el host
+
+La protección de rama de GitHub no se activará porque requiere un plan de pago en repositorios privados de cuentas gratuitas. Esta enmienda sustituye la línea de Consecuencias que da por pendiente "GitHub: proteger `master` y `develop` (PR obligatorio, check `check` de CI, sin push forzado)"; el texto original se conserva como registro histórico.
+
+El flujo se sostiene por convención, no por bloqueo técnico:
+- Las reglas de los agentes (`.agents/rules/working-style.md`).
+- "Push o merge solo cuando se pida" y sin push forzado.
+- El flujo de dos PR: cambio → `develop` (squash) y `develop` → `master` (merge commit).
+
+Consecuencia: nada impide técnicamente un push directo a `master` o fusionar un PR con la CI en rojo; la disciplina depende de seguir estas reglas.

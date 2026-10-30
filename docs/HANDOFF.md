@@ -76,6 +76,7 @@ Excepciones deliberadas de este proyecto (detalle en `.agents/rules/architecture
 - Convex en rutas planas (`projects.ts`, `tasks.ts`, `users.ts`); las carpetas por dominio rompieron `api.*` (`339a26a`).
 - Borrado físico con cascada de proyectos y tareas.
 - Se mantienen Recharts, `@dnd-kit` y Supabase Auth (ADR 001). **TanStack Charts** (`@tanstack/charts`) es el default para gráficas nuevas, pero aún **no está en `frontend/package.json`**: instalarlo antes de usarlo y no migrar `ProjectProgressChart` sin pedirlo.
+- Sin protección de rama a propósito (plan de pago): el flujo de ramas se sostiene por convención (ADR 004, enmienda 2026-10-30).
 
 Antes de editar `convex/`, leer `frontend/convex/_generated/ai/guidelines.md`.
 
