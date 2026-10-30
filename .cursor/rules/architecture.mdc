@@ -71,4 +71,3 @@ La capa común ([Principios y forma de trabajo](https://app.notion.com/p/3f3aa39
 | Gráficas: `@tanstack/charts` | Recharts 3.7 instalado (`ProjectProgressChart`); no se migra sin pedirlo | `package.json` manda |
 | Drag & drop: pragmatic-drag-and-drop | `@dnd-kit` | Ya instalado y en uso |
 | Auth: better-auth | Supabase Auth con JWT ES256 y JWKS en Convex | ADR 001 |
-| Flujo de ramas `develop` → `master` | Solo `master` | Repo de un solo desarrollador |

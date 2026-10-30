@@ -34,3 +34,7 @@ Skills Convex en `.agents/skills/` (pertenecen a este frontend).
 - **Filosofía:** UI tonta / backend fuerte
 
 `backend/` del monorepo es FastAPI histórico — no es este cwd.
+
+## Flujo de ramas
+
+Un solo lugar de verdad: sección "Flujo de ramas y commits" de `.agents/rules/working-style.md`. Resumen: `master` = producción, `develop` = integración; cada cambio sale de `develop` en rama nueva y vuelve con PR (squash); publicar es PR `develop` → `master` (merge commit).
