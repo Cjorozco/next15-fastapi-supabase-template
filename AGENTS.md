@@ -25,3 +25,7 @@ Si abres **solo** `frontend/` como raíz del IDE, usa `frontend/AGENTS.md` y `fr
 - FastAPI `backend/`: no extender salvo que se pida
 
 Documentación: [`ARCHITECTURE.md`](./ARCHITECTURE.md)
+
+## Flujo de ramas
+
+Un solo lugar de verdad: sección "Flujo de ramas y commits" de `.agents/rules/working-style.md`. Resumen: `master` = producción, `develop` = integración; cada cambio sale de `develop` en rama nueva y vuelve con PR (squash); publicar es PR `develop` → `master` (merge commit).

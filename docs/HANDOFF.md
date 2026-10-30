@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio y sincronizado con `origin`.
+> **Última actualización:** 2026-10-30 (flujo de ramas, ADR 004). Anterior: 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio y sincronizado con `origin`.
 
 ## 1. Qué es
 
@@ -16,7 +16,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 - Leer `AGENTS.md` y `.agents/rules/` (working-style, ux-principles, architecture, convex-conventions, ai-validation-zod).
 - App viva en `frontend/`. Para Convex, leer antes `frontend/convex/_generated/ai/guidelines.md`.
-- Rama única: `master`.
+- Flujo de ramas: `master` (producción) y `develop` (integración); cambios en rama nueva desde `develop` con PR y squash; publicar con PR `develop` → `master` (merge commit). Regla única en `.agents/rules/working-style.md`; decisión en ADR 004.
 - Comandos (en `frontend/`): `npm run test` (Vitest), `npx tsc --noEmit`.
 
 ## 3. Estado actual
@@ -76,7 +76,6 @@ Excepciones deliberadas de este proyecto (detalle en `.agents/rules/architecture
 - Convex en rutas planas (`projects.ts`, `tasks.ts`, `users.ts`); las carpetas por dominio rompieron `api.*` (`339a26a`).
 - Borrado físico con cascada de proyectos y tareas.
 - Se mantienen Recharts, `@dnd-kit` y Supabase Auth (ADR 001). **TanStack Charts** (`@tanstack/charts`) es el default para gráficas nuevas, pero aún **no está en `frontend/package.json`**: instalarlo antes de usarlo y no migrar `ProjectProgressChart` sin pedirlo.
-- Solo existe `master`.
 
 Antes de editar `convex/`, leer `frontend/convex/_generated/ai/guidelines.md`.
 
