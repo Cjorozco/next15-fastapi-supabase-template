@@ -63,6 +63,40 @@ describe('TaskMeta', () => {
     expect(screen.getByTitle('Fecha límite vencida')).toBeInTheDocument();
   });
 
+  it('shows a neutral "Sin límite" badge for a task flagged without deadline', () => {
+    render(<TaskMeta task={{ ...baseTask, noDeadline: true }} />);
+    expect(screen.getByText('Sin límite')).toBeInTheDocument();
+  });
+
+  it('does not show "Sin límite" or "Sin planificar" on a plain undated task in the card', () => {
+    render(<TaskMeta task={baseTask} />);
+    expect(screen.queryByText('Sin límite')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sin planificar')).not.toBeInTheDocument();
+  });
+
+  it('marks an undated, unflagged task as "Sin planificar" only in the week view', () => {
+    const { rerender } = render(<TaskMeta task={baseTask} showUnplanned />);
+    expect(screen.getByText('Sin planificar')).toBeInTheDocument();
+
+    rerender(<TaskMeta task={{ ...baseTask, noDeadline: true }} showUnplanned />);
+    expect(screen.queryByText('Sin planificar')).not.toBeInTheDocument();
+    rerender(<TaskMeta task={{ ...baseTask, dueDate: Date.now() + 5 * DAY_MS }} showUnplanned />);
+    expect(screen.queryByText('Sin planificar')).not.toBeInTheDocument();
+  });
+
+  it('treats a recurring task as "Sin límite" by default and does not inherit the project date', () => {
+    render(
+      <TaskMeta
+        task={{ ...baseTask, recurrence: 'diaria' }}
+        inheritedDueDate={new Date(2030, 2, 15).getTime()}
+        showUnplanned
+      />
+    );
+    expect(screen.getByText('Sin límite')).toBeInTheDocument();
+    expect(screen.queryByTitle('Fecha límite del proyecto')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sin planificar')).not.toBeInTheDocument();
+  });
+
   it('does not render a priority badge when the task has no priority', () => {
     render(<TaskMeta task={baseTask} />);
     expect(screen.queryByText(/prioridad/i)).not.toBeInTheDocument();
@@ -100,8 +134,41 @@ describe('TaskEditForm', () => {
       dueDate: new Date(2030, 2, 9).getTime(),
       estimatedHours: 4.5,
       recurrence: null,
+      noDeadline: false,
       notes: 'Hablar con QA',
     });
+  });
+
+  it('"Sin fecha límite" disables and clears the date and sends noDeadline', async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    render(<TaskEditForm task={{ ...baseTask, dueDate: new Date(2030, 2, 9).getTime() }} onSave={onSave} />);
+
+    const date = screen.getByLabelText('Fecha límite') as HTMLInputElement;
+    expect(date.value).toBe('2030-03-09');
+    expect(date).not.toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText('Sin fecha límite'));
+    expect(date).toBeDisabled();
+    expect(date.value).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ dueDate: null, noDeadline: true }));
+  });
+
+  it('starts checked for a flagged task and for a recurring task without date', () => {
+    const { rerender } = render(<TaskEditForm task={{ ...baseTask, noDeadline: true }} onSave={vi.fn()} />);
+    expect(screen.getByLabelText('Sin fecha límite')).toBeChecked();
+    expect(screen.getByLabelText('Fecha límite')).toBeDisabled();
+
+    rerender(<TaskEditForm key="r" task={{ ...baseTask, recurrence: 'diaria' }} onSave={vi.fn()} />);
+    expect(screen.getByLabelText('Sin fecha límite')).toBeChecked();
+  });
+
+  it('unchecking re-enables the date input', () => {
+    render(<TaskEditForm task={{ ...baseTask, noDeadline: true }} onSave={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText('Sin fecha límite'));
+    expect(screen.getByLabelText('Fecha límite')).not.toBeDisabled();
   });
 
   it('sends the chosen recurrence and clears it with an empty option', async () => {

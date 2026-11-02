@@ -1,6 +1,7 @@
 import { memo } from 'react';
-import { CalendarDays, Clock, Flag, Repeat } from 'lucide-react';
+import { CalendarDays, CalendarX, Clock, Flag, Infinity as InfinityIcon, Repeat } from 'lucide-react';
 import {
+  hasNoDeadline,
   resolveTaskStatus,
   TASK_PRIORITY_LABELS,
   TASK_RECURRENCE_LABELS,
@@ -45,6 +46,8 @@ interface TaskMetaProps {
   task: Task;
   /** Project due date, shown (not saved) when the task has no date of its own. */
   inheritedDueDate?: number;
+  /** "Esta semana" only: flag tasks that still need a date. */
+  showUnplanned?: boolean;
   /** Compact variant for project cards: smaller, no status badge. */
   compact?: boolean;
 }
@@ -53,12 +56,15 @@ interface TaskMetaProps {
 export const TaskMeta = memo(function TaskMeta({
   task,
   inheritedDueDate,
+  showUnplanned = false,
   compact = false,
 }: TaskMetaProps) {
   const status = resolveTaskStatus(task);
   const now = useNow();
-  const isInherited = task.dueDate === undefined && inheritedDueDate !== undefined;
-  const dueDate = task.dueDate ?? inheritedDueDate;
+  const noDeadline = hasNoDeadline(task);
+  // A task with no deadline by nature does not inherit the project date.
+  const isInherited = task.dueDate === undefined && !noDeadline && inheritedDueDate !== undefined;
+  const dueDate = task.dueDate ?? (noDeadline ? undefined : inheritedDueDate);
   const overdue = isTaskOverdue({ ...task, dueDate }, now);
 
   return (
@@ -78,6 +84,24 @@ export const TaskMeta = memo(function TaskMeta({
           {isInherited && <span>Proyecto: </span>}
           {formatDueDate(dueDate, now)}
           {overdue && <span className="sr-only"> (vencida)</span>}
+        </span>
+      )}
+      {noDeadline && (
+        <span
+          className={`${PILL} bg-muted/60 text-muted-foreground border-border`}
+          title="Esta tarea no tiene fecha límite"
+        >
+          <InfinityIcon className="w-2.5 h-2.5" aria-hidden="true" />
+          Sin límite
+        </span>
+      )}
+      {showUnplanned && dueDate === undefined && !noDeadline && (
+        <span
+          className={`${PILL} bg-warning/10 text-warning border-warning/30`}
+          title="Falta asignarle una fecha"
+        >
+          <CalendarX className="w-2.5 h-2.5" aria-hidden="true" />
+          Sin planificar
         </span>
       )}
       {task.recurrence && (

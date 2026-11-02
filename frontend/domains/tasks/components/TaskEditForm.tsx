@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { NativeSelect } from '@/shared/components/ui/native-select';
@@ -7,6 +8,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import {
   MAX_ESTIMATED_HOURS,
   MAX_TASK_NOTES_LENGTH,
+  hasNoDeadline,
   MAX_TASK_TITLE_LENGTH,
   resolveTaskStatus,
   TASK_PRIORITIES,
@@ -41,6 +43,7 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
   const [title, setTitle] = useState(task.title);
   const [status, setStatus] = useState<TaskStatus>(resolveTaskStatus(task));
   const [dueDate, setDueDate] = useState(toDateInputValue(task.dueDate));
+  const [noDeadline, setNoDeadline] = useState(hasNoDeadline(task));
   const [hours, setHours] = useState(task.estimatedHours !== undefined ? String(task.estimatedHours) : '');
   const [priority, setPriority] = useState<TaskPriority | ''>(task.priority ?? '');
   const [recurrence, setRecurrence] = useState<TaskRecurrence | ''>(task.recurrence ?? '');
@@ -74,7 +77,8 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
     await onSave({
       title: trimmedTitle,
       status,
-      dueDate: fromDateInputValue(dueDate),
+      dueDate: noDeadline ? null : fromDateInputValue(dueDate),
+      noDeadline,
       estimatedHours,
       priority: priority === '' ? null : priority,
       recurrence: recurrence === '' ? null : recurrence,
@@ -149,9 +153,23 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
             id={`${idPrefix}-due`}
             type="date"
             value={dueDate}
+            disabled={noDeadline}
             onChange={(e) => setDueDate(e.target.value)}
             className={FIELD}
           />
+          <div className="flex items-center gap-2 pt-1">
+            <Checkbox
+              id={`${idPrefix}-no-deadline`}
+              checked={noDeadline}
+              onCheckedChange={(checked) => {
+                setNoDeadline(!!checked);
+                if (checked) setDueDate('');
+              }}
+            />
+            <Label htmlFor={`${idPrefix}-no-deadline`} className="text-xs text-muted-foreground cursor-pointer">
+              Sin fecha límite
+            </Label>
+          </div>
         </div>
 
         <div className="space-y-1">
