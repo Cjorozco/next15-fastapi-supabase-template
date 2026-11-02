@@ -205,3 +205,47 @@ describe("migrations.backfillTaskFields", () => {
     expect(await base.query(internal.migrations.countTasksPendingBackfill, {})).toMatchObject({ pending: 0 });
   });
 });
+
+describe("projects.createWithTasks planning fields", () => {
+  test("stores priority, hours and due date of each task", async () => {
+    const { owner } = await setup();
+    const due = new Date(2030, 2, 15).getTime();
+
+    const created = await owner.mutation(api.projects.createWithTasks, {
+      name: "Con IA",
+      tasks: [
+        { title: "A", position: 0, priority: "alta", estimatedHours: 1.5, dueDate: due },
+        { title: "B", position: 1 },
+      ],
+    });
+
+    expect(created.tasks[0]).toMatchObject({ priority: "alta", estimatedHours: 1.5, dueDate: due });
+    expect(created.tasks[1].priority).toBeUndefined();
+    expect(created.tasks[1].estimatedHours).toBeUndefined();
+  });
+
+  test("rejects out-of-range hours and invalid dates", async () => {
+    const { owner } = await setup();
+
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Horas",
+        tasks: [{ title: "A", position: 0, estimatedHours: -1 }],
+      })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Fecha",
+        tasks: [{ title: "A", position: 0, dueDate: 0 }],
+      })
+    ).rejects.toThrow();
+  });
+
+  test("rejects too many tasks", async () => {
+    const { owner } = await setup();
+    const tasks = Array.from({ length: 51 }, (_, i) => ({ title: `T${i}`, position: i }));
+    await expect(
+      owner.mutation(api.projects.createWithTasks, { name: "Muchas", tasks })
+    ).rejects.toThrow();
+  });
+});

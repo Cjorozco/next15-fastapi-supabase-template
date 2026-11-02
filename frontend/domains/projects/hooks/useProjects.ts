@@ -3,6 +3,7 @@ import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { useCallback, useState } from 'react';
 import { Id } from '@/convex/_generated/dataModel';
+import type { CreateProjectArgs } from '@/domains/projects/lib/ai-draft';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 
 export const useProjects = () => {
@@ -64,7 +65,7 @@ export const useCreateProjectWithTasks = () => {
       projectData: {
         name: string;
         description?: string;
-        tasks: Array<{ title: string; position: number }>;
+        tasks: CreateProjectArgs["tasks"];
       },
       options?: {
         onSuccess?: (data: { _id: string; name: string; tasks: Array<{ title: string; position: number }> }) => void;

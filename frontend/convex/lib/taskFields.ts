@@ -49,6 +49,7 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 export const MAX_TASK_TITLE_LENGTH = 200;
 export const MAX_TASK_NOTES_LENGTH = 5000;
 export const MAX_ESTIMATED_HOURS = 10000;
+export const MAX_TASKS_PER_REQUEST = 50;
 
 export function normalizeStatus(
   value: TaskStatus | LegacyTaskStatus | undefined

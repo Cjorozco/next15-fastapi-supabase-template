@@ -3,8 +3,10 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuthenticatedUser, requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
-import { taskValidator, toTaskDto } from "./lib/taskDto";
+import { assertValidTaskPlanning } from "./lib/taskValidation";
+import { taskPriorityValidator, taskValidator, toTaskDto } from "./lib/taskDto";
 import {
+  MAX_TASKS_PER_REQUEST,
   resolveTaskStatus,
   statusAfterCompletion,
 } from "./lib/taskFields";
@@ -123,6 +125,9 @@ export const createWithTasks = mutation({
       v.object({
         title: v.string(),
         position: v.number(),
+        priority: v.optional(taskPriorityValidator),
+        estimatedHours: v.optional(v.number()),
+        dueDate: v.optional(v.number()),
       })
     ),
   },
@@ -133,6 +138,27 @@ export const createWithTasks = mutation({
 
     if (!name) {
       throw new DomainException("INVALID_INPUT", "Project name is required");
+    }
+    if (name.length > MAX_PROJECT_NAME_LENGTH) {
+      throw new DomainException(
+        "INVALID_INPUT",
+        `Project name cannot exceed ${MAX_PROJECT_NAME_LENGTH} characters`
+      );
+    }
+    if ((args.description?.trim().length ?? 0) > MAX_PROJECT_DESCRIPTION_LENGTH) {
+      throw new DomainException(
+        "INVALID_INPUT",
+        `Description cannot exceed ${MAX_PROJECT_DESCRIPTION_LENGTH} characters`
+      );
+    }
+    if (args.tasks.length > MAX_TASKS_PER_REQUEST) {
+      throw new DomainException(
+        "INVALID_INPUT",
+        `Cannot create more than ${MAX_TASKS_PER_REQUEST} tasks at once`
+      );
+    }
+    for (const task of args.tasks) {
+      assertValidTaskPlanning(task);
     }
 
     const duplicate = await ctx.db
@@ -165,6 +191,9 @@ export const createWithTasks = mutation({
           isCompleted: false,
           status: "pendiente",
           position: task.position,
+          ...(task.priority ? { priority: task.priority } : {}),
+          ...(task.estimatedHours !== undefined ? { estimatedHours: task.estimatedHours } : {}),
+          ...(task.dueDate !== undefined ? { dueDate: task.dueDate } : {}),
         });
         const createdTask = await ctx.db.get(taskId);
         if (createdTask) {

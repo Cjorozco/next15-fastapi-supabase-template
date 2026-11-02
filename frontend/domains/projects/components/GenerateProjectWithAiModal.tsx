@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { Sparkles, Loader2, Key, AlertCircle, CheckCircle2, PlusCircle } from 'lucide-react';
+import { Sparkles, Loader2, Key, AlertCircle, CheckCircle2, PlusCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import {
   generateProjectWithAi,
   mapAIErrorToUserMessage,
@@ -21,6 +21,13 @@ import {
 import { useAiClient } from '@/shared/lib/ai/useAiClient';
 import { AiProviderId } from '@/shared/lib/ai/types';
 import { useCreateProjectWithTasks } from '@/domains/projects/hooks/useProjects';
+import { AiDraftEditor } from '@/domains/projects/components/AiDraftEditor';
+import {
+  draftToCreateArgs,
+  extractExplicitTitle,
+  projectToDraft,
+  type ProjectDraft,
+} from '@/domains/projects/lib/ai-draft';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
@@ -49,6 +56,9 @@ export function GenerateProjectWithAiModal({
   const [inputKey, setInputKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ProjectDraft | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const lastRequest = useRef<{ prompt: string; fixedName?: string } | null>(null);
 
   const { provider, setProvider, apiKey, setApiKey, hasApiKey } = useAiClient();
   const { mutate: createProjectWithTasks } = useCreateProjectWithTasks();
@@ -83,6 +93,36 @@ export function GenerateProjectWithAiModal({
     }
   };
 
+  const resetAll = () => {
+    setDraft(null);
+    setPrompt('');
+    setErrorMessage(null);
+    lastRequest.current = null;
+  };
+
+  /** Asks the AI for a draft of the project. Nothing is saved until the user confirms. */
+  const requestDraft = async (request: { prompt: string; fixedName?: string }, apiKeyToUse: string) => {
+    setIsGenerating(true);
+    setErrorMessage(null);
+    try {
+      const aiProject = await generateProjectWithAi({
+        prompt: request.prompt,
+        apiKey: apiKeyToUse,
+        provider,
+        fixedName: request.fixedName,
+      });
+      lastRequest.current = request;
+      setDraft(projectToDraft(aiProject, request.fixedName));
+    } catch (err: unknown) {
+      // Typed errors: 429, timeout, network, invalid JSON after one retry
+      const { message: friendlyMessage } = mapAIErrorToUserMessage(err);
+      setErrorMessage(friendlyMessage);
+      toast.error(friendlyMessage);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -96,7 +136,9 @@ export function GenerateProjectWithAiModal({
     const currentKey = inputKey.trim() || apiKey.trim();
     if (!currentKey) {
       setShowConfig(true);
-      setErrorMessage(`Se requiere una Google Gemini API Key para generar con IA.`);
+      setErrorMessage(
+        `Se requiere una ${provider === 'gemini' ? 'Google Gemini' : 'Groq'} API Key para generar con IA.`
+      );
       return;
     }
 
@@ -105,49 +147,51 @@ export function GenerateProjectWithAiModal({
       setApiKey(currentKey);
     }
 
-    setIsGenerating(true);
+    // A leading "Title. rest" / "Title: rest" names the project verbatim.
+    const explicit = extractExplicitTitle(activePrompt);
+    await requestDraft(
+      explicit ? { prompt: explicit.rest, fixedName: explicit.title } : { prompt: activePrompt },
+      currentKey
+    );
+  };
 
-    try {
-      // 1. Invocar AI Gateway con validación defensiva automática Zod
-      const aiProject = await generateProjectWithAi({
-        prompt: activePrompt,
-        apiKey: currentKey,
-        provider,
-      });
+  const handleRegenerate = async () => {
+    const request = lastRequest.current;
+    const currentKey = inputKey.trim() || apiKey.trim();
+    if (!request || !currentKey) return;
+    await requestDraft(request, currentKey);
+  };
 
-      // 2. Ejecución de la mutación atómica de Convex
-      createProjectWithTasks(
-        {
-          name: aiProject.projectName,
-          description: aiProject.description,
-          tasks: aiProject.tasks,
-        },
-        {
-          onSuccess: (created) => {
-            setIsGenerating(false);
-            setIsOpen(false);
-            setPrompt('');
-            onSuccess?.(created);
-          },
-          onError: (err) => {
-            setIsGenerating(false);
-            const userMsg = err.message || 'Error al guardar el proyecto en la base de datos';
-            setErrorMessage(userMsg);
-            toast.error(userMsg);
-          },
-        }
-      );
-    } catch (err: unknown) {
-      // Intercepción tipada de errores (429, timeout de 8s, red, invalid-json/ZodError)
-      setIsGenerating(false);
-      const { message: friendlyMessage } = mapAIErrorToUserMessage(err);
-      setErrorMessage(friendlyMessage);
-      toast.error(friendlyMessage);
+  const handleCreate = () => {
+    if (!draft) return;
+    const args = draftToCreateArgs(draft);
+    if (!args.name) {
+      setErrorMessage('El proyecto necesita un nombre');
+      return;
     }
+    if (args.tasks.length === 0) {
+      setErrorMessage('Agrega al menos una tarea con título');
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsCreating(true);
+    createProjectWithTasks(args, {
+      onSuccess: (created) => {
+        setIsCreating(false);
+        setIsOpen(false);
+        resetAll();
+        onSuccess?.(created);
+      },
+      onError: (err) => {
+        setIsCreating(false);
+        setErrorMessage(err.message || 'Error al guardar el proyecto en la base de datos');
+      },
+    });
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !isGenerating && setIsOpen(open)}>
+    <Dialog open={isOpen} onOpenChange={(open) => !isGenerating && !isCreating && setIsOpen(open)}>
       {trigger ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
@@ -162,7 +206,7 @@ export function GenerateProjectWithAiModal({
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-[480px] bg-card border-border text-foreground rounded-2xl shadow-2xl">
+      <DialogContent className={`${draft ? "sm:max-w-[640px]" : "sm:max-w-[480px]"} bg-card border-border text-foreground rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -173,10 +217,70 @@ export function GenerateProjectWithAiModal({
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs text-muted-foreground">
-            Describe tu idea o meta y la IA creará el proyecto completo con su desglose de tareas ordenadas automáticamente.
+            {draft
+              ? "Revisa el borrador, edita lo que quieras y crea el proyecto cuando esté listo. Todavía no se guardó nada."
+              : "Describe tu idea, tus restricciones y tu situación. La IA propondrá un borrador que podrás editar antes de crear el proyecto."}
           </DialogDescription>
         </DialogHeader>
 
+        {draft ? (
+          <div className="space-y-4 pt-2">
+            <AiDraftEditor draft={draft} onChange={setDraft} disabled={isGenerating || isCreating} />
+
+            {errorMessage && (
+              <div role="alert" className="p-3 rounded-xl bg-warning/10 border border-warning/20 text-foreground text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-warning" />
+                <span className="leading-relaxed">{errorMessage}</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isGenerating || isCreating}
+                onClick={() => {
+                  setDraft(null);
+                  setErrorMessage(null);
+                }}
+                className="border-border text-foreground/80 hover:bg-muted text-xs rounded-xl h-9"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+                Editar prompt
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isGenerating || isCreating}
+                onClick={handleRegenerate}
+                className="border-border text-foreground/80 hover:bg-muted text-xs rounded-xl h-9"
+              >
+                {isGenerating ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                Regenerar
+              </Button>
+              <Button
+                type="button"
+                disabled={isGenerating || isCreating}
+                onClick={handleCreate}
+                className="flex-1 bg-primary hover:opacity-90 text-primary-foreground font-medium text-xs rounded-xl h-9 shadow-md shadow-primary/20 cursor-pointer"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                    <span>Creando...</span>
+                  </>
+                ) : (
+                  <span>Crear proyecto</span>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Regenerar descarta los cambios que hayas hecho en el borrador.</p>
+          </div>
+        ) : (
         <form onSubmit={handleGenerate} className="space-y-4 pt-2">
           {/* Prompt input */}
           <div className="space-y-2">
@@ -353,6 +457,7 @@ export function GenerateProjectWithAiModal({
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
