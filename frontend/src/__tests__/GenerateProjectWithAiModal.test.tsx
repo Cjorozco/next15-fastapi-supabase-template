@@ -200,6 +200,104 @@ describe('GenerateProjectWithAiModal', () => {
     });
   });
 
+  describe('closing and reopening', () => {
+    const openModal = () => fireEvent.click(screen.getByRole('button', { name: /generar con ia/i }));
+    const closeWithX = () => fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    const promptField = () => screen.getByLabelText(/¿Qué proyecto deseas construir\?/i) as HTMLTextAreaElement;
+
+    it('reopens on the prompt step with no draft after closing an untouched draft', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      closeWithX();
+
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument());
+
+      openModal();
+      expect(promptField().value).toBe('');
+      expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /generar proyecto/i })).toBeInTheDocument();
+
+      // What the user types now goes to the prompt, not to the old draft.
+      fireEvent.change(promptField(), { target: { value: 'Otra idea' } });
+      expect(promptField().value).toBe('Otra idea');
+    });
+
+    it('asks to discard an edited draft and keeps the modal open on "No"', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      fireEvent.change(screen.getByLabelText('Nombre del proyecto'), { target: { value: 'Mi nombre editado' } });
+      closeWithX();
+
+      expect(screen.getByText('¿Descartar borrador?')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /^No/ }));
+
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Mi nombre editado');
+    });
+
+    it('discards the edited draft on "Sí" and resets the modal', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      fireEvent.click(screen.getByRole('button', { name: 'Eliminar tarea 1' }));
+      closeWithX();
+      fireEvent.click(screen.getByRole('button', { name: /^Sí/ }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument());
+      expect(mockMutate).not.toHaveBeenCalled();
+
+      openModal();
+      expect(promptField().value).toBe('');
+      expect(screen.queryByLabelText('Título de la tarea 1')).not.toBeInTheDocument();
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+    });
+
+    it('does not ask again once the user undoes every change', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      const name = screen.getByLabelText('Nombre del proyecto') as HTMLInputElement;
+      const original = name.value;
+      fireEvent.change(name, { target: { value: 'Cambio temporal' } });
+      fireEvent.change(name, { target: { value: original } });
+      closeWithX();
+
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+    });
+
+    it('clears the prompt typed before cancelling', () => {
+      render(<GenerateProjectWithAiModal />);
+      openModal();
+      fireEvent.change(promptField(), { target: { value: 'Algo a medias' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      openModal();
+      expect(promptField().value).toBe('');
+    });
+
+    it('starts fresh after a project was created from the draft', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+      mockMutate.mockImplementation((_args, options) =>
+        options.onSuccess({ _id: 'p1', name: 'Campaña', tasks: [] })
+      );
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      fireEvent.click(screen.getByRole('button', { name: /crear proyecto/i }));
+
+      await waitFor(() => expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument());
+      openModal();
+      expect(promptField().value).toBe('');
+    });
+  });
+
   it('keeps an explicit title from the prompt instead of the AI name', async () => {
     localStorage.setItem('gemini_api_key', 'test-key-123');
     const generateSpy = vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue({
