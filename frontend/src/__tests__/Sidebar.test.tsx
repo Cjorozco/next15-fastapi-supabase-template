@@ -163,6 +163,8 @@ describe('Sidebar toggle placement', () => {
     // Positioned against the aside, and not inside the block that holds the title.
     expect(aside.className).toContain('relative');
     expect(toggle.className).toContain('absolute');
+    // In dark mode the sidebar border is nearly invisible, so the button needs its own.
+    expect(toggle.className).toContain('dark:border-muted-foreground/40');
     expect(toggle.parentElement).toBe(aside);
     expect(title.parentElement?.contains(toggle)).toBe(false);
   });
