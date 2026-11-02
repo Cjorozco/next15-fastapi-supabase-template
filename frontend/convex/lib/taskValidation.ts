@@ -12,6 +12,7 @@ export function assertValidTaskPlanning(task: {
   title: string;
   estimatedHours?: number;
   dueDate?: number;
+  noDeadline?: boolean;
 }): void {
   if (task.title.trim().length > MAX_TASK_TITLE_LENGTH) {
     throw new DomainException(
@@ -28,5 +29,8 @@ export function assertValidTaskPlanning(task: {
   }
   if (task.dueDate !== undefined && (!Number.isFinite(task.dueDate) || task.dueDate <= 0)) {
     throw new DomainException("INVALID_INPUT", "Invalid due date");
+  }
+  if (task.dueDate !== undefined && task.noDeadline === true) {
+    throw new DomainException("INVALID_INPUT", "A task cannot have a due date and no deadline");
   }
 }

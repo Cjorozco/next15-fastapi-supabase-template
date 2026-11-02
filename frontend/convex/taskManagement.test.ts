@@ -441,3 +441,60 @@ describe("tasks.createMany", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("tasks without deadline", () => {
+  test("existing tasks load without the flag", async () => {
+    const { task } = await setup();
+    expect(task.noDeadline).toBeUndefined();
+  });
+
+  test("noDeadline clears the date and setting a date turns it off", async () => {
+    const { owner, task } = await setup();
+    const due = new Date(2030, 0, 15).getTime();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, dueDate: due });
+
+    const open = await owner.mutation(api.tasks.updateTask, { taskId: task._id, noDeadline: true });
+    expect(open.noDeadline).toBe(true);
+    expect(open.dueDate).toBeUndefined();
+
+    const dated = await owner.mutation(api.tasks.updateTask, { taskId: task._id, dueDate: due });
+    expect(dated.noDeadline).toBe(false);
+    expect(dated.dueDate).toBe(due);
+  });
+
+  test("rejects a date together with noDeadline", async () => {
+    const { owner, task } = await setup();
+    await expect(
+      owner.mutation(api.tasks.updateTask, { taskId: task._id, noDeadline: true, dueDate: 123456 })
+    ).rejects.toThrow();
+  });
+
+  test("AI-created tasks keep the flag and reject date plus flag", async () => {
+    const { owner } = await setup();
+    const created = await owner.mutation(api.projects.createWithTasks, {
+      name: "Hábitos",
+      tasks: [
+        { title: "Leer", position: 0, noDeadline: true },
+        { title: "Entregar", position: 1, dueDate: new Date(2030, 0, 15).getTime() },
+      ],
+    });
+    expect(created.tasks[0].noDeadline).toBe(true);
+    expect(created.tasks[1].noDeadline).toBeUndefined();
+
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Mal",
+        tasks: [{ title: "X", position: 0, noDeadline: true, dueDate: 123456 }],
+      })
+    ).rejects.toThrow();
+  });
+
+  test("applyAiRefinement stores the flag on new tasks", async () => {
+    const { owner, project } = await setup();
+    const refined = await owner.mutation(api.projects.applyAiRefinement, {
+      projectId: project._id,
+      newTasks: [{ title: "Meditar", noDeadline: true }],
+    });
+    expect(refined.tasks.find((t) => t.title === "Meditar")?.noDeadline).toBe(true);
+  });
+});

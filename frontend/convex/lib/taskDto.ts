@@ -38,6 +38,7 @@ export const taskValidator = v.object({
   status: taskStatusValidator,
   priority: v.optional(taskPriorityValidator),
   dueDate: v.optional(v.number()),
+  noDeadline: v.optional(v.boolean()),
   estimatedHours: v.optional(v.number()),
   recurrence: v.optional(taskRecurrenceValidator),
   notes: v.optional(v.string()),
