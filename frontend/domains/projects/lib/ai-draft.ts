@@ -32,6 +32,8 @@ export interface DraftTask {
   estimatedHours: string;
   /** `YYYY-MM-DD` as used by `<input type="date">`, or empty. */
   dueDate: string;
+  /** No deadline by nature (habit, open task). Mutually exclusive with a date. */
+  noDeadline: boolean;
 }
 
 export interface ProjectDraft {
@@ -49,6 +51,7 @@ export interface CreateProjectArgs {
     priority?: TaskPriority;
     estimatedHours?: number;
     dueDate?: number;
+    noDeadline?: boolean;
   }>;
 }
 
@@ -62,6 +65,7 @@ export function newDraftTask(partial: Partial<Omit<DraftTask, 'key'>> = {}): Dra
     priority: '',
     estimatedHours: '',
     dueDate: '',
+    noDeadline: false,
     ...partial,
   };
 }
@@ -77,6 +81,7 @@ export function projectToDraft(project: AiProject, fixedName?: string): ProjectD
         priority: task.priority ?? '',
         estimatedHours: task.estimatedHours === undefined ? '' : String(task.estimatedHours),
         dueDate: task.dueDate ?? '',
+        noDeadline: task.noDeadline === true,
       })
     ),
   };
@@ -96,7 +101,7 @@ export function draftToCreateArgs(draft: ProjectDraft): CreateProjectArgs {
         ...(task.estimatedHours.trim() && Number.isFinite(hours) && hours > 0
           ? { estimatedHours: hours }
           : {}),
-        ...(dueDate !== null ? { dueDate } : {}),
+        ...(dueDate !== null ? { dueDate } : task.noDeadline ? { noDeadline: true } : {}),
       };
     });
 

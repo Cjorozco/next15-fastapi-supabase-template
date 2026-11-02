@@ -215,6 +215,8 @@ export const updateTask = mutation({
     title: v.optional(v.string()),
     status: v.optional(taskStatusValidator),
     dueDate: v.optional(v.union(v.number(), v.null())),
+    // true = no deadline by nature: also clears the date. Setting a date turns it off.
+    noDeadline: v.optional(v.boolean()),
     estimatedHours: v.optional(v.union(v.number(), v.null())),
     priority: v.optional(v.union(taskPriorityValidator, v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
@@ -255,6 +257,16 @@ export const updateTask = mutation({
         throw new DomainException("INVALID_INPUT", "Invalid due date");
       }
       patch.dueDate = args.dueDate ?? undefined;
+    }
+
+    if (args.noDeadline === true) {
+      if (args.dueDate !== undefined && args.dueDate !== null) {
+        throw new DomainException("INVALID_INPUT", "A task cannot have a due date and no deadline");
+      }
+      patch.noDeadline = true;
+      patch.dueDate = undefined;
+    } else if (args.noDeadline === false || (args.dueDate !== undefined && args.dueDate !== null)) {
+      patch.noDeadline = false;
     }
 
     if (args.estimatedHours !== undefined) {

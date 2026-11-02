@@ -101,7 +101,7 @@ describe('RefineProjectWithAiModal Component', () => {
   const proposal = {
     summary: 'Se agregaron 2 subtareas técnicas.',
     updatedDescription: 'Descripción mejorada con métricas.',
-    newTasks: [{ title: 'Pruebas de carga', subtasks: ['Definir escenarios'] }],
+    newTasks: [{ title: 'Pruebas de carga', subtasks: ['Definir escenarios'], noDeadline: true }],
     newSubtasksForExistingTasks: [
       { taskId: 'task_1', subtaskTitles: ['Configurar índices', 'Añadir seed data'] },
     ],
@@ -131,7 +131,7 @@ describe('RefineProjectWithAiModal Component', () => {
         {
           projectId: dummyProjectId,
           updatedDescription: 'Descripción mejorada con métricas.',
-          newTasks: [{ title: 'Pruebas de carga', subtasks: ['Definir escenarios'] }],
+          newTasks: [{ title: 'Pruebas de carga', subtasks: ['Definir escenarios'], noDeadline: true }],
           newSubtasksForExistingTasks: [
             { taskId: 'task_1', subtaskTitles: ['Configurar índices', 'Añadir seed data'] },
           ],

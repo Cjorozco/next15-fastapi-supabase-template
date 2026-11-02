@@ -46,6 +46,25 @@ export const aiPriorityField = z.unknown().transform(normalizeAiPriority).option
 export const aiHoursField = z.unknown().transform(normalizeAiHours).optional();
 export const aiDateField = z.unknown().transform(normalizeAiDate).optional();
 
+/** Only a real `true` counts; anything else is "not flagged". */
+export function normalizeAiNoDeadline(value: unknown): true | undefined {
+  return value === true || value === 'true' ? true : undefined;
+}
+export const aiNoDeadlineField = z.unknown().transform(normalizeAiNoDeadline).optional();
+
+export const DATE_OR_NO_DEADLINE_MESSAGE =
+  'Cada tarea necesita "dueDate" (YYYY-MM-DD) o "noDeadline": true; no puede quedar sin ninguno';
+
+/** A task either has a date or is explicitly marked as having no deadline, never neither. */
+export function hasDateOrNoDeadline(task: { dueDate?: string; noDeadline?: true }): boolean {
+  return task.dueDate !== undefined || task.noDeadline === true;
+}
+
+/** When the model sends both, the date wins. */
+export function dropFlagWhenDated<T extends { dueDate?: string; noDeadline?: true }>(task: T): T {
+  return task.dueDate !== undefined && task.noDeadline ? { ...task, noDeadline: undefined } : task;
+}
+
 const MAX_DESCRIPTION_SENTENCES = 2;
 const MAX_DESCRIPTION_CHARS = 400;
 

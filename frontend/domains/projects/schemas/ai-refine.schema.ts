@@ -1,11 +1,21 @@
 import { z } from "zod";
 import { safeParseAIResponse, AISafeResult } from "@/shared/lib/ai/safe-ai-parser";
-import { aiDateField, aiHoursField, aiPriorityField, limitSentences } from "./ai-fields";
+import {
+  aiDateField,
+  aiHoursField,
+  aiNoDeadlineField,
+  aiPriorityField,
+  DATE_OR_NO_DEADLINE_MESSAGE,
+  dropFlagWhenDated,
+  hasDateOrNoDeadline,
+  limitSentences,
+} from "./ai-fields";
 
 /**
  * Task specification for new tasks to be appended by the refinement AI.
  */
-export const AiNewTaskSchema = z.object({
+export const AiNewTaskSchema = z
+  .object({
   title: z
     .string()
     .trim()
@@ -23,7 +33,10 @@ export const AiNewTaskSchema = z.object({
   priority: aiPriorityField,
   estimatedHours: aiHoursField,
   dueDate: aiDateField,
-});
+  noDeadline: aiNoDeadlineField,
+})
+  .transform(dropFlagWhenDated)
+  .refine(hasDateOrNoDeadline, { message: DATE_OR_NO_DEADLINE_MESSAGE, path: ["dueDate"] });
 
 /**
  * Injection specification for adding new subtasks to an existing task by its taskId.

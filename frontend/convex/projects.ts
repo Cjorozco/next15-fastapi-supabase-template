@@ -132,6 +132,7 @@ export const createWithTasks = mutation({
         priority: v.optional(taskPriorityValidator),
         estimatedHours: v.optional(v.number()),
         dueDate: v.optional(v.number()),
+        noDeadline: v.optional(v.boolean()),
       })
     ),
   },
@@ -198,6 +199,7 @@ export const createWithTasks = mutation({
           ...(task.priority ? { priority: task.priority } : {}),
           ...(task.estimatedHours !== undefined ? { estimatedHours: task.estimatedHours } : {}),
           ...(task.dueDate !== undefined ? { dueDate: task.dueDate } : {}),
+          ...(task.noDeadline ? { noDeadline: true } : {}),
         });
         const createdTask = await ctx.db.get(taskId);
         if (createdTask) {
@@ -331,6 +333,7 @@ export const applyAiRefinement = mutation({
           priority: v.optional(taskPriorityValidator),
           estimatedHours: v.optional(v.number()),
           dueDate: v.optional(v.number()),
+          noDeadline: v.optional(v.boolean()),
         })
       )
     ),
@@ -426,6 +429,7 @@ export const applyAiRefinement = mutation({
               ? { estimatedHours: newTask.estimatedHours }
               : {}),
             ...(newTask.dueDate !== undefined ? { dueDate: newTask.dueDate } : {}),
+            ...(newTask.noDeadline ? { noDeadline: true } : {}),
           });
         }
       }

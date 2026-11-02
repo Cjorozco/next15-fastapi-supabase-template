@@ -32,3 +32,12 @@ if (typeof window !== 'undefined') {
     writable: true,
   });
 }
+
+// jsdom has no ResizeObserver; Radix (Checkbox inside a <form>) needs it.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}

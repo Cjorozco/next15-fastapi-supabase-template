@@ -10,6 +10,7 @@ describe('AiRefinementSchema & Validation (Surgical AI Copilot)', () => {
         {
           title: 'Configurar suite de pruebas E2E',
           subtasks: ['Instalar Cypress', 'Configurar CI GitHub Actions'],
+          noDeadline: true,
         },
       ],
       newSubtasksForExistingTasks: [
@@ -78,6 +79,30 @@ describe('AiRefinementSchema & Validation (Surgical AI Copilot)', () => {
       expect(result.formattedError).toContain('El título de la tarea no puede estar vacío');
     }
   });
+
+  it('requires a date or noDeadline on every new task', () => {
+    const result = validateAiRefinementResponse({ newTasks: [{ title: 'Sin plan' }] });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.formattedError).toContain('newTasks.0.dueDate');
+      expect(result.formattedError).toContain('noDeadline');
+    }
+  });
+
+  it('accepts noDeadline or a date', () => {
+    const result = validateAiRefinementResponse({
+      newTasks: [
+        { title: 'Hábito', noDeadline: true },
+        { title: 'Entrega', dueDate: '2030-03-15', noDeadline: true },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.newTasks[0].noDeadline).toBe(true);
+      expect(result.data.newTasks[1]).toMatchObject({ dueDate: '2030-03-15' });
+      expect(result.data.newTasks[1].noDeadline).toBeUndefined();
+    }
+  });
 });
 
 describe('AiRefinementSchema planning fields', () => {
@@ -85,7 +110,7 @@ describe('AiRefinementSchema planning fields', () => {
     const result = AiRefinementSchema.safeParse({
       newTasks: [
         { title: 'A', priority: 'media', estimatedHours: '1.5', dueDate: '2030-01-10' },
-        { title: 'B', priority: 'nunca', estimatedHours: 0, dueDate: 'mañana' },
+        { title: 'B', priority: 'nunca', estimatedHours: 0, dueDate: 'mañana', noDeadline: true },
       ],
     });
     expect(result.success).toBe(true);
