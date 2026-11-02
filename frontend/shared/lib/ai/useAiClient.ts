@@ -9,7 +9,7 @@ import {
   getStoredApiKey,
   setStoredApiKey as saveStoredApiKey,
 } from './ai-storage';
-import { executeAiPrompt, UNIFIED_SYSTEM_INSTRUCTION } from './ai-gateway';
+import { DEFAULT_AI_TIMEOUT_MS, executeAiPrompt, UNIFIED_SYSTEM_INSTRUCTION } from './ai-gateway';
 import { safeParseAIResponse } from './safe-ai-parser';
 import { AISchemaValidationError } from './ai-errors';
 
@@ -54,7 +54,7 @@ export function useAiClient(options?: UseAiClientOptions) {
         systemInstruction,
         provider,
         apiKey,
-        timeoutMs: callOptions?.timeoutMs ?? 8000,
+        timeoutMs: callOptions?.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS,
         temperature: callOptions?.temperature,
         model: callOptions?.model,
       });
@@ -74,7 +74,7 @@ export function useAiClient(options?: UseAiClientOptions) {
         systemInstruction,
         provider,
         apiKey,
-        timeoutMs: callOptions?.timeoutMs ?? 8000,
+        timeoutMs: callOptions?.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS,
         temperature: callOptions?.temperature,
         model: callOptions?.model,
         responseFormat: 'json',
