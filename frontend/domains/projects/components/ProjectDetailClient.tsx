@@ -22,6 +22,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { RefineProjectWithAiModal } from './RefineProjectWithAiModal';
 import { SortableTaskItem } from './SortableTaskItem';
 import { EditProjectDialog } from './EditProjectDialog';
+import { ProjectBadges } from './ProjectBadges';
 import { ProjectMetricsPanel } from './ProjectMetricsPanel';
 import { NewTaskForm } from '@/domains/tasks/components/NewTaskForm';
 import { Plus, ArrowLeft, Loader2, AlertCircle, FolderKanban, Circle } from 'lucide-react';
@@ -177,11 +178,21 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                           projectId={project._id}
                           name={project.name}
                           description={project.description}
+                          priority={project.priority}
+                          status={project.status}
+                          dueDate={project.dueDate}
                         />
                       </div>
                       {project.description && (
                         <p className="text-xs text-muted-foreground mt-1">{project.description}</p>
                       )}
+                      <div className="mt-2">
+                        <ProjectBadges
+                          priority={project.priority}
+                          status={project.status}
+                          dueDate={project.dueDate}
+                        />
+                      </div>
                     </div>
                   </div>
                   <RefineProjectWithAiModal

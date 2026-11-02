@@ -249,3 +249,49 @@ describe("projects.createWithTasks planning fields", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("project priority, status and due date", () => {
+  test("a project created before the new fields loads without them", async () => {
+    const { base, owner } = await setup();
+    const legacyId = await base.run(async (ctx) => {
+      const user = await ctx.db.query("users").first();
+      return await ctx.db.insert("projects", { ownerId: user!._id, name: "Antiguo" });
+    });
+
+    const loaded = await owner.query(api.projects.get, { projectId: legacyId });
+    expect(loaded).not.toBeNull();
+    expect(loaded!.status).toBeUndefined();
+    expect(loaded!.priority).toBeUndefined();
+    expect(loaded!.dueDate).toBeUndefined();
+  });
+
+  test("updateProject stores and clears the new fields", async () => {
+    const { owner, project } = await setup();
+    const due = new Date(2030, 5, 1).getTime();
+
+    const updated = await owner.mutation(api.projects.updateProject, {
+      projectId: project._id,
+      priority: "alta",
+      status: "en_pausa",
+      dueDate: due,
+    });
+    expect(updated).toMatchObject({ priority: "alta", status: "en_pausa", dueDate: due });
+
+    const cleared = await owner.mutation(api.projects.updateProject, {
+      projectId: project._id,
+      dueDate: null,
+    });
+    expect(cleared.dueDate).toBeUndefined();
+    expect(cleared.priority).toBe("alta");
+  });
+
+  test("updateProject rejects an invalid due date and other users", async () => {
+    const { owner, intruder, project } = await setup();
+    await expect(
+      owner.mutation(api.projects.updateProject, { projectId: project._id, dueDate: -5 })
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.projects.updateProject, { projectId: project._id, status: "completado" })
+    ).rejects.toThrow();
+  });
+});

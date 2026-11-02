@@ -9,6 +9,7 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTaskItem } from './SortableTaskItem';
 import { EditProjectDialog } from './EditProjectDialog';
+import { ProjectBadges } from './ProjectBadges';
 import { NewTaskForm } from '@/domains/tasks/components/NewTaskForm';
 import { Plus } from 'lucide-react';
 import { Id } from '@/convex/_generated/dataModel';
@@ -80,6 +81,9 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
         projectId={project._id}
         name={project.name}
         description={project.description}
+        priority={project.priority}
+        status={project.status}
+        dueDate={project.dueDate}
         className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-primary p-2.5 rounded-lg hover:bg-muted transition-colors"
       />
 
@@ -89,6 +93,13 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
             {project.name}
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">{project.description || 'Sin descripción'}</p>
+          <div className="mt-2">
+            <ProjectBadges
+              priority={project.priority}
+              status={project.status}
+              dueDate={project.dueDate}
+            />
+          </div>
         </div>
 
         <div className="mb-4">

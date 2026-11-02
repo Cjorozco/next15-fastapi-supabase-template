@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useCallback, useState } from 'react';
 import { Id } from '@/convex/_generated/dataModel';
 import type { TaskPriority } from '@/convex/lib/taskFields';
+import type { ProjectPriority, ProjectStatus } from '@/convex/lib/projectFields';
 import type { CreateProjectArgs } from '@/domains/projects/lib/ai-draft';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 
@@ -102,7 +103,15 @@ export const useUpdateProject = () => {
 
   const mutate = useCallback(
     (
-      params: { projectId: Id<'projects'>; name?: string; description?: string },
+      params: {
+        projectId: Id<'projects'>;
+        name?: string;
+        description?: string;
+        priority?: ProjectPriority;
+        status?: ProjectStatus;
+        /** `null` clears the due date. */
+        dueDate?: number | null;
+      },
       options?: { onSuccess?: () => void; onError?: (message: string) => void }
     ) => {
       setIsPending(true);

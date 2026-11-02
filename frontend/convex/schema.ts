@@ -9,6 +9,19 @@ const taskStatus = v.union(
 
 const taskPriority = v.union(v.literal("baja"), v.literal("media"), v.literal("alta"));
 
+const projectStatus = v.union(
+  v.literal("activo"),
+  v.literal("en_pausa"),
+  v.literal("completado")
+);
+
+const projectPriority = v.union(
+  v.literal("alta"),
+  v.literal("media"),
+  v.literal("baja"),
+  v.literal("ninguna")
+);
+
 export default defineSchema({
   users: defineTable({
     tokenIdentifier: v.string(),
@@ -22,6 +35,10 @@ export default defineSchema({
     ownerId: v.id("users"),
     name: v.string(),
     description: v.optional(v.string()),
+    // Optional: projects created before these fields are "activo" with priority "ninguna".
+    priority: v.optional(projectPriority),
+    status: v.optional(projectStatus),
+    dueDate: v.optional(v.number()),
   })
     .index("by_owner", ["ownerId"])
     .index("by_owner_and_name", ["ownerId", "name"]),
