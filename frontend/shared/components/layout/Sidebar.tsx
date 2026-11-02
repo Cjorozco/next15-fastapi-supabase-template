@@ -60,7 +60,7 @@ export function Sidebar() {
           aria-controls="sidebar-nav"
           aria-label={toggleLabel}
           title={toggleLabel}
-          className={`absolute -right-3.5 top-8 z-20 grid size-7 place-items-center rounded-full border border-sidebar-border bg-sidebar text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground ${FOCUS_RING}`}
+          className={`absolute -right-3.5 top-8 z-20 grid size-7 place-items-center rounded-full border border-sidebar-border dark:border-muted-foreground/40 bg-sidebar text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground ${FOCUS_RING}`}
         >
           <ToggleIcon className="w-4 h-4" aria-hidden="true" />
         </button>
