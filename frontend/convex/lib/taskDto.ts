@@ -25,6 +25,8 @@ export const taskPriorityValidator = v.union(
   v.literal("alta")
 );
 
+export const taskRecurrenceValidator = v.union(v.literal("diaria"), v.literal("semanal"));
+
 /** Shape returned to clients: status/priority always normalized to the Spanish literals. */
 export const taskValidator = v.object({
   _id: v.id("tasks"),
@@ -37,6 +39,7 @@ export const taskValidator = v.object({
   priority: v.optional(taskPriorityValidator),
   dueDate: v.optional(v.number()),
   estimatedHours: v.optional(v.number()),
+  recurrence: v.optional(taskRecurrenceValidator),
   notes: v.optional(v.string()),
   assignee: v.optional(v.string()),
   subtasks: v.optional(v.array(subtaskValidator)),

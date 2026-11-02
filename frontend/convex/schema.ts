@@ -22,6 +22,8 @@ const projectPriority = v.union(
   v.literal("ninguna")
 );
 
+const taskRecurrence = v.union(v.literal("diaria"), v.literal("semanal"));
+
 export default defineSchema({
   users: defineTable({
     tokenIdentifier: v.string(),
@@ -53,6 +55,8 @@ export default defineSchema({
     priority: v.optional(taskPriority),
     dueDate: v.optional(v.number()),
     estimatedHours: v.optional(v.number()),
+    // When set, completing the task reopens it with the next due date.
+    recurrence: v.optional(taskRecurrence),
     notes: v.optional(v.string()),
     assignee: v.optional(v.string()),
     subtasks: v.optional(

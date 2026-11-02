@@ -1,10 +1,11 @@
-import { mutation } from "./_generated/server";
-import { Doc } from "./_generated/dataModel";
+import { mutation, MutationCtx } from "./_generated/server";
+import { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
 import {
   taskPriorityValidator,
+  taskRecurrenceValidator,
   taskStatusValidator,
   taskValidator,
   toTaskDto,
@@ -13,6 +14,8 @@ import {
   MAX_ESTIMATED_HOURS,
   MAX_TASK_NOTES_LENGTH,
   MAX_TASK_TITLE_LENGTH,
+  MAX_TASKS_PER_REQUEST,
+  nextOccurrence,
   resolveTaskStatus,
   statusAfterCompletion,
 } from "./lib/taskFields";
@@ -57,10 +60,97 @@ export const create = mutation({
   },
 });
 
+/**
+ * Completing a recurring task does not close it: it is reopened with the next due date
+ * and its subtasks unchecked. Returns null when the task does not repeat.
+ */
+function reopenPatchIfRecurring(
+  task: Pick<Doc<"tasks">, "recurrence" | "dueDate" | "subtasks">,
+  tzOffsetMinutes: number | undefined
+): Partial<Doc<"tasks">> | null {
+  if (!task.recurrence) return null;
+  return {
+    isCompleted: false,
+    status: "pendiente",
+    dueDate: nextOccurrence({
+      dueDate: task.dueDate,
+      recurrence: task.recurrence,
+      now: Date.now(),
+      tzOffsetMinutes,
+    }),
+    ...(task.subtasks
+      ? { subtasks: task.subtasks.map((subtask) => ({ ...subtask, isCompleted: false })) }
+      : {}),
+  };
+}
+
+async function nextPositionInProject(ctx: MutationCtx, projectId: Id<"projects">) {
+  const tasks = await ctx.db
+    .query("tasks")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .collect();
+  return tasks.reduce((max, task) => Math.max(max, task.position), -1) + 1;
+}
+
+async function reindexProjectTasks(ctx: MutationCtx, projectId: Id<"projects">) {
+  const tasks = await ctx.db
+    .query("tasks")
+    .withIndex("by_project", (q) => q.eq("projectId", projectId))
+    .collect();
+  tasks.sort((a, b) => a.position - b.position);
+  for (let i = 0; i < tasks.length; i++) {
+    if (tasks[i].position !== i) {
+      await ctx.db.patch(tasks[i]._id, { position: i });
+    }
+  }
+}
+
+/** Creates one task per title (bulk paste). Blank lines are ignored. */
+export const createMany = mutation({
+  args: {
+    projectId: v.id("projects"),
+    titles: v.array(v.string()),
+  },
+  returns: v.array(taskValidator),
+  handler: async (ctx, args) => {
+    await requireProjectOwner(ctx, args.projectId);
+
+    const titles = args.titles.map((title) => title.trim()).filter(Boolean);
+    if (titles.length === 0) {
+      throw new DomainException("INVALID_INPUT", "Task title is required");
+    }
+    if (titles.length > MAX_TASKS_PER_REQUEST) {
+      throw new DomainException(
+        "INVALID_INPUT",
+        `Cannot create more than ${MAX_TASKS_PER_REQUEST} tasks at once`
+      );
+    }
+    titles.forEach(requireValidTitle);
+
+    let position = await nextPositionInProject(ctx, args.projectId);
+    const created = [];
+    for (const title of titles) {
+      const taskId = await ctx.db.insert("tasks", {
+        projectId: args.projectId,
+        title,
+        isCompleted: false,
+        status: "pendiente",
+        position: position++,
+        subtasks: [],
+      });
+      const task = await ctx.db.get(taskId);
+      if (task) created.push(toTaskDto(task));
+    }
+    return created;
+  },
+});
+
 export const update = mutation({
   args: {
     taskId: v.id("tasks"),
     isCompleted: v.boolean(),
+    // `Date#getTimezoneOffset()` of the user, to compute recurring dates in their calendar.
+    tzOffsetMinutes: v.optional(v.number()),
   },
   returns: taskValidator,
   handler: async (ctx, args) => {
@@ -77,11 +167,19 @@ export const update = mutation({
       isCompleted: args.isCompleted,
     }));
 
-    await ctx.db.patch(args.taskId, {
-      isCompleted: args.isCompleted,
-      status: statusAfterCompletion(resolveTaskStatus(task), args.isCompleted),
-      ...(updatedSubtasks ? { subtasks: updatedSubtasks } : {}),
-    });
+    const reopenPatch =
+      args.isCompleted && !task.isCompleted
+        ? reopenPatchIfRecurring(task, args.tzOffsetMinutes)
+        : null;
+
+    await ctx.db.patch(
+      args.taskId,
+      reopenPatch ?? {
+        isCompleted: args.isCompleted,
+        status: statusAfterCompletion(resolveTaskStatus(task), args.isCompleted),
+        ...(updatedSubtasks ? { subtasks: updatedSubtasks } : {}),
+      }
+    );
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {
@@ -120,6 +218,11 @@ export const updateTask = mutation({
     estimatedHours: v.optional(v.union(v.number(), v.null())),
     priority: v.optional(v.union(taskPriorityValidator, v.null())),
     notes: v.optional(v.union(v.string(), v.null())),
+    recurrence: v.optional(v.union(taskRecurrenceValidator, v.null())),
+    // Moves the task to another project of the same owner (subtasks, notes, status and
+    // priority are kept; it goes to the end of the target project).
+    projectId: v.optional(v.id("projects")),
+    tzOffsetMinutes: v.optional(v.number()),
   },
   returns: taskValidator,
   handler: async (ctx, args) => {
@@ -131,6 +234,17 @@ export const updateTask = mutation({
     await requireProjectOwner(ctx, task.projectId);
 
     const patch: Partial<Doc<"tasks">> = {};
+
+    const movesProject = args.projectId !== undefined && args.projectId !== task.projectId;
+    if (movesProject) {
+      await requireProjectOwner(ctx, args.projectId!);
+      patch.projectId = args.projectId;
+      patch.position = await nextPositionInProject(ctx, args.projectId!);
+    }
+
+    if (args.recurrence !== undefined) {
+      patch.recurrence = args.recurrence ?? undefined;
+    }
 
     if (args.title !== undefined) {
       patch.title = requireValidTitle(args.title);
@@ -183,12 +297,27 @@ export const updateTask = mutation({
           isCompleted: true,
         }));
       }
+      // A recurring task that gets completed is reopened with its next due date.
+      if (isCompleted && !task.isCompleted) {
+        const reopenPatch = reopenPatchIfRecurring(
+          {
+            recurrence: "recurrence" in patch ? patch.recurrence : task.recurrence,
+            dueDate: "dueDate" in patch ? patch.dueDate : task.dueDate,
+            subtasks: task.subtasks,
+          },
+          args.tzOffsetMinutes
+        );
+        if (reopenPatch) Object.assign(patch, reopenPatch);
+      }
     } else if (task.status !== resolveTaskStatus(task)) {
       // Lazily normalize legacy / missing status while the document is being edited.
       patch.status = resolveTaskStatus(task);
     }
 
     await ctx.db.patch(args.taskId, patch);
+    if (movesProject) {
+      await reindexProjectTasks(ctx, task.projectId);
+    }
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {
@@ -248,6 +377,7 @@ export const toggleSubtask = mutation({
     taskId: v.id("tasks"),
     subtaskId: v.string(),
     isCompleted: v.boolean(),
+    tzOffsetMinutes: v.optional(v.number()),
   },
   returns: taskValidator,
   handler: async (ctx, args) => {
@@ -267,11 +397,19 @@ export const toggleSubtask = mutation({
     const allCompleted =
       updatedSubtasks.length > 0 && updatedSubtasks.every((st) => st.isCompleted);
 
-    await ctx.db.patch(args.taskId, {
-      subtasks: updatedSubtasks,
-      isCompleted: allCompleted,
-      status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
-    });
+    const reopenPatch =
+      allCompleted && !task.isCompleted
+        ? reopenPatchIfRecurring({ ...task, subtasks: updatedSubtasks }, args.tzOffsetMinutes)
+        : null;
+
+    await ctx.db.patch(
+      args.taskId,
+      reopenPatch ?? {
+        subtasks: updatedSubtasks,
+        isCompleted: allCompleted,
+        status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
+      }
+    );
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {
