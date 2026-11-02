@@ -36,6 +36,7 @@ describe('Sidebar (collapsible)', () => {
     expect(within(aside).getByText('Manager')).toBeInTheDocument();
     expect(within(aside).getByText('ana@example.com')).toBeInTheDocument();
     expect(within(aside).getByText('© 2026 Project Manager SaaS')).toBeInTheDocument();
+    expect(within(aside).queryByText('PM')).not.toBeInTheDocument();
     expect(within(aside).getByRole('button', { name: 'Recoger menú lateral' })).toHaveAttribute(
       'aria-expanded',
       'true'
@@ -52,6 +53,9 @@ describe('Sidebar (collapsible)', () => {
     expect(within(aside).queryByText('Manager')).not.toBeInTheDocument();
     expect(within(aside).queryByText('ana@example.com')).not.toBeInTheDocument();
     expect(within(aside).queryByText('© 2026 Project Manager SaaS')).not.toBeInTheDocument();
+    // The brand stays: a monogram for sight, the full name for screen readers.
+    expect(within(aside).getByText('PM')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(aside).getByRole('heading', { level: 1, name: 'Project Manager' })).toBeInTheDocument();
     const toggle = within(aside).getByRole('button', { name: 'Expandir menú lateral' });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
@@ -140,5 +144,36 @@ describe('Sidebar (collapsible)', () => {
     expect(mobile).not.toBeNull();
     expect(within(mobile).getByText('Dashboard')).toBeVisible();
     expect(within(mobile).getByText('Esta semana')).toBeVisible();
+  });
+});
+
+describe('Sidebar toggle placement', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    act(() => setSidebarCollapsed(false));
+    localStorage.clear();
+  });
+
+  it('sits on the sidebar edge, outside the title row, so it cannot cover the title', () => {
+    const { container } = render(<Sidebar />);
+    const aside = desktop(container);
+    const toggle = within(aside).getByRole('button', { name: 'Recoger menú lateral' });
+    const title = within(aside).getByRole('heading', { level: 1 });
+
+    // Positioned against the aside, and not inside the block that holds the title.
+    expect(aside.className).toContain('relative');
+    expect(toggle.className).toContain('absolute');
+    expect(toggle.parentElement).toBe(aside);
+    expect(title.parentElement?.contains(toggle)).toBe(false);
+  });
+
+  it('keeps the same toggle button in both states (only its label and icon change)', () => {
+    const { container } = render(<Sidebar />);
+    const aside = desktop(container);
+    const before = within(aside).getByRole('button', { name: 'Recoger menú lateral' });
+    fireEvent.click(before);
+    const after = within(aside).getByRole('button', { name: 'Expandir menú lateral' });
+    expect(after.parentElement).toBe(aside);
+    expect(after.className).toBe(before.className);
   });
 });
