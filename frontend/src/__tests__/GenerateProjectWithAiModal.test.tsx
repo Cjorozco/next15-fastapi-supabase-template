@@ -59,45 +59,107 @@ describe('GenerateProjectWithAiModal', () => {
     expect(textarea.value).toBe('Campaña de marketing en 3 semanas');
   });
 
-  it('executes AI generation and calls atomic mutation on submit', async () => {
-    localStorage.setItem('gemini_api_key', 'test-key-123');
+  const sampleProject = {
+    projectName: 'Campaña de Marketing 3 Semanas',
+    description: 'Estrategia integral',
+    tasks: [
+      { title: 'Definir público', position: 0, priority: 'alta' as const, estimatedHours: 1 },
+      { title: 'Lanzar anuncios', position: 1 },
+      { title: 'Medir resultados', position: 2 },
+      { title: 'Ajustar presupuesto', position: 3 },
+    ],
+  };
 
-    const generateSpy = vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue({
-      projectName: 'Campaña de Marketing 3 Semanas',
-      description: 'Estrategia integral',
-      tasks: [
-        { title: 'Definir público', position: 0 },
-        { title: 'Lanzar anuncios', position: 1 },
-      ],
-    });
-
+  const openAndGenerate = async (promptText: string) => {
     render(<GenerateProjectWithAiModal />);
     fireEvent.click(screen.getByRole('button', { name: /generar con ia/i }));
+    fireEvent.change(screen.getByLabelText(/¿Qué proyecto deseas construir?/i), {
+      target: { value: promptText },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /generar proyecto/i }));
+    await screen.findByRole('button', { name: /crear proyecto/i });
+  };
 
-    const textarea = screen.getByLabelText(/¿Qué proyecto deseas construir\?/i);
-    fireEvent.change(textarea, { target: { value: 'Campaña de marketing en 3 semanas' } });
+  it('shows an editable preview and does not create anything until confirmed', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key-123');
+    const generateSpy = vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
 
-    const submitButton = screen.getByRole('button', { name: /generar proyecto/i });
-    fireEvent.click(submitButton);
+    await openAndGenerate('Campaña de marketing en 3 semanas');
+
+    expect(generateSpy).toHaveBeenCalledWith({
+      prompt: 'Campaña de marketing en 3 semanas',
+      apiKey: 'test-key-123',
+      provider: 'gemini',
+    });
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Campaña de Marketing 3 Semanas');
+    expect(screen.getByLabelText('Título de la tarea 1')).toHaveValue('Definir público');
+    expect(screen.getByLabelText('Prioridad de la tarea 1')).toHaveValue('alta');
+    expect(screen.getByLabelText('Horas estimadas de la tarea 1')).toHaveValue(1);
+  });
+
+  it('creates the project with the edits made in the preview', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key-123');
+    vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+    await openAndGenerate('Campaña de marketing en 3 semanas');
+
+    fireEvent.change(screen.getByLabelText('Nombre del proyecto'), { target: { value: 'Mi campaña' } });
+    fireEvent.change(screen.getByLabelText('Título de la tarea 2'), { target: { value: 'Lanzar anuncios Meta' } });
+    fireEvent.change(screen.getByLabelText('Prioridad de la tarea 2'), { target: { value: 'baja' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar tarea 4' }));
+    fireEvent.click(screen.getByRole('button', { name: /agregar tarea/i }));
+    fireEvent.change(screen.getByLabelText('Título de la tarea 4'), { target: { value: 'Informe final' } });
+    fireEvent.click(screen.getByRole('button', { name: /crear proyecto/i }));
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      {
+        name: 'Mi campaña',
+        description: 'Estrategia integral',
+        tasks: [
+          { title: 'Definir público', position: 0, priority: 'alta', estimatedHours: 1 },
+          { title: 'Lanzar anuncios Meta', position: 1, priority: 'baja' },
+          { title: 'Medir resultados', position: 2 },
+          { title: 'Informe final', position: 3 },
+        ],
+      },
+      expect.anything()
+    );
+  });
+
+  it('keeps an explicit title from the prompt instead of the AI name', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key-123');
+    const generateSpy = vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue({
+      ...sampleProject,
+      projectName: 'Nombre inventado',
+    });
+
+    await openAndGenerate('Inglés B2. Retomo tras 19 días, 30 min al día');
+
+    expect(generateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: 'Retomo tras 19 días, 30 min al día',
+        fixedName: 'Inglés B2',
+      })
+    );
+    expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Inglés B2');
+  });
+
+  it('regenerates the draft with the same request', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key-123');
+    const generateSpy = vi
+      .spyOn(geminiClient, 'generateProjectWithAi')
+      .mockResolvedValueOnce(sampleProject)
+      .mockResolvedValueOnce({ ...sampleProject, projectName: 'Segunda versión' });
+
+    await openAndGenerate('Campaña de marketing en 3 semanas');
+    fireEvent.click(screen.getByRole('button', { name: /regenerar/i }));
 
     await waitFor(() => {
-      expect(generateSpy).toHaveBeenCalledWith({
-        prompt: 'Campaña de marketing en 3 semanas',
-        apiKey: 'test-key-123',
-        provider: 'gemini',
-      });
-      expect(mockMutate).toHaveBeenCalledWith(
-        {
-          name: 'Campaña de Marketing 3 Semanas',
-          description: 'Estrategia integral',
-          tasks: [
-            { title: 'Definir público', position: 0 },
-            { title: 'Lanzar anuncios', position: 1 },
-          ],
-        },
-        expect.anything()
-      );
+      expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Segunda versión');
     });
+    expect(generateSpy).toHaveBeenCalledTimes(2);
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 
   it('handles 429 Rate Limit error gracefully with Sonner toast and manual fallback', async () => {

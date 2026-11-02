@@ -16,6 +16,14 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ["baja", "media", "alta"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
+export const TASK_RECURRENCES = ["diaria", "semanal"] as const;
+export type TaskRecurrence = (typeof TASK_RECURRENCES)[number];
+
+export const TASK_RECURRENCE_LABELS: Record<TaskRecurrence, string> = {
+  diaria: "Todos los días",
+  semanal: "Todas las semanas",
+};
+
 export const LEGACY_TASK_STATUSES = ["todo", "in_progress", "done"] as const;
 export type LegacyTaskStatus = (typeof LEGACY_TASK_STATUSES)[number];
 
@@ -49,6 +57,7 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
 export const MAX_TASK_TITLE_LENGTH = 200;
 export const MAX_TASK_NOTES_LENGTH = 5000;
 export const MAX_ESTIMATED_HOURS = 10000;
+export const MAX_TASKS_PER_REQUEST = 50;
 
 export function normalizeStatus(
   value: TaskStatus | LegacyTaskStatus | undefined
@@ -94,4 +103,35 @@ export function statusAfterCompletion(
 ): TaskStatus {
   if (isCompleted) return "completada";
   return previous === "completada" ? "pendiente" : previous;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const RECURRENCE_STEP_DAYS: Record<TaskRecurrence, number> = { diaria: 1, semanal: 7 };
+
+/**
+ * Due date of the next occurrence of a recurring task that was just completed.
+ *
+ * It is the first date of the task's own cycle (due date + k * step) that falls after
+ * today, so completing an overdue task never schedules something in the past, and an
+ * early completion moves on to the following cycle. Without a due date the cycle starts
+ * today. Calendar days are computed in the user's timezone (`tzOffsetMinutes`, as given
+ * by `Date#getTimezoneOffset`) and the result is local noon so a DST change can never
+ * move it to another calendar day.
+ */
+export function nextOccurrence(params: {
+  dueDate?: number;
+  recurrence: TaskRecurrence;
+  now: number;
+  tzOffsetMinutes?: number;
+}): number {
+  const offset = params.tzOffsetMinutes ?? 0;
+  const localDay = (timestamp: number) => Math.floor((timestamp - offset * 60_000) / DAY_MS);
+
+  const today = localDay(params.now);
+  const base = params.dueDate === undefined ? today : localDay(params.dueDate);
+  const step = RECURRENCE_STEP_DAYS[params.recurrence];
+  const cycles = base > today ? 1 : Math.floor((today - base) / step) + 1;
+  const nextDay = base + cycles * step;
+
+  return nextDay * DAY_MS + DAY_MS / 2 + offset * 60_000;
 }

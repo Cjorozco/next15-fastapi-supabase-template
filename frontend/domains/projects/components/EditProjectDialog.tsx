@@ -13,7 +13,19 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import { NativeSelect } from '@/shared/components/ui/native-select';
 import { Textarea } from '@/shared/components/ui/textarea';
+import {
+  PROJECT_PRIORITIES,
+  PROJECT_PRIORITY_LABELS,
+  PROJECT_STATUSES,
+  PROJECT_STATUS_LABELS,
+  resolveProjectPriority,
+  resolveProjectStatus,
+  type ProjectPriority,
+  type ProjectStatus,
+} from '@/convex/lib/projectFields';
+import { fromDateInputValue, toDateInputValue } from '@/domains/tasks/lib/dates';
 import { useUpdateProject } from '@/domains/projects/hooks/useProjects';
 import { Id } from '@/convex/_generated/dataModel';
 
@@ -24,6 +36,9 @@ interface EditProjectDialogProps {
   projectId: Id<'projects'>;
   name: string;
   description?: string;
+  priority?: ProjectPriority;
+  status?: ProjectStatus;
+  dueDate?: number;
   className?: string;
 }
 
@@ -32,10 +47,23 @@ interface EditProjectFormProps extends Omit<EditProjectDialogProps, 'className'>
 }
 
 /** Mounted only while the dialog is open, so its local state resets on every open. */
-function EditProjectForm({ projectId, name, description, onDone }: EditProjectFormProps) {
+function EditProjectForm({
+  projectId,
+  name,
+  description,
+  priority,
+  status,
+  dueDate,
+  onDone,
+}: EditProjectFormProps) {
   const { mutate: updateProject, isPending } = useUpdateProject();
   const [draftName, setDraftName] = useState(name);
   const [draftDescription, setDraftDescription] = useState(description ?? '');
+  const [draftPriority, setDraftPriority] = useState<ProjectPriority>(
+    resolveProjectPriority({ priority })
+  );
+  const [draftStatus, setDraftStatus] = useState<ProjectStatus>(resolveProjectStatus({ status }));
+  const [draftDueDate, setDraftDueDate] = useState(toDateInputValue(dueDate));
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,7 +76,14 @@ function EditProjectForm({ projectId, name, description, onDone }: EditProjectFo
     setError('');
 
     updateProject(
-      { projectId, name: trimmedName, description: draftDescription.trim() },
+      {
+        projectId,
+        name: trimmedName,
+        description: draftDescription.trim(),
+        priority: draftPriority,
+        status: draftStatus,
+        dueDate: fromDateInputValue(draftDueDate),
+      },
       { onSuccess: onDone, onError: setError }
     );
   };
@@ -86,6 +121,54 @@ function EditProjectForm({ projectId, name, description, onDone }: EditProjectFo
           rows={4}
           className="bg-muted/50 border-border text-foreground text-xs rounded-xl resize-none"
         />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor={`edit-project-status-${projectId}`} className="text-xs text-muted-foreground">
+            Estado
+          </Label>
+          <NativeSelect
+            id={`edit-project-status-${projectId}`}
+            value={draftStatus}
+            onChange={(e) => setDraftStatus(e.target.value as ProjectStatus)}
+            className="text-xs rounded-xl"
+          >
+            {PROJECT_STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {PROJECT_STATUS_LABELS[value]}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`edit-project-priority-${projectId}`} className="text-xs text-muted-foreground">
+            Prioridad
+          </Label>
+          <NativeSelect
+            id={`edit-project-priority-${projectId}`}
+            value={draftPriority}
+            onChange={(e) => setDraftPriority(e.target.value as ProjectPriority)}
+            className="text-xs rounded-xl"
+          >
+            {PROJECT_PRIORITIES.map((value) => (
+              <option key={value} value={value}>
+                {PROJECT_PRIORITY_LABELS[value]}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`edit-project-due-${projectId}`} className="text-xs text-muted-foreground">
+            Fecha límite
+          </Label>
+          <Input
+            id={`edit-project-due-${projectId}`}
+            type="date"
+            value={draftDueDate}
+            onChange={(e) => setDraftDueDate(e.target.value)}
+            className="bg-muted/50 border-border text-foreground text-xs rounded-xl"
+          />
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-xs text-destructive">
@@ -135,7 +218,7 @@ export function EditProjectDialog({ className, ...project }: EditProjectDialogPr
         <DialogHeader>
           <DialogTitle className="text-foreground text-base">Editar Proyecto</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            Cambia el nombre o la descripción de tu proyecto.
+            Cambia el nombre, la descripción, el estado, la prioridad o la fecha límite.
           </DialogDescription>
         </DialogHeader>
         <EditProjectForm {...project} onDone={() => setOpen(false)} />

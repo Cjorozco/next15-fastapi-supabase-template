@@ -205,3 +205,239 @@ describe("migrations.backfillTaskFields", () => {
     expect(await base.query(internal.migrations.countTasksPendingBackfill, {})).toMatchObject({ pending: 0 });
   });
 });
+
+describe("projects.createWithTasks planning fields", () => {
+  test("stores priority, hours and due date of each task", async () => {
+    const { owner } = await setup();
+    const due = new Date(2030, 2, 15).getTime();
+
+    const created = await owner.mutation(api.projects.createWithTasks, {
+      name: "Con IA",
+      tasks: [
+        { title: "A", position: 0, priority: "alta", estimatedHours: 1.5, dueDate: due },
+        { title: "B", position: 1 },
+      ],
+    });
+
+    expect(created.tasks[0]).toMatchObject({ priority: "alta", estimatedHours: 1.5, dueDate: due });
+    expect(created.tasks[1].priority).toBeUndefined();
+    expect(created.tasks[1].estimatedHours).toBeUndefined();
+  });
+
+  test("rejects out-of-range hours and invalid dates", async () => {
+    const { owner } = await setup();
+
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Horas",
+        tasks: [{ title: "A", position: 0, estimatedHours: -1 }],
+      })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Fecha",
+        tasks: [{ title: "A", position: 0, dueDate: 0 }],
+      })
+    ).rejects.toThrow();
+  });
+
+  test("rejects too many tasks", async () => {
+    const { owner } = await setup();
+    const tasks = Array.from({ length: 51 }, (_, i) => ({ title: `T${i}`, position: i }));
+    await expect(
+      owner.mutation(api.projects.createWithTasks, { name: "Muchas", tasks })
+    ).rejects.toThrow();
+  });
+});
+
+describe("project priority, status and due date", () => {
+  test("a project created before the new fields loads without them", async () => {
+    const { base, owner } = await setup();
+    const legacyId = await base.run(async (ctx) => {
+      const user = await ctx.db.query("users").first();
+      return await ctx.db.insert("projects", { ownerId: user!._id, name: "Antiguo" });
+    });
+
+    const loaded = await owner.query(api.projects.get, { projectId: legacyId });
+    expect(loaded).not.toBeNull();
+    expect(loaded!.status).toBeUndefined();
+    expect(loaded!.priority).toBeUndefined();
+    expect(loaded!.dueDate).toBeUndefined();
+  });
+
+  test("updateProject stores and clears the new fields", async () => {
+    const { owner, project } = await setup();
+    const due = new Date(2030, 5, 1).getTime();
+
+    const updated = await owner.mutation(api.projects.updateProject, {
+      projectId: project._id,
+      priority: "alta",
+      status: "en_pausa",
+      dueDate: due,
+    });
+    expect(updated).toMatchObject({ priority: "alta", status: "en_pausa", dueDate: due });
+
+    const cleared = await owner.mutation(api.projects.updateProject, {
+      projectId: project._id,
+      dueDate: null,
+    });
+    expect(cleared.dueDate).toBeUndefined();
+    expect(cleared.priority).toBe("alta");
+  });
+
+  test("updateProject rejects an invalid due date and other users", async () => {
+    const { owner, intruder, project } = await setup();
+    await expect(
+      owner.mutation(api.projects.updateProject, { projectId: project._id, dueDate: -5 })
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.projects.updateProject, { projectId: project._id, status: "completado" })
+    ).rejects.toThrow();
+  });
+});
+
+describe("recurring tasks", () => {
+  const TZ = 0;
+
+  test("completing with the checkbox reopens the task with the next due date", async () => {
+    const { owner, task } = await setup();
+    const sub = await owner.mutation(api.tasks.addSubtask, { taskId: task._id, title: "Paso" });
+    const subId = sub.subtasks![0].id;
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "semanal" });
+
+    const reopened = await owner.mutation(api.tasks.update, {
+      taskId: task._id,
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+
+    expect(reopened.isCompleted).toBe(false);
+    expect(reopened.status).toBe("pendiente");
+    expect(reopened.recurrence).toBe("semanal");
+    expect(reopened.dueDate).toBeGreaterThan(Date.now());
+    expect(reopened.subtasks![0]).toMatchObject({ id: subId, isCompleted: false });
+  });
+
+  test("setting the status to completada also reopens it and overrides the sent date", async () => {
+    const { owner, task } = await setup();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
+
+    const reopened = await owner.mutation(api.tasks.updateTask, {
+      taskId: task._id,
+      status: "completada",
+      tzOffsetMinutes: TZ,
+    });
+
+    expect(reopened.status).toBe("pendiente");
+    expect(reopened.isCompleted).toBe(false);
+    expect(reopened.dueDate).toBeGreaterThan(Date.now());
+  });
+
+  test("checking the last subtask completes the parent, which reopens", async () => {
+    const { owner, task } = await setup();
+    const withSub = await owner.mutation(api.tasks.addSubtask, { taskId: task._id, title: "Único" });
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
+
+    const result = await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: withSub.subtasks![0].id,
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+
+    expect(result.isCompleted).toBe(false);
+    expect(result.subtasks![0].isCompleted).toBe(false);
+    expect(result.dueDate).toBeGreaterThan(Date.now());
+  });
+
+  test("a task without recurrence still completes normally", async () => {
+    const { owner, task } = await setup();
+    const done = await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true });
+    expect(done.isCompleted).toBe(true);
+    expect(done.status).toBe("completada");
+  });
+
+  test("recurrence can be cleared", async () => {
+    const { owner, task } = await setup();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
+    const cleared = await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: null });
+    expect(cleared.recurrence).toBeUndefined();
+  });
+});
+
+describe("moving a task to another project", () => {
+  test("keeps subtasks, notes, status and priority and goes to the end of the target", async () => {
+    const { owner, project, task } = await setup();
+    const target = await owner.mutation(api.projects.create, { name: "Destino" });
+    await owner.mutation(api.tasks.create, { projectId: target._id, title: "Ya estaba" });
+    await owner.mutation(api.tasks.addSubtask, { taskId: task._id, title: "Sub" });
+    await owner.mutation(api.tasks.updateTask, {
+      taskId: task._id,
+      notes: "Importante",
+      priority: "alta",
+      status: "en_progreso",
+    });
+
+    const moved = await owner.mutation(api.tasks.updateTask, {
+      taskId: task._id,
+      projectId: target._id,
+    });
+
+    expect(moved.projectId).toBe(target._id);
+    expect(moved).toMatchObject({ notes: "Importante", priority: "alta", status: "en_progreso" });
+    expect(moved.subtasks).toHaveLength(1);
+    expect(moved.position).toBe(1);
+
+    const source = await owner.query(api.projects.get, { projectId: project._id });
+    expect(source!.tasks).toHaveLength(0);
+    const destination = await owner.query(api.projects.get, { projectId: target._id });
+    expect(destination!.tasks.map((t) => t.title)).toEqual(["Ya estaba", "Tarea"]);
+  });
+
+  test("closes the position gap left in the source project", async () => {
+    const { owner, project, task } = await setup();
+    const second = await owner.mutation(api.tasks.create, { projectId: project._id, title: "Segunda" });
+    const target = await owner.mutation(api.projects.create, { name: "Destino" });
+
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, projectId: target._id });
+
+    const source = await owner.query(api.projects.get, { projectId: project._id });
+    expect(source!.tasks.map((t) => [t._id, t.position])).toEqual([[second._id, 0]]);
+  });
+
+  test("refuses a project that belongs to someone else", async () => {
+    const { owner, intruder, task } = await setup();
+    const foreign = await intruder.mutation(api.projects.create, { name: "Ajeno" });
+    await expect(
+      owner.mutation(api.tasks.updateTask, { taskId: task._id, projectId: foreign._id })
+    ).rejects.toThrow();
+  });
+});
+
+describe("tasks.createMany", () => {
+  test("creates one task per non-blank line in order", async () => {
+    const { owner, project } = await setup();
+    const created = await owner.mutation(api.tasks.createMany, {
+      projectId: project._id,
+      titles: ["Uno", "  ", "Dos  ", "Tres"],
+    });
+    expect(created.map((t) => t.title)).toEqual(["Uno", "Dos", "Tres"]);
+    expect(created.map((t) => t.position)).toEqual([1, 2, 3]);
+  });
+
+  test("rejects empty input, too many titles and foreign projects", async () => {
+    const { owner, intruder, project } = await setup();
+    await expect(
+      owner.mutation(api.tasks.createMany, { projectId: project._id, titles: [" ", ""] })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.tasks.createMany, {
+        projectId: project._id,
+        titles: Array.from({ length: 51 }, (_, i) => `T${i}`),
+      })
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.tasks.createMany, { projectId: project._id, titles: ["X"] })
+    ).rejects.toThrow();
+  });
+});

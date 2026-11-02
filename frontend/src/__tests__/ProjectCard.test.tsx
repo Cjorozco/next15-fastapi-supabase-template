@@ -7,7 +7,7 @@ import type { Id } from '@/convex/_generated/dataModel';
 // Mock useMutation hooks to avoid real API calls in tests
 vi.mock('@/domains/tasks/hooks/useTaskMutations', () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
-  useCreateTask: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateTasks: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
   useReorderTasks: () => ({ mutate: vi.fn() }),
 }));
@@ -43,6 +43,28 @@ describe('ProjectCard', () => {
   it('shows correct task progress count', () => {
     render(<ProjectCard project={mockProject} />);
     expect(screen.getByText('1/2')).toBeInTheDocument();
+  });
+
+  it('treats a project without the new fields as active with no priority badge', () => {
+    render(<ProjectCard project={mockProject} />);
+    expect(screen.getByText('Activo')).toBeInTheDocument();
+    expect(screen.queryByText(/prioridad/i)).not.toBeInTheDocument();
+  });
+
+  it('shows status, priority and due date as text badges', () => {
+    render(
+      <ProjectCard
+        project={{
+          ...mockProject,
+          status: 'en_pausa',
+          priority: 'media',
+          dueDate: new Date(2030, 2, 15).getTime(),
+        }}
+      />
+    );
+    expect(screen.getByText('En pausa')).toBeInTheDocument();
+    expect(screen.getByText(/prioridad media/i)).toBeInTheDocument();
+    expect(screen.getByText(/fecha límite/i)).toBeInTheDocument();
   });
 
   it('links the title to the project detail page', () => {

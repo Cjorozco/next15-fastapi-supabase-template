@@ -47,3 +47,22 @@ describe('buildRefinementPreview', () => {
     expect(toApplyPayload(preview).updatedDescription).toBe('Nueva');
   });
 });
+
+describe('new task planning fields', () => {
+  it('carries priority, hours and date to the preview and converts the date for the mutation', () => {
+    const preview = buildRefinementPreview(
+      refinement({
+        newTasks: [
+          { title: 'Con plan', subtasks: [], priority: 'alta', estimatedHours: 2, dueDate: '2030-03-15' },
+          { title: 'Sin plan', subtasks: [] },
+        ],
+      }),
+      project
+    );
+
+    expect(preview.newTasks[0]).toMatchObject({ priority: 'alta', estimatedHours: 2, dueDate: '2030-03-15' });
+    const payload = toApplyPayload(preview);
+    expect(payload.newTasks[0].dueDate).toBe(new Date(2030, 2, 15).getTime());
+    expect(payload.newTasks[1]).toEqual({ title: 'Sin plan', subtasks: [] });
+  });
+});

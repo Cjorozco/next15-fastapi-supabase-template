@@ -3,6 +3,9 @@ import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { useCallback, useState } from 'react';
 import { Id } from '@/convex/_generated/dataModel';
+import type { TaskPriority } from '@/convex/lib/taskFields';
+import type { ProjectPriority, ProjectStatus } from '@/convex/lib/projectFields';
+import type { CreateProjectArgs } from '@/domains/projects/lib/ai-draft';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 
 export const useProjects = () => {
@@ -64,7 +67,7 @@ export const useCreateProjectWithTasks = () => {
       projectData: {
         name: string;
         description?: string;
-        tasks: Array<{ title: string; position: number }>;
+        tasks: CreateProjectArgs["tasks"];
       },
       options?: {
         onSuccess?: (data: { _id: string; name: string; tasks: Array<{ title: string; position: number }> }) => void;
@@ -100,7 +103,15 @@ export const useUpdateProject = () => {
 
   const mutate = useCallback(
     (
-      params: { projectId: Id<'projects'>; name?: string; description?: string },
+      params: {
+        projectId: Id<'projects'>;
+        name?: string;
+        description?: string;
+        priority?: ProjectPriority;
+        status?: ProjectStatus;
+        /** `null` clears the due date. */
+        dueDate?: number | null;
+      },
       options?: { onSuccess?: () => void; onError?: (message: string) => void }
     ) => {
       setIsPending(true);
@@ -161,7 +172,13 @@ export const useApplyAiRefinement = () => {
       params: {
         projectId: Parameters<typeof refine>[0]['projectId'];
         updatedDescription?: string;
-        newTasks?: Array<{ title: string; subtasks?: string[] }>;
+        newTasks?: Array<{
+          title: string;
+          subtasks?: string[];
+          priority?: TaskPriority;
+          estimatedHours?: number;
+          dueDate?: number;
+        }>;
         newSubtasksForExistingTasks?: Array<{ taskId: string; subtaskTitles: string[] }>;
       },
       options?: {
