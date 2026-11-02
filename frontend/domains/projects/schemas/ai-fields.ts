@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fromDateInputValue } from "@/domains/tasks/lib/dates";
 import type { TaskPriority, TaskRecurrence } from "@/convex/lib/taskFields";
+import { minutesToHours } from "@/domains/tasks/lib/duration";
 
 export const AI_MAX_TASK_HOURS = 40;
 
@@ -24,15 +25,40 @@ export function normalizeAiPriority(value: unknown): TaskPriority | undefined {
 }
 
 /**
- * Positive hours with two decimals (10 min = 0.17 h), capped; anything else becomes
- * undefined. Short durations must survive: rounding to half hours would drop them.
+ * Positive hours rounded to the minute (10 min = 0.1667 h, as the duration inputs
+ * store it), capped; anything else becomes undefined. Short durations must survive:
+ * rounding to half hours would drop them.
  */
 export function normalizeAiHours(value: unknown): number | undefined {
   if (value === null || value === undefined || value === "") return undefined;
   const hours = Number(value);
   if (!Number.isFinite(hours) || hours <= 0) return undefined;
-  return Math.min(AI_MAX_TASK_HOURS, Math.round(hours * 100) / 100) || undefined;
+  const minutes = Math.max(1, Math.round(hours * 60));
+  return Math.min(AI_MAX_TASK_HOURS, minutesToHours(minutes));
 }
+
+export const AI_MAX_SUBTASKS = 8;
+export const AI_MAX_NOTES_LENGTH = 500;
+
+/** Up to 8 non-empty subtask titles; anything else is dropped. */
+export function normalizeAiSubtasks(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const titles = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().slice(0, 200))
+    .filter(Boolean)
+    .slice(0, AI_MAX_SUBTASKS);
+  return titles.length > 0 ? titles : undefined;
+}
+export const aiSubtasksField = z.unknown().transform(normalizeAiSubtasks).optional();
+
+/** A short note (trimmed, capped); anything else is dropped. */
+export function normalizeAiNotes(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const notes = value.trim().slice(0, AI_MAX_NOTES_LENGTH);
+  return notes || undefined;
+}
+export const aiNotesField = z.unknown().transform(normalizeAiNotes).optional();
 
 const RECURRENCE_ALIASES: Record<string, TaskRecurrence> = {
   diaria: "diaria",

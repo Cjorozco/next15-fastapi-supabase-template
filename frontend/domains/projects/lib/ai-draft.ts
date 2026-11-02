@@ -1,5 +1,6 @@
 import type { TaskPriority, TaskRecurrence } from '@/convex/lib/taskFields';
 import { fromDateInputValue } from '@/domains/tasks/lib/dates';
+import { formatDurationInput, parseDuration } from '@/domains/tasks/lib/duration';
 import type { AiProject } from '@/domains/projects/schemas/ai-project.schema';
 
 const MAX_EXPLICIT_TITLE_LENGTH = 80;
@@ -29,12 +30,16 @@ export interface DraftTask {
   key: string;
   title: string;
   priority: TaskPriority | '';
+  /** What the user sees and types: "10 min", "1.5 h" (a bare number is hours). */
   estimatedHours: string;
   /** `YYYY-MM-DD` as used by `<input type="date">`, or empty. */
   dueDate: string;
   /** No deadline by nature (habit, open task). Mutually exclusive with a date. */
   noDeadline: boolean;
   recurrence: TaskRecurrence | '';
+  notes: string;
+  /** One subtask title per line. */
+  subtasks: string;
 }
 
 export interface ProjectDraft {
@@ -54,6 +59,8 @@ export interface CreateProjectArgs {
     dueDate?: number;
     noDeadline?: boolean;
     recurrence?: TaskRecurrence;
+    notes?: string;
+    subtasks?: string[];
   }>;
 }
 
@@ -69,6 +76,8 @@ export function newDraftTask(partial: Partial<Omit<DraftTask, 'key'>> = {}): Dra
     dueDate: '',
     noDeadline: false,
     recurrence: '',
+    notes: '',
+    subtasks: '',
     ...partial,
   };
 }
@@ -82,10 +91,12 @@ export function projectToDraft(project: AiProject, fixedName?: string): ProjectD
       newDraftTask({
         title: task.title,
         priority: task.priority ?? '',
-        estimatedHours: task.estimatedHours === undefined ? '' : String(task.estimatedHours),
+        estimatedHours: task.estimatedHours === undefined ? '' : formatDurationInput(task.estimatedHours),
         dueDate: task.dueDate ?? '',
         noDeadline: task.noDeadline === true,
         recurrence: task.recurrence ?? '',
+        notes: task.notes ?? '',
+        subtasks: (task.subtasks ?? []).join('\n'),
       })
     ),
   };
@@ -96,17 +107,22 @@ export function draftToCreateArgs(draft: ProjectDraft): CreateProjectArgs {
   const tasks = draft.tasks
     .filter((task) => task.title.trim())
     .map((task, position) => {
-      const hours = Number(task.estimatedHours.replace(',', '.'));
+      const hours = parseDuration(task.estimatedHours);
+      const subtasks = task.subtasks
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const notes = task.notes.trim();
       const dueDate = fromDateInputValue(task.dueDate);
       return {
         title: task.title.trim(),
         position,
         ...(task.priority ? { priority: task.priority } : {}),
-        ...(task.estimatedHours.trim() && Number.isFinite(hours) && hours > 0
-          ? { estimatedHours: hours }
-          : {}),
+        ...(hours !== null && hours > 0 ? { estimatedHours: hours } : {}),
         ...(dueDate !== null ? { dueDate } : task.noDeadline ? { noDeadline: true } : {}),
         ...(task.recurrence ? { recurrence: task.recurrence } : {}),
+        ...(subtasks.length > 0 ? { subtasks } : {}),
+        ...(notes ? { notes } : {}),
       };
     });
 

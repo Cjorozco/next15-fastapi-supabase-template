@@ -560,3 +560,49 @@ describe("AI-created habits keep recurrence and short durations", () => {
     });
   });
 });
+
+describe("AI habit created as one task with subtasks and notes", () => {
+  test("createWithTasks stores subtasks (unchecked, with ids) and notes", async () => {
+    const { owner } = await setup();
+    const created = await owner.mutation(api.projects.createWithTasks, {
+      name: "Inglés diario",
+      tasks: [
+        {
+          title: "Practicar inglés",
+          position: 0,
+          estimatedHours: 0.1667,
+          noDeadline: true,
+          recurrence: "diaria",
+          subtasks: ["Vocabulario", "  ", "Pronunciación"],
+          notes: "  Rota el foco  ",
+        },
+      ],
+    });
+    const loaded = await owner.query(api.projects.get, { projectId: created._id });
+    const [task] = loaded!.tasks;
+    expect(loaded!.tasks).toHaveLength(1);
+    expect(task.notes).toBe("Rota el foco");
+    expect(task.estimatedHours).toBe(0.1667);
+    expect(task.subtasks!.map((s) => [s.title, s.isCompleted])).toEqual([
+      ["Vocabulario", false],
+      ["Pronunciación", false],
+    ]);
+    expect(new Set(task.subtasks!.map((s) => s.id)).size).toBe(2);
+  });
+
+  test("rejects too many subtasks and over-long notes", async () => {
+    const { owner } = await setup();
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Muchas",
+        tasks: [{ title: "T", position: 0, subtasks: Array.from({ length: 21 }, (_, i) => `S${i}`) }],
+      })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.projects.createWithTasks, {
+        name: "Notas",
+        tasks: [{ title: "T", position: 0, notes: "x".repeat(5001) }],
+      })
+    ).rejects.toThrow();
+  });
+});
