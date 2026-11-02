@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   draftToCreateArgs,
   extractExplicitTitle,
+  isDraftDirty,
   newDraftTask,
   projectToDraft,
 } from '@/domains/projects/lib/ai-draft';
@@ -109,5 +110,37 @@ describe('draft conversion', () => {
     const first = draftToCreateArgs(draft).tasks[0];
     expect(first).not.toHaveProperty('estimatedHours');
     expect(first).not.toHaveProperty('dueDate');
+  });
+});
+
+describe('isDraftDirty', () => {
+  const base = () =>
+    projectToDraft(
+      AiProjectSchema.parse({
+        projectName: 'Proyecto',
+        tasks: [{ title: 'A', noDeadline: true }],
+      })
+    );
+
+  it('is false for the untouched draft, even with different React keys', () => {
+    const initial = base();
+    const copy = { ...initial, tasks: initial.tasks.map((t) => ({ ...t, key: `other-${t.key}` })) };
+    expect(isDraftDirty(initial, copy)).toBe(false);
+  });
+
+  it('detects edits to name, description and any task field', () => {
+    const initial = base();
+    expect(isDraftDirty(initial, { ...initial, name: 'Otro' })).toBe(true);
+    expect(isDraftDirty(initial, { ...initial, description: 'Algo' })).toBe(true);
+    expect(isDraftDirty(initial, { ...initial, tasks: [{ ...initial.tasks[0], title: 'B' }] })).toBe(true);
+    expect(isDraftDirty(initial, { ...initial, tasks: [{ ...initial.tasks[0], estimatedHours: '10 min' }] })).toBe(true);
+    expect(isDraftDirty(initial, { ...initial, tasks: [...initial.tasks, newDraftTask()] })).toBe(true);
+    expect(isDraftDirty(initial, { ...initial, tasks: [] })).toBe(true);
+  });
+
+  it('is false again when an edit is undone', () => {
+    const initial = base();
+    expect(isDraftDirty(initial, { ...initial, name: 'x' })).toBe(true);
+    expect(isDraftDirty(initial, { ...initial, name: initial.name })).toBe(false);
   });
 });

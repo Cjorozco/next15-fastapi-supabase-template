@@ -132,3 +132,16 @@ export function draftToCreateArgs(draft: ProjectDraft): CreateProjectArgs {
     tasks,
   };
 }
+
+const draftSnapshot = (draft: ProjectDraft) =>
+  JSON.stringify({
+    name: draft.name,
+    description: draft.description,
+    // `key` is only an identity for React lists, not content the user can change.
+    tasks: draft.tasks.map((task) => ({ ...task, key: undefined })),
+  });
+
+/** True when the draft differs from `initial` in anything the user can edit. */
+export function isDraftDirty(initial: ProjectDraft, current: ProjectDraft): boolean {
+  return draftSnapshot(initial) !== draftSnapshot(current);
+}
