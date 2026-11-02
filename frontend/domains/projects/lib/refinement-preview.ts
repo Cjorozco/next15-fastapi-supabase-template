@@ -1,4 +1,4 @@
-import type { TaskPriority } from '@/convex/lib/taskFields';
+import type { TaskPriority, TaskRecurrence } from '@/convex/lib/taskFields';
 import { fromDateInputValue } from '@/domains/tasks/lib/dates';
 import type { AiRefinement } from '@/domains/projects/schemas/ai-refine.schema';
 
@@ -15,6 +15,7 @@ export interface PreviewNewTask {
   /** `YYYY-MM-DD`, shown as proposed. */
   dueDate?: string;
   noDeadline?: boolean;
+  recurrence?: TaskRecurrence;
 }
 
 export interface RefinementPreview {
@@ -38,6 +39,7 @@ export interface RefinementApplyPayload {
     estimatedHours?: number;
     dueDate?: number;
     noDeadline?: boolean;
+    recurrence?: TaskRecurrence;
   }>;
   newSubtasksForExistingTasks: Array<{ taskId: string; subtaskTitles: string[] }>;
 }
@@ -80,6 +82,7 @@ export function buildRefinementPreview(
     ...(task.estimatedHours !== undefined ? { estimatedHours: task.estimatedHours } : {}),
     ...(task.dueDate ? { dueDate: task.dueDate } : {}),
     ...(task.noDeadline ? { noDeadline: true } : {}),
+    ...(task.recurrence ? { recurrence: task.recurrence } : {}),
   }));
 
   return {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { fromDateInputValue } from "@/domains/tasks/lib/dates";
-import type { TaskPriority } from "@/convex/lib/taskFields";
+import type { TaskPriority, TaskRecurrence } from "@/convex/lib/taskFields";
 
 export const AI_MAX_TASK_HOURS = 40;
 
@@ -23,13 +23,31 @@ export function normalizeAiPriority(value: unknown): TaskPriority | undefined {
   return PRIORITY_ALIASES[value.trim().toLowerCase()];
 }
 
-/** Positive hours rounded to half hours and capped; anything else becomes undefined. */
+/**
+ * Positive hours with two decimals (10 min = 0.17 h), capped; anything else becomes
+ * undefined. Short durations must survive: rounding to half hours would drop them.
+ */
 export function normalizeAiHours(value: unknown): number | undefined {
   if (value === null || value === undefined || value === "") return undefined;
   const hours = Number(value);
   if (!Number.isFinite(hours) || hours <= 0) return undefined;
-  return Math.min(AI_MAX_TASK_HOURS, Math.round(hours * 2) / 2) || undefined;
+  return Math.min(AI_MAX_TASK_HOURS, Math.round(hours * 100) / 100) || undefined;
 }
+
+const RECURRENCE_ALIASES: Record<string, TaskRecurrence> = {
+  diaria: "diaria",
+  diario: "diaria",
+  daily: "diaria",
+  semanal: "semanal",
+  weekly: "semanal",
+};
+
+/** Maps whatever the model wrote to a recurrence; anything unknown becomes undefined. */
+export function normalizeAiRecurrence(value: unknown): TaskRecurrence | undefined {
+  if (typeof value !== "string") return undefined;
+  return RECURRENCE_ALIASES[value.trim().toLowerCase()];
+}
+export const aiRecurrenceField = z.unknown().transform(normalizeAiRecurrence).optional();
 
 /** Keeps only real `YYYY-MM-DD` calendar days; anything else becomes undefined. */
 export function normalizeAiDate(value: unknown): string | undefined {

@@ -157,7 +157,10 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
             onChange={(e) => setDueDate(e.target.value)}
             className={FIELD}
           />
-          <div className="flex items-center gap-2 pt-1">
+          <label
+            htmlFor={`${idPrefix}-no-deadline`}
+            className="flex items-center gap-2 pt-1 text-xs text-muted-foreground cursor-pointer w-fit"
+          >
             <Checkbox
               id={`${idPrefix}-no-deadline`}
               checked={noDeadline}
@@ -166,10 +169,8 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
                 if (checked) setDueDate('');
               }}
             />
-            <Label htmlFor={`${idPrefix}-no-deadline`} className="text-xs text-muted-foreground cursor-pointer">
-              Sin fecha límite
-            </Label>
-          </div>
+            <span>Sin fecha límite</span>
+          </label>
         </div>
 
         <div className="space-y-1">
@@ -182,7 +183,7 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
             inputMode="decimal"
             min={0}
             max={MAX_ESTIMATED_HOURS}
-            step="0.5"
+            step="any"
             value={hours}
             onChange={(e) => setHours(e.target.value)}
             placeholder="0"

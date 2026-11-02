@@ -498,3 +498,65 @@ describe("tasks without deadline", () => {
     expect(refined.tasks.find((t) => t.title === "Meditar")?.noDeadline).toBe(true);
   });
 });
+
+describe("noDeadline persistence (read back through the project query)", () => {
+  test("the value saved by the edit form is what projects.get and projects.list return", async () => {
+    const { owner, project, task } = await setup();
+
+    // Exactly what TaskEditForm sends when "Sin fecha límite" is checked on an undated task.
+    await owner.mutation(api.tasks.updateTask, {
+      taskId: task._id,
+      title: "Tarea",
+      status: "pendiente",
+      dueDate: null,
+      noDeadline: true,
+      estimatedHours: null,
+      priority: null,
+      recurrence: null,
+      notes: null,
+      tzOffsetMinutes: 300,
+    });
+
+    const viaGet = await owner.query(api.projects.get, { projectId: project._id });
+    expect(viaGet!.tasks[0].noDeadline).toBe(true);
+    expect(viaGet!.tasks[0].dueDate).toBeUndefined();
+
+    const viaList = await owner.query(api.projects.list, {});
+    expect(viaList.find((p) => p._id === project._id)!.tasks[0].noDeadline).toBe(true);
+  });
+
+  test("a later save that unchecks the flag persists false", async () => {
+    const { owner, project, task } = await setup();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, noDeadline: true, dueDate: null });
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, noDeadline: false, dueDate: null });
+    const loaded = await owner.query(api.projects.get, { projectId: project._id });
+    expect(loaded!.tasks[0].noDeadline).toBe(false);
+  });
+});
+
+describe("AI-created habits keep recurrence and short durations", () => {
+  test("createWithTasks stores recurrence + noDeadline + 10 min and the query returns them", async () => {
+    const { owner } = await setup();
+    const created = await owner.mutation(api.projects.createWithTasks, {
+      name: "Inglés",
+      tasks: [
+        { title: "10 min de práctica", position: 0, estimatedHours: 0.17, noDeadline: true, recurrence: "diaria" },
+      ],
+    });
+    const loaded = await owner.query(api.projects.get, { projectId: created._id });
+    expect(loaded!.tasks[0]).toMatchObject({ noDeadline: true, recurrence: "diaria", estimatedHours: 0.17 });
+  });
+
+  test("applyAiRefinement stores recurrence on new tasks", async () => {
+    const { owner, project } = await setup();
+    await owner.mutation(api.projects.applyAiRefinement, {
+      projectId: project._id,
+      newTasks: [{ title: "Repaso semanal", noDeadline: true, recurrence: "semanal" }],
+    });
+    const loaded = await owner.query(api.projects.get, { projectId: project._id });
+    expect(loaded!.tasks.find((t) => t.title === "Repaso semanal")).toMatchObject({
+      noDeadline: true,
+      recurrence: "semanal",
+    });
+  });
+});
