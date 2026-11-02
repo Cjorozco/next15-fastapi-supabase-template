@@ -7,7 +7,14 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { NativeSelect } from '@/shared/components/ui/native-select';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { TASK_PRIORITIES, TASK_PRIORITY_LABELS, type TaskPriority } from '@/convex/lib/taskFields';
+import {
+  TASK_PRIORITIES,
+  TASK_PRIORITY_LABELS,
+  TASK_RECURRENCES,
+  TASK_RECURRENCE_LABELS,
+  type TaskPriority,
+  type TaskRecurrence,
+} from '@/convex/lib/taskFields';
 import {
   newDraftTask,
   type DraftTask,
@@ -101,7 +108,7 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <NativeSelect
                     value={task.priority}
                     disabled={disabled}
@@ -121,7 +128,7 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                   <Input
                     type="number"
                     min={0}
-                    step={0.5}
+                    step="any"
                     inputMode="decimal"
                     value={task.estimatedHours}
                     disabled={disabled}
@@ -130,6 +137,22 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                     onChange={(e) => updateTask(task.key, { estimatedHours: e.target.value })}
                     className="bg-background border-border text-xs rounded-lg h-8"
                   />
+                  <NativeSelect
+                    value={task.recurrence}
+                    disabled={disabled}
+                    aria-label={`Repetición de la tarea ${n}`}
+                    onChange={(e) =>
+                      updateTask(task.key, { recurrence: e.target.value as TaskRecurrence | '' })
+                    }
+                    className="h-8 text-xs"
+                  >
+                    <option value="">No se repite</option>
+                    {TASK_RECURRENCES.map((recurrence) => (
+                      <option key={recurrence} value={recurrence}>
+                        {TASK_RECURRENCE_LABELS[recurrence]}
+                      </option>
+                    ))}
+                  </NativeSelect>
                   <Input
                     type="date"
                     value={task.dueDate}
@@ -139,7 +162,10 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                     className="bg-background border-border text-xs rounded-lg h-8"
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                <label
+                  htmlFor={`draft-no-deadline-${task.key}`}
+                  className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer w-fit"
+                >
                   <Checkbox
                     id={`draft-no-deadline-${task.key}`}
                     checked={task.noDeadline}
@@ -148,14 +174,11 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                       updateTask(task.key, checked ? { noDeadline: true, dueDate: '' } : { noDeadline: false })
                     }
                   />
-                  <Label
-                    htmlFor={`draft-no-deadline-${task.key}`}
-                    className="text-xs text-muted-foreground cursor-pointer"
-                  >
+                  <span>
                     Sin fecha límite
                     <span className="sr-only"> (tarea {n})</span>
-                  </Label>
-                </div>
+                  </span>
+                </label>
               </li>
             );
           })}

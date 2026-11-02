@@ -1,6 +1,6 @@
 import { CheckCircle2, Loader2, Plus, ArrowLeft, AlertCircle, CornerDownRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import { TASK_PRIORITY_LABELS } from '@/convex/lib/taskFields';
+import { TASK_PRIORITY_LABELS, TASK_RECURRENCE_LABELS } from '@/convex/lib/taskFields';
 import type { PreviewNewTask, RefinementPreview } from '@/domains/projects/lib/refinement-preview';
 import { formatDueDate, formatHours, fromDateInputValue } from '@/domains/tasks/lib/dates';
 
@@ -12,6 +12,7 @@ function describePlanning(task: PreviewNewTask): string {
     task.estimatedHours !== undefined ? formatHours(task.estimatedHours) : null,
     dueDate !== null ? formatDueDate(dueDate) : null,
     task.noDeadline ? 'Sin fecha límite' : null,
+    task.recurrence ? `Se repite: ${TASK_RECURRENCE_LABELS[task.recurrence].toLowerCase()}` : null,
   ]
     .filter(Boolean)
     .join(' · ');

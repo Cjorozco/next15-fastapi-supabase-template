@@ -3,7 +3,7 @@ import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { useCallback, useState } from 'react';
 import { Id } from '@/convex/_generated/dataModel';
-import type { TaskPriority } from '@/convex/lib/taskFields';
+import type { TaskPriority, TaskRecurrence } from '@/convex/lib/taskFields';
 import type { ProjectPriority, ProjectStatus } from '@/convex/lib/projectFields';
 import type { CreateProjectArgs } from '@/domains/projects/lib/ai-draft';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
@@ -179,6 +179,7 @@ export const useApplyAiRefinement = () => {
           estimatedHours?: number;
           dueDate?: number;
           noDeadline?: boolean;
+          recurrence?: TaskRecurrence;
         }>;
         newSubtasksForExistingTasks?: Array<{ taskId: string; subtaskTitles: string[] }>;
       },

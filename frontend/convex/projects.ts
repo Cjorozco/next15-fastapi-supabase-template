@@ -4,6 +4,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { requireAuthenticatedUser, requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
 import { projectPriorityValidator, projectStatusValidator } from "./lib/projectDto";
+import { taskRecurrenceValidator } from "./lib/taskDto";
 import { assertValidTaskPlanning } from "./lib/taskValidation";
 import { taskPriorityValidator, taskValidator, toTaskDto } from "./lib/taskDto";
 import {
@@ -133,6 +134,7 @@ export const createWithTasks = mutation({
         estimatedHours: v.optional(v.number()),
         dueDate: v.optional(v.number()),
         noDeadline: v.optional(v.boolean()),
+        recurrence: v.optional(taskRecurrenceValidator),
       })
     ),
   },
@@ -200,6 +202,7 @@ export const createWithTasks = mutation({
           ...(task.estimatedHours !== undefined ? { estimatedHours: task.estimatedHours } : {}),
           ...(task.dueDate !== undefined ? { dueDate: task.dueDate } : {}),
           ...(task.noDeadline ? { noDeadline: true } : {}),
+          ...(task.recurrence ? { recurrence: task.recurrence } : {}),
         });
         const createdTask = await ctx.db.get(taskId);
         if (createdTask) {
@@ -334,6 +337,7 @@ export const applyAiRefinement = mutation({
           estimatedHours: v.optional(v.number()),
           dueDate: v.optional(v.number()),
           noDeadline: v.optional(v.boolean()),
+          recurrence: v.optional(taskRecurrenceValidator),
         })
       )
     ),
@@ -430,6 +434,7 @@ export const applyAiRefinement = mutation({
               : {}),
             ...(newTask.dueDate !== undefined ? { dueDate: newTask.dueDate } : {}),
             ...(newTask.noDeadline ? { noDeadline: true } : {}),
+            ...(newTask.recurrence ? { recurrence: newTask.recurrence } : {}),
           });
         }
       }
