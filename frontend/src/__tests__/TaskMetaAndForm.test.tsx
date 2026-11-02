@@ -31,8 +31,19 @@ describe('TaskMeta', () => {
     expect(screen.getByText('6 h')).toBeInTheDocument();
   });
 
-  it('does not render a badge for non-high priorities', () => {
-    render(<TaskMeta task={{ ...baseTask, priority: 'media' }} />);
+  it('renders a labelled badge for every priority, each with its own color', () => {
+    const { rerender } = render(<TaskMeta task={{ ...baseTask, priority: 'media' }} />);
+    const media = screen.getByText(/prioridad media/i).className;
+    rerender(<TaskMeta task={{ ...baseTask, priority: 'baja' }} />);
+    const baja = screen.getByText(/prioridad baja/i).className;
+    rerender(<TaskMeta task={{ ...baseTask, priority: 'alta' }} />);
+    const alta = screen.getByText(/prioridad alta/i).className;
+
+    expect(new Set([media, baja, alta]).size).toBe(3);
+  });
+
+  it('does not render a priority badge when the task has no priority', () => {
+    render(<TaskMeta task={baseTask} />);
     expect(screen.queryByText(/prioridad/i)).not.toBeInTheDocument();
   });
 

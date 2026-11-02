@@ -45,6 +45,28 @@ describe('ProjectCard', () => {
     expect(screen.getByText('1/2')).toBeInTheDocument();
   });
 
+  it('treats a project without the new fields as active with no priority badge', () => {
+    render(<ProjectCard project={mockProject} />);
+    expect(screen.getByText('Activo')).toBeInTheDocument();
+    expect(screen.queryByText(/prioridad/i)).not.toBeInTheDocument();
+  });
+
+  it('shows status, priority and due date as text badges', () => {
+    render(
+      <ProjectCard
+        project={{
+          ...mockProject,
+          status: 'en_pausa',
+          priority: 'media',
+          dueDate: new Date(2030, 2, 15).getTime(),
+        }}
+      />
+    );
+    expect(screen.getByText('En pausa')).toBeInTheDocument();
+    expect(screen.getByText(/prioridad media/i)).toBeInTheDocument();
+    expect(screen.getByText(/fecha límite/i)).toBeInTheDocument();
+  });
+
   it('links the title to the project detail page', () => {
     render(<ProjectCard project={mockProject} />);
     const link = screen.getByRole('link');

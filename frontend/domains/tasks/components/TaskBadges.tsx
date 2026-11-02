@@ -4,6 +4,7 @@ import {
   resolveTaskStatus,
   TASK_PRIORITY_LABELS,
   TASK_STATUS_LABELS,
+  type TaskPriority,
   type TaskStatus,
 } from '@/convex/lib/taskFields';
 import { formatDueDate, formatHours, isTaskOverdue } from '@/domains/tasks/lib/dates';
@@ -22,11 +23,18 @@ export function TaskStatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`${PILL} ${STATUS_STYLES[status]}`}>{TASK_STATUS_LABELS[status]}</span>;
 }
 
+const PRIORITY_STYLES: Record<TaskPriority, string> = {
+  alta: 'bg-destructive/10 text-destructive border-destructive/30',
+  media: 'bg-warning/10 text-warning border-warning/30',
+  baja: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+};
+
+/** Every level is shown, each with its own color and a text label (color is never the only cue). */
 export function TaskPriorityBadge({ priority }: { priority: Task['priority'] }) {
-  if (priority !== 'alta') return null;
+  if (!priority) return null;
   return (
-    <span className={`${PILL} bg-destructive/10 text-destructive border-destructive/20`}>
-      <Flag className="w-2.5 h-2.5" />
+    <span className={`${PILL} ${PRIORITY_STYLES[priority]}`}>
+      <Flag className="w-2.5 h-2.5" aria-hidden="true" />
       Prioridad {TASK_PRIORITY_LABELS[priority].toLowerCase()}
     </span>
   );
