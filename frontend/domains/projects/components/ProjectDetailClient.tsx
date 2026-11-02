@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { Header } from '@/shared/components/layout/Header';
 import { Sidebar } from '@/shared/components/layout/Sidebar';
 import { useProject } from '@/domains/projects/hooks/useProject';
+import { useProjects } from '@/domains/projects/hooks/useProjects';
 import {
   useUpdateTask,
-  useCreateTask,
+  useCreateTasks,
   useDeleteTask,
   useReorderTasks,
   useAddSubtask,
@@ -35,7 +36,8 @@ interface ProjectDetailClientProps {
 export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { data: project, isLoading, error } = useProject(projectId);
   const { mutate: updateTask } = useUpdateTask();
-  const { mutate: createTask, isPending: isCreating } = useCreateTask();
+  const { mutate: createTasks, isPending: isCreating } = useCreateTasks();
+  const { data: allProjects } = useProjects();
   const { mutate: deleteTask } = useDeleteTask();
   const { mutate: reorderTasks } = useReorderTasks();
   const { mutate: addSubtask } = useAddSubtask();
@@ -90,19 +92,16 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     setActiveDraggingId(null);
   };
 
-  const handleCreateTask = useCallback(
-    (title: string, onCreated: () => void) => {
-      createTask(
-        { projectId, title },
-        {
-          onSuccess: () => {
-            onCreated();
-            setShowInput(false);
-          },
-        }
-      );
+  const handleCreateTasks = useCallback(
+    (titles: string[], onCreated: () => void) => {
+      createTasks({ projectId, titles }, { onSuccess: onCreated });
     },
-    [createTask, projectId]
+    [createTasks, projectId]
+  );
+  // Targets of the "Proyecto" selector: every project the user owns.
+  const projectOptions = useMemo(
+    () => allProjects?.map(({ _id, name }) => ({ _id, name })),
+    [allProjects]
   );
   const handleCancelCreate = useCallback(() => setShowInput(false), []);
 
@@ -238,7 +237,7 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                   <NewTaskForm
                     variant="detail"
                     isCreating={isCreating}
-                    onSubmit={handleCreateTask}
+                    onSubmit={handleCreateTasks}
                     onCancel={handleCancelCreate}
                   />
                 )}
@@ -271,6 +270,8 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                           onToggleSubtask={handleToggleSubtask}
                           onRemoveSubtask={handleRemoveSubtask}
                           onSaveDetails={saveTaskDetails}
+                          inheritedDueDate={project.dueDate}
+                          projects={projectOptions}
                         />
                       ))}
                     </SortableContext>

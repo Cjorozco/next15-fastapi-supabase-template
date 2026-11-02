@@ -9,6 +9,7 @@ import { X, GripVertical, CheckCircle2, ChevronRight, ChevronDown, Plus, CornerD
 import { Task, TaskDetailsInput } from '@/domains/tasks/types';
 import { TaskMeta } from '@/domains/tasks/components/TaskBadges';
 import { TaskEditForm } from '@/domains/tasks/components/TaskEditForm';
+import { ConfirmDelete } from '@/domains/tasks/components/ConfirmDelete';
 import { resolveTaskStatus } from '@/convex/lib/taskFields';
 import { Id } from '@/convex/_generated/dataModel';
 
@@ -29,6 +30,10 @@ interface SortableTaskItemProps {
   onAddSubtask?: (taskId: Id<'tasks'>, title: string) => void;
   onToggleSubtask?: (taskId: Id<'tasks'>, subtaskId: string, isCompleted: boolean) => void;
   onRemoveSubtask?: (taskId: Id<'tasks'>, subtaskId: string) => void;
+  /** Project due date, shown (not saved) when the task has no date of its own. */
+  inheritedDueDate?: number;
+  /** Projects offered by the "Proyecto" selector of the edit form. */
+  projects?: Array<{ _id: Id<'projects'>; name: string }>;
   /** Enables the edit form in the expanded detail view. Resolves true when saved. */
   onSaveDetails?: (taskId: Id<'tasks'>, input: TaskDetailsInput) => Promise<boolean>;
   isDetailView?: boolean;
@@ -43,12 +48,16 @@ function SortableTaskItemComponent({
   onToggleSubtask,
   onRemoveSubtask,
   onSaveDetails,
+  inheritedDueDate,
+  projects,
   isDetailView = false,
   activeDraggingId = null,
 }: SortableTaskItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [confirmingTaskDelete, setConfirmingTaskDelete] = useState(false);
+  const [confirmingSubtaskId, setConfirmingSubtaskId] = useState<string | null>(null);
 
   const {
     attributes,
@@ -96,7 +105,11 @@ function SortableTaskItemComponent({
   };
 
   const hasMeta =
-    task.dueDate !== undefined || task.estimatedHours !== undefined || task.priority === 'alta';
+    task.dueDate !== undefined ||
+    inheritedDueDate !== undefined ||
+    task.estimatedHours !== undefined ||
+    task.priority !== undefined ||
+    task.recurrence !== undefined;
   // Remount the form when the task changes on the server so it never shows stale values.
   const formKey = [
     task.title,
@@ -104,6 +117,8 @@ function SortableTaskItemComponent({
     task.dueDate,
     task.estimatedHours,
     task.priority,
+    task.recurrence,
+    task.projectId,
     task.notes,
   ].join('|');
 
@@ -194,18 +209,29 @@ function SortableTaskItemComponent({
             <span className="text-xs">Subtarea</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => onDelete(task._id)}
-            className={`${REVEAL_ROW} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1 rounded ${FOCUS_RING}`}
-            aria-label={`Eliminar tarea ${task.title}`}
-          >
-            <X className="w-3.5 h-3.5" aria-hidden="true" />
-          </button>
+          {confirmingTaskDelete ? (
+            <ConfirmDelete
+              subject={`tarea ${task.title}`}
+              onConfirm={() => {
+                setConfirmingTaskDelete(false);
+                onDelete(task._id);
+              }}
+              onCancel={() => setConfirmingTaskDelete(false)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingTaskDelete(true)}
+              className={`${REVEAL_ROW} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1 rounded ${FOCUS_RING}`}
+              aria-label={`Eliminar tarea ${task.title}`}
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         <div className="pl-[4.5rem] pr-3 pb-2 -mt-1">
-          <TaskMeta task={task} />
+          <TaskMeta task={task} inheritedDueDate={inheritedDueDate} />
         </div>
 
         {/* Zona visual de Drop para convertir la tarea arrastrada en subtarea */}
@@ -237,6 +263,7 @@ function SortableTaskItemComponent({
               <TaskEditForm
                 key={formKey}
                 task={task}
+                projects={projects}
                 onSave={(input) => onSaveDetails(task._id, input)}
               />
             )}
@@ -270,14 +297,25 @@ function SortableTaskItemComponent({
                   >
                     {subtask.title}
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => onRemoveSubtask?.(task._id, subtask.id)}
-                    className={`${REVEAL_SUBTASK} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1.5 rounded ${FOCUS_RING}`}
-                    aria-label={`Eliminar subtarea ${subtask.title}`}
-                  >
-                    <X className="w-3 h-3" aria-hidden="true" />
-                  </button>
+                  {confirmingSubtaskId === subtask.id ? (
+                    <ConfirmDelete
+                      subject={`subtarea ${subtask.title}`}
+                      onConfirm={() => {
+                        setConfirmingSubtaskId(null);
+                        onRemoveSubtask?.(task._id, subtask.id);
+                      }}
+                      onCancel={() => setConfirmingSubtaskId(null)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingSubtaskId(subtask.id)}
+                      className={`${REVEAL_SUBTASK} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1.5 rounded ${FOCUS_RING}`}
+                      aria-label={`Eliminar subtarea ${subtask.title}`}
+                    >
+                      <X className="w-3 h-3" aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -377,17 +415,28 @@ function SortableTaskItemComponent({
           </span>
         )}
 
-        <button
-          type="button"
-          onClick={() => onDelete(task._id)}
-          className={`${REVEAL_COMPACT} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1 rounded ${FOCUS_RING}`}
-          aria-label={`Eliminar tarea ${task.title}`}
-        >
-          <X className="w-3.5 h-3.5" aria-hidden="true" />
-        </button>
+        {confirmingTaskDelete ? (
+          <ConfirmDelete
+            subject={`tarea ${task.title}`}
+            onConfirm={() => {
+              setConfirmingTaskDelete(false);
+              onDelete(task._id);
+            }}
+            onCancel={() => setConfirmingTaskDelete(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingTaskDelete(true)}
+            className={`${REVEAL_COMPACT} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1 rounded ${FOCUS_RING}`}
+            aria-label={`Eliminar tarea ${task.title}`}
+          >
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
-      {hasMeta && <TaskMeta task={task} compact />}
+      {hasMeta && <TaskMeta task={task} inheritedDueDate={inheritedDueDate} compact />}
     </div>
   );
 }

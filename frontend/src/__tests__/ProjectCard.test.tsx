@@ -7,7 +7,7 @@ import type { Id } from '@/convex/_generated/dataModel';
 // Mock useMutation hooks to avoid real API calls in tests
 vi.mock('@/domains/tasks/hooks/useTaskMutations', () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
-  useCreateTask: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateTasks: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
   useReorderTasks: () => ({ mutate: vi.fn() }),
 }));

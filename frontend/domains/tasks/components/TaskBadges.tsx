@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { CalendarDays, Clock, Flag } from 'lucide-react';
+import { CalendarDays, Clock, Flag, Repeat } from 'lucide-react';
 import {
   resolveTaskStatus,
   TASK_PRIORITY_LABELS,
+  TASK_RECURRENCE_LABELS,
   TASK_STATUS_LABELS,
   type TaskPriority,
   type TaskStatus,
@@ -42,32 +43,50 @@ export function TaskPriorityBadge({ priority }: { priority: Task['priority'] }) 
 
 interface TaskMetaProps {
   task: Task;
+  /** Project due date, shown (not saved) when the task has no date of its own. */
+  inheritedDueDate?: number;
   /** Compact variant for project cards: smaller, no status badge. */
   compact?: boolean;
 }
 
 /** Status, priority, due date and estimated hours of a task, as a row of small badges. */
-export const TaskMeta = memo(function TaskMeta({ task, compact = false }: TaskMetaProps) {
+export const TaskMeta = memo(function TaskMeta({
+  task,
+  inheritedDueDate,
+  compact = false,
+}: TaskMetaProps) {
   const status = resolveTaskStatus(task);
   const now = useNow();
-  const overdue = isTaskOverdue(task, now);
+  const isInherited = task.dueDate === undefined && inheritedDueDate !== undefined;
+  const dueDate = task.dueDate ?? inheritedDueDate;
+  const overdue = isTaskOverdue({ ...task, dueDate }, now);
 
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${compact ? 'pl-9' : ''}`}>
       {!compact && <TaskStatusBadge status={status} />}
       <TaskPriorityBadge priority={task.priority} />
-      {task.dueDate !== undefined && (
+      {dueDate !== undefined && (
         <span
           className={`${PILL} ${
             overdue
               ? 'bg-destructive/10 text-destructive border-destructive/30'
               : 'bg-muted/60 text-muted-foreground border-border'
           }`}
-          title={overdue ? 'Fecha límite vencida' : 'Fecha límite'}
+          title={overdue ? 'Fecha límite vencida' : isInherited ? 'Fecha límite del proyecto' : 'Fecha límite'}
         >
-          <CalendarDays className="w-2.5 h-2.5" />
-          {formatDueDate(task.dueDate, now)}
+          <CalendarDays className="w-2.5 h-2.5" aria-hidden="true" />
+          {isInherited && <span>Proyecto: </span>}
+          {formatDueDate(dueDate, now)}
           {overdue && <span className="sr-only"> (vencida)</span>}
+        </span>
+      )}
+      {task.recurrence && (
+        <span
+          className={`${PILL} bg-muted/60 text-muted-foreground border-border`}
+          title={`Se repite: ${TASK_RECURRENCE_LABELS[task.recurrence].toLowerCase()}`}
+        >
+          <Repeat className="w-2.5 h-2.5" aria-hidden="true" />
+          <span className="sr-only">Se repite {TASK_RECURRENCE_LABELS[task.recurrence].toLowerCase()}</span>
         </span>
       )}
       {task.estimatedHours !== undefined && (

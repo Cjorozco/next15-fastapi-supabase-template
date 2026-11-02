@@ -42,6 +42,27 @@ describe('TaskMeta', () => {
     expect(new Set([media, baja, alta]).size).toBe(3);
   });
 
+  it('shows a recurrence icon with an accessible label', () => {
+    render(<TaskMeta task={{ ...baseTask, recurrence: 'semanal' }} />);
+    expect(screen.getByTitle(/se repite: todas las semanas/i)).toBeInTheDocument();
+    expect(screen.getByText(/se repite todas las semanas/i)).toHaveClass('sr-only');
+  });
+
+  it('shows the project due date when the task has none, without treating it as the task own', () => {
+    const projectDue = new Date(2030, 2, 15).getTime();
+    const { rerender } = render(<TaskMeta task={baseTask} inheritedDueDate={projectDue} />);
+    expect(screen.getByTitle('Fecha límite del proyecto')).toHaveTextContent(/proyecto:/i);
+
+    rerender(<TaskMeta task={{ ...baseTask, dueDate: new Date(2030, 3, 1).getTime() }} inheritedDueDate={projectDue} />);
+    expect(screen.queryByTitle('Fecha límite del proyecto')).not.toBeInTheDocument();
+    expect(screen.getByTitle('Fecha límite')).toBeInTheDocument();
+  });
+
+  it('marks an inherited past date as overdue', () => {
+    render(<TaskMeta task={baseTask} inheritedDueDate={Date.now() - 7 * DAY_MS} />);
+    expect(screen.getByTitle('Fecha límite vencida')).toBeInTheDocument();
+  });
+
   it('does not render a priority badge when the task has no priority', () => {
     render(<TaskMeta task={baseTask} />);
     expect(screen.queryByText(/prioridad/i)).not.toBeInTheDocument();
@@ -78,8 +99,56 @@ describe('TaskEditForm', () => {
       priority: 'alta',
       dueDate: new Date(2030, 2, 9).getTime(),
       estimatedHours: 4.5,
+      recurrence: null,
       notes: 'Hablar con QA',
     });
+  });
+
+  it('sends the chosen recurrence and clears it with an empty option', async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    const { rerender } = render(<TaskEditForm task={baseTask} onSave={onSave} />);
+
+    fireEvent.change(screen.getByLabelText('Repetir'), { target: { value: 'semanal' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ recurrence: 'semanal' })));
+
+    onSave.mockClear();
+    rerender(<TaskEditForm key="b" task={{ ...baseTask, recurrence: 'diaria' }} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('Repetir'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ recurrence: null })));
+  });
+
+  it('offers the project selector and sends projectId only when it changes', async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    const projects = [
+      { _id: 'project_1' as Id<'projects'>, name: 'Origen' },
+      { _id: 'project_2' as Id<'projects'>, name: 'Destino' },
+    ];
+    render(<TaskEditForm task={baseTask} projects={projects} onSave={onSave} />);
+
+    const select = screen.getByLabelText('Proyecto') as HTMLSelectElement;
+    expect(select.value).toBe('project_1');
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).not.toHaveProperty('projectId');
+
+    onSave.mockClear();
+    fireEvent.change(select, { target: { value: 'project_2' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'project_2' })));
+  });
+
+  it('hides the project selector when there is nowhere to move the task', () => {
+    render(
+      <TaskEditForm
+        task={baseTask}
+        projects={[{ _id: 'project_1' as Id<'projects'>, name: 'Único' }]}
+        onSave={vi.fn()}
+      />
+    );
+    expect(screen.queryByLabelText('Proyecto')).not.toBeInTheDocument();
   });
 
   it('sends null for cleared optional fields', async () => {

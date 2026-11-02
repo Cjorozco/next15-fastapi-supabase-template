@@ -11,18 +11,24 @@ import {
   resolveTaskStatus,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
+  TASK_RECURRENCES,
+  TASK_RECURRENCE_LABELS,
   TASK_STATUSES,
   TASK_STATUS_LABELS,
   type TaskPriority,
+  type TaskRecurrence,
   type TaskStatus,
 } from '@/convex/lib/taskFields';
 import { fromDateInputValue, toDateInputValue } from '@/domains/tasks/lib/dates';
 import type { Task, TaskDetailsInput } from '@/domains/tasks/types';
+import type { Id } from '@/convex/_generated/dataModel';
 
 interface TaskEditFormProps {
   task: Task;
   /** Resolves true when the task was saved. */
   onSave: (input: TaskDetailsInput) => Promise<boolean>;
+  /** Projects the task can be moved to (including its current one). Hides the selector when absent. */
+  projects?: Array<{ _id: Id<'projects'>; name: string }>;
 }
 
 const FIELD = 'bg-muted/50 border border-border text-foreground text-xs rounded-lg h-8';
@@ -31,12 +37,14 @@ const FIELD = 'bg-muted/50 border border-border text-foreground text-xs rounded-
  * Edit form for a task. All field state is local so typing never re-renders the task
  * list; only "Guardar" talks to the server.
  */
-export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
+export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
   const [title, setTitle] = useState(task.title);
   const [status, setStatus] = useState<TaskStatus>(resolveTaskStatus(task));
   const [dueDate, setDueDate] = useState(toDateInputValue(task.dueDate));
   const [hours, setHours] = useState(task.estimatedHours !== undefined ? String(task.estimatedHours) : '');
   const [priority, setPriority] = useState<TaskPriority | ''>(task.priority ?? '');
+  const [recurrence, setRecurrence] = useState<TaskRecurrence | ''>(task.recurrence ?? '');
+  const [projectId, setProjectId] = useState<Id<'projects'>>(task.projectId);
   const [notes, setNotes] = useState(task.notes ?? '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -69,7 +77,9 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
       dueDate: fromDateInputValue(dueDate),
       estimatedHours,
       priority: priority === '' ? null : priority,
+      recurrence: recurrence === '' ? null : recurrence,
       notes: notes.trim() || null,
+      ...(projectId !== task.projectId ? { projectId } : {}),
     });
     setIsSaving(false);
   };
@@ -161,6 +171,47 @@ export function TaskEditForm({ task, onSave }: TaskEditFormProps) {
             className={FIELD}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-recurrence`} className="text-xs text-muted-foreground">
+            Repetir
+          </Label>
+          <NativeSelect
+            id={`${idPrefix}-recurrence`}
+            value={recurrence}
+            onChange={(e) => setRecurrence(e.target.value as TaskRecurrence | '')}
+            className={FIELD}
+          >
+            <option value="">No se repite</option>
+            {TASK_RECURRENCES.map((value) => (
+              <option key={value} value={value}>
+                {TASK_RECURRENCE_LABELS[value]}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+
+        {projects && projects.length > 1 && (
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-project`} className="text-xs text-muted-foreground">
+              Proyecto
+            </Label>
+            <NativeSelect
+              id={`${idPrefix}-project`}
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value as Id<'projects'>)}
+              className={FIELD}
+            >
+              {projects.map((project) => (
+                <option key={project._id} value={project._id}>
+                  {project.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        )}
       </div>
 
       <div className="space-y-1">

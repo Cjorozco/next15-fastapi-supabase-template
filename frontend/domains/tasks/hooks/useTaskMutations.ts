@@ -4,7 +4,18 @@ import { api } from '@/convex/_generated/api';
 import { toast } from 'sonner';
 import { Id } from '@/convex/_generated/dataModel';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
-import type { TaskDetailsInput } from '@/domains/tasks/types';
+import { formatDueDate } from '@/domains/tasks/lib/dates';
+import type { Task, TaskDetailsInput } from '@/domains/tasks/types';
+
+/** Offset the server needs to compute recurring dates in the user's calendar. */
+const tzOffsetMinutes = () => new Date().getTimezoneOffset();
+
+/** A recurring task is not closed when completed: tell the user when it comes back. */
+function notifyIfReopened(task: Pick<Task, 'recurrence' | 'isCompleted' | 'dueDate'>, askedToComplete: boolean) {
+  if (askedToComplete && task.recurrence && !task.isCompleted && task.dueDate !== undefined) {
+    toast.success(`Tarea recurrente: vuelve el ${formatDueDate(task.dueDate)}`);
+  }
+}
 
 // Every `mutate` is memoized so list items wrapped in React.memo keep stable props.
 
@@ -31,14 +42,41 @@ export const useCreateTask = () => {
   return { mutate, isPending: false };
 };
 
+export const useCreateTasks = () => {
+  const createMany = useMutation(api.tasks.createMany);
+
+  const mutate = useCallback(
+    (
+      { projectId, titles }: { projectId: Id<'projects'>; titles: string[] },
+      options?: { onSuccess?: () => void }
+    ) => {
+      createMany({ projectId, titles })
+        .then((tasks) => {
+          toast.success(
+            tasks.length === 1 ? `Tarea "${tasks[0].title}" creada` : `${tasks.length} tareas creadas`
+          );
+          options?.onSuccess?.();
+        })
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al crear las tareas'));
+        });
+    },
+    [createMany]
+  );
+
+  return { mutate, isPending: false };
+};
+
 export const useUpdateTask = () => {
   const update = useMutation(api.tasks.update);
 
   const mutate = useCallback(
     ({ taskId, isCompleted }: { taskId: Id<'tasks'>; isCompleted: boolean }) => {
-      update({ taskId, isCompleted }).catch((err: unknown) => {
-        toast.error(mapErrorToUserMessage(err, 'Error al actualizar la tarea'));
-      });
+      update({ taskId, isCompleted, tzOffsetMinutes: tzOffsetMinutes() })
+        .then((task) => notifyIfReopened(task, isCompleted))
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al actualizar la tarea'));
+        });
     },
     [update]
   );
@@ -53,8 +91,14 @@ export const useUpdateTaskDetails = () => {
   const mutate = useCallback(
     async (taskId: Id<'tasks'>, input: TaskDetailsInput): Promise<boolean> => {
       try {
-        await updateTask({ taskId, ...input });
-        toast.success('Tarea actualizada');
+        const updated = await updateTask({ taskId, ...input, tzOffsetMinutes: tzOffsetMinutes() });
+        if (input.projectId) {
+          toast.success('Tarea movida a otro proyecto');
+        } else if (input.status === 'completada' && updated.recurrence && !updated.isCompleted) {
+          notifyIfReopened(updated, true);
+        } else {
+          toast.success('Tarea actualizada');
+        }
         return true;
       } catch (err: unknown) {
         toast.error(mapErrorToUserMessage(err, 'Error al guardar la tarea'));
@@ -134,9 +178,11 @@ export const useToggleSubtask = () => {
       subtaskId: string;
       isCompleted: boolean;
     }) => {
-      toggleSubtask({ taskId, subtaskId, isCompleted }).catch((err: unknown) => {
-        toast.error(mapErrorToUserMessage(err, 'Error al actualizar la subtarea'));
-      });
+      toggleSubtask({ taskId, subtaskId, isCompleted, tzOffsetMinutes: tzOffsetMinutes() })
+        .then((task) => notifyIfReopened(task, isCompleted))
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al actualizar la subtarea'));
+        });
     },
     [toggleSubtask]
   );
