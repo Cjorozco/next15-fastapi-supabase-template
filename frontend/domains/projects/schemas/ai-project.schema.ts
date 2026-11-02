@@ -4,6 +4,8 @@ import {
   aiDateField,
   aiHoursField,
   aiNoDeadlineField,
+  aiNotesField,
+  aiSubtasksField,
   aiPriorityField,
   aiRecurrenceField,
   DATE_OR_NO_DEADLINE_MESSAGE,
@@ -12,7 +14,8 @@ import {
   limitSentences,
 } from "./ai-fields";
 
-export const AI_MIN_TASKS = 4;
+// A single recurring habit is one task, so one is enough.
+export const AI_MIN_TASKS = 1;
 export const AI_MAX_TASKS = 8;
 
 /**
@@ -39,6 +42,8 @@ export const AiTaskSchema = z
   dueDate: aiDateField,
   noDeadline: aiNoDeadlineField,
   recurrence: aiRecurrenceField,
+  subtasks: aiSubtasksField,
+  notes: aiNotesField,
 })
   .transform(dropFlagWhenDated)
   .refine(hasDateOrNoDeadline, { message: DATE_OR_NO_DEADLINE_MESSAGE, path: ['dueDate'] });
@@ -61,7 +66,7 @@ export const AiProjectSchema = z
       .transform(limitSentences),
     tasks: z
       .array(AiTaskSchema)
-      .min(AI_MIN_TASKS, `El proyecto debe contener al menos ${AI_MIN_TASKS} tareas generadas`)
+      .min(AI_MIN_TASKS, `El proyecto debe contener al menos ${AI_MIN_TASKS} tarea generada`)
       .max(AI_MAX_TASKS, `El proyecto no puede contener más de ${AI_MAX_TASKS} tareas generadas por solicitud`),
   })
   .transform((project) => ({

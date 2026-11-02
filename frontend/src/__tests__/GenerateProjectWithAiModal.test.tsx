@@ -95,7 +95,7 @@ describe('GenerateProjectWithAiModal', () => {
     expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Campaña de Marketing 3 Semanas');
     expect(screen.getByLabelText('Título de la tarea 1')).toHaveValue('Definir público');
     expect(screen.getByLabelText('Prioridad de la tarea 1')).toHaveValue('alta');
-    expect(screen.getByLabelText('Horas estimadas de la tarea 1')).toHaveValue(1);
+    expect(screen.getByLabelText('Duración estimada de la tarea 1')).toHaveValue('1 h');
   });
 
   it('creates the project with the edits made in the preview', async () => {
@@ -153,6 +153,51 @@ describe('GenerateProjectWithAiModal', () => {
     expect(args.tasks[0]).toMatchObject({ title: 'Entrega', noDeadline: true });
     expect(args.tasks[0]).not.toHaveProperty('dueDate');
     expect(args.tasks[1]).toMatchObject({ title: 'Hábito', noDeadline: true });
+  });
+
+  it('shows a 10-minute habit as minutes, with short recurrence labels, and creates it as one task', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key-123');
+    vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue({
+      projectName: 'Inglés diario',
+      description: 'Hábito corto.',
+      tasks: [
+        {
+          title: 'Practicar inglés',
+          position: 0,
+          estimatedHours: 0.1667,
+          noDeadline: true,
+          recurrence: 'diaria',
+          subtasks: ['Vocabulario', 'Pronunciación'],
+          notes: 'Rota el foco',
+        },
+      ],
+    });
+
+    await openAndGenerate('10 minutos de inglés cada día');
+
+    expect(screen.getByLabelText('Duración estimada de la tarea 1')).toHaveValue('10 min');
+    const select = screen.getByLabelText('Repetición de la tarea 1') as HTMLSelectElement;
+    expect(select.value).toBe('diaria');
+    expect(Array.from(select.options).map((o) => o.text)).toEqual(['Sin repetir', 'Diaria', 'Semanal']);
+    expect(screen.getByLabelText('Subtareas de la tarea 1 (una por línea)')).toHaveValue('Vocabulario\nPronunciación');
+    expect(screen.getByLabelText('Notas de la tarea 1')).toHaveValue('Rota el foco');
+
+    fireEvent.change(screen.getByLabelText('Duración estimada de la tarea 1'), { target: { value: '15 min' } });
+    fireEvent.change(screen.getByLabelText('Subtareas de la tarea 1 (una por línea)'), {
+      target: { value: 'Vocabulario\nPodcast corto' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /crear proyecto/i }));
+
+    const args = mockMutate.mock.calls[0][0];
+    expect(args.tasks).toHaveLength(1);
+    expect(args.tasks[0]).toMatchObject({
+      title: 'Practicar inglés',
+      estimatedHours: 0.25,
+      noDeadline: true,
+      recurrence: 'diaria',
+      subtasks: ['Vocabulario', 'Podcast corto'],
+      notes: 'Rota el foco',
+    });
   });
 
   it('keeps an explicit title from the prompt instead of the AI name', async () => {

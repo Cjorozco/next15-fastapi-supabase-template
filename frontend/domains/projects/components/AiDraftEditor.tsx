@@ -11,7 +11,7 @@ import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
   TASK_RECURRENCES,
-  TASK_RECURRENCE_LABELS,
+  TASK_RECURRENCE_SHORT_LABELS,
   type TaskPriority,
   type TaskRecurrence,
 } from '@/convex/lib/taskFields';
@@ -126,14 +126,12 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                     ))}
                   </NativeSelect>
                   <Input
-                    type="number"
-                    min={0}
-                    step="any"
+                    type="text"
                     inputMode="decimal"
                     value={task.estimatedHours}
                     disabled={disabled}
-                    placeholder="Horas"
-                    aria-label={`Horas estimadas de la tarea ${n}`}
+                    placeholder="Ej. 10 min"
+                    aria-label={`Duración estimada de la tarea ${n}`}
                     onChange={(e) => updateTask(task.key, { estimatedHours: e.target.value })}
                     className="bg-background border-border text-xs rounded-lg h-8"
                   />
@@ -146,10 +144,10 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                     }
                     className="h-8 text-xs"
                   >
-                    <option value="">No se repite</option>
+                    <option value="">Sin repetir</option>
                     {TASK_RECURRENCES.map((recurrence) => (
                       <option key={recurrence} value={recurrence}>
-                        {TASK_RECURRENCE_LABELS[recurrence]}
+                        {TASK_RECURRENCE_SHORT_LABELS[recurrence]}
                       </option>
                     ))}
                   </NativeSelect>
@@ -179,6 +177,35 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                     <span className="sr-only"> (tarea {n})</span>
                   </span>
                 </label>
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground w-fit">
+                    Subtareas y notas
+                    {(task.subtasks.trim() || task.notes.trim()) && (
+                      <span className="sr-only"> (con contenido, tarea {n})</span>
+                    )}
+                  </summary>
+                  <div className="space-y-2 pt-2">
+                    <Textarea
+                      value={task.subtasks}
+                      rows={3}
+                      disabled={disabled}
+                      placeholder="Una subtarea por línea"
+                      aria-label={`Subtareas de la tarea ${n} (una por línea)`}
+                      onChange={(e) => updateTask(task.key, { subtasks: e.target.value })}
+                      className="bg-background border border-border text-xs rounded-lg resize-none"
+                    />
+                    <Textarea
+                      value={task.notes}
+                      rows={2}
+                      maxLength={500}
+                      disabled={disabled}
+                      placeholder="Notas"
+                      aria-label={`Notas de la tarea ${n}`}
+                      onChange={(e) => updateTask(task.key, { notes: e.target.value })}
+                      className="bg-background border border-border text-xs rounded-lg resize-none"
+                    />
+                  </div>
+                </details>
               </li>
             );
           })}

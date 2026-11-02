@@ -14,7 +14,7 @@ import {
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
   TASK_RECURRENCES,
-  TASK_RECURRENCE_LABELS,
+  TASK_RECURRENCE_SHORT_LABELS,
   TASK_STATUSES,
   TASK_STATUS_LABELS,
   type TaskPriority,
@@ -22,6 +22,7 @@ import {
   type TaskStatus,
 } from '@/convex/lib/taskFields';
 import { fromDateInputValue, toDateInputValue } from '@/domains/tasks/lib/dates';
+import { formatDurationInput, parseDuration } from '@/domains/tasks/lib/duration';
 import type { Task, TaskDetailsInput } from '@/domains/tasks/types';
 import type { Id } from '@/convex/_generated/dataModel';
 
@@ -44,7 +45,7 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
   const [status, setStatus] = useState<TaskStatus>(resolveTaskStatus(task));
   const [dueDate, setDueDate] = useState(toDateInputValue(task.dueDate));
   const [noDeadline, setNoDeadline] = useState(hasNoDeadline(task));
-  const [hours, setHours] = useState(task.estimatedHours !== undefined ? String(task.estimatedHours) : '');
+  const [hours, setHours] = useState(task.estimatedHours !== undefined ? formatDurationInput(task.estimatedHours) : '');
   const [priority, setPriority] = useState<TaskPriority | ''>(task.priority ?? '');
   const [recurrence, setRecurrence] = useState<TaskRecurrence | ''>(task.recurrence ?? '');
   const [projectId, setProjectId] = useState<Id<'projects'>>(task.projectId);
@@ -65,11 +66,12 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
 
     let estimatedHours: number | null = null;
     if (hours.trim() !== '') {
-      estimatedHours = Number(hours);
-      if (!Number.isFinite(estimatedHours) || estimatedHours < 0 || estimatedHours > MAX_ESTIMATED_HOURS) {
-        setError(`Las horas deben estar entre 0 y ${MAX_ESTIMATED_HOURS}`);
+      const parsed = parseDuration(hours);
+      if (parsed === null || parsed < 0 || parsed > MAX_ESTIMATED_HOURS) {
+        setError(`La duración debe ser un tiempo como "10 min" o "1.5 h" (entre 0 y ${MAX_ESTIMATED_HOURS} h)`);
         return;
       }
+      estimatedHours = parsed;
     }
 
     setError('');
@@ -175,18 +177,15 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
 
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-hours`} className="text-xs text-muted-foreground">
-            Horas estimadas
+            Duración estimada
           </Label>
           <Input
             id={`${idPrefix}-hours`}
-            type="number"
+            type="text"
             inputMode="decimal"
-            min={0}
-            max={MAX_ESTIMATED_HOURS}
-            step="any"
             value={hours}
             onChange={(e) => setHours(e.target.value)}
-            placeholder="0"
+            placeholder="Ej. 10 min o 1.5 h"
             className={FIELD}
           />
         </div>
@@ -206,7 +205,7 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
             <option value="">No se repite</option>
             {TASK_RECURRENCES.map((value) => (
               <option key={value} value={value}>
-                {TASK_RECURRENCE_LABELS[value]}
+                {TASK_RECURRENCE_SHORT_LABELS[value]}
               </option>
             ))}
           </NativeSelect>

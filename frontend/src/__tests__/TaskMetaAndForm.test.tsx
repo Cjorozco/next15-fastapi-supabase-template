@@ -122,7 +122,7 @@ describe('TaskEditForm', () => {
     fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'en_progreso' } });
     fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: 'alta' } });
     fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '2030-03-09' } });
-    fireEvent.change(screen.getByLabelText('Horas estimadas'), { target: { value: '4.5' } });
+    fireEvent.change(screen.getByLabelText('Duración estimada'), { target: { value: '4.5' } });
     fireEvent.change(screen.getByLabelText('Notas'), { target: { value: ' Hablar con QA ' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
 
@@ -137,6 +137,43 @@ describe('TaskEditForm', () => {
       noDeadline: false,
       notes: 'Hablar con QA',
     });
+  });
+
+  it('edits the duration in minutes and stores it in hours', async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    render(<TaskEditForm task={{ ...baseTask, estimatedHours: 0.1667 }} onSave={onSave} />);
+
+    const field = screen.getByLabelText('Duración estimada') as HTMLInputElement;
+    expect(field.value).toBe('10 min');
+
+    fireEvent.change(field, { target: { value: '45 min' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ estimatedHours: 0.75 })));
+  });
+
+  it('shows hours from one hour and accepts a bare number as hours', async () => {
+    const onSave = vi.fn().mockResolvedValue(true);
+    render(<TaskEditForm task={{ ...baseTask, estimatedHours: 1.5 }} onSave={onSave} />);
+    expect((screen.getByLabelText('Duración estimada') as HTMLInputElement).value).toBe('1.5 h');
+
+    fireEvent.change(screen.getByLabelText('Duración estimada'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ estimatedHours: 2 })));
+  });
+
+  it('rejects text that is not a duration', () => {
+    const onSave = vi.fn();
+    render(<TaskEditForm task={baseTask} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('Duración estimada'), { target: { value: 'mucho' } });
+    fireEvent.submit(screen.getByRole('form', { name: /editar tarea/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/duración/i);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('uses short labels in the recurrence select so they are not cut off', () => {
+    render(<TaskEditForm task={baseTask} onSave={vi.fn()} />);
+    const options = Array.from((screen.getByLabelText('Repetir') as HTMLSelectElement).options).map((o) => o.text);
+    expect(options).toEqual(['No se repite', 'Diaria', 'Semanal']);
   });
 
   it('"Sin fecha límite" disables and clears the date and sends noDeadline', async () => {
@@ -229,7 +266,7 @@ describe('TaskEditForm', () => {
 
     fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Fecha límite'), { target: { value: '' } });
-    fireEvent.change(screen.getByLabelText('Horas estimadas'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Duración estimada'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Notas'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
 
@@ -248,10 +285,10 @@ describe('TaskEditForm', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('El título es obligatorio');
 
     fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Ok' } });
-    fireEvent.change(screen.getByLabelText('Horas estimadas'), { target: { value: '-2' } });
+    fireEvent.change(screen.getByLabelText('Duración estimada'), { target: { value: '-2' } });
     // jsdom blocks a click on an invalid form (native min=0); submit directly to reach our own check.
     fireEvent.submit(screen.getByRole('form', { name: /editar tarea/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/horas/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/duración/i);
 
     expect(onSave).not.toHaveBeenCalled();
   });
