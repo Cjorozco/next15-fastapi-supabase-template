@@ -9,9 +9,8 @@ import {
   getStoredApiKey,
   setStoredApiKey as saveStoredApiKey,
 } from './ai-storage';
+import { requestValidatedAiJson } from './validated-request';
 import { DEFAULT_AI_TIMEOUT_MS, executeAiPrompt, UNIFIED_SYSTEM_INSTRUCTION } from './ai-gateway';
-import { safeParseAIResponse } from './safe-ai-parser';
-import { AISchemaValidationError } from './ai-errors';
 
 export interface UseAiClientOptions {
   initialProvider?: AiProviderId;
@@ -69,7 +68,9 @@ export function useAiClient(options?: UseAiClientOptions) {
       systemInstruction: string = UNIFIED_SYSTEM_INSTRUCTION,
       callOptions?: { timeoutMs?: number; temperature?: number; model?: string }
     ): Promise<z.infer<T>> => {
-      const rawText = await executeAiPrompt({
+      // Validates with safeParse and retries once with the validation issues.
+      return requestValidatedAiJson({
+        schema,
         prompt,
         systemInstruction,
         provider,
@@ -77,15 +78,7 @@ export function useAiClient(options?: UseAiClientOptions) {
         timeoutMs: callOptions?.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS,
         temperature: callOptions?.temperature,
         model: callOptions?.model,
-        responseFormat: 'json',
       });
-
-      const parsed = safeParseAIResponse(schema, rawText);
-      if (!parsed.success) {
-        throw new AISchemaValidationError(parsed.error, parsed.formattedError);
-      }
-
-      return parsed.data;
     },
     [provider, apiKey]
   );

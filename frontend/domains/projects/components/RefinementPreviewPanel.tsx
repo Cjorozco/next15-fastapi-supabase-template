@@ -1,6 +1,20 @@
 import { CheckCircle2, Loader2, Plus, ArrowLeft, AlertCircle, CornerDownRight } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import type { RefinementPreview } from '@/domains/projects/lib/refinement-preview';
+import { TASK_PRIORITY_LABELS } from '@/convex/lib/taskFields';
+import type { PreviewNewTask, RefinementPreview } from '@/domains/projects/lib/refinement-preview';
+import { formatDueDate, formatHours, fromDateInputValue } from '@/domains/tasks/lib/dates';
+
+/** "Prioridad alta · 2 h · 15 mar": only what the AI proposed. */
+function describePlanning(task: PreviewNewTask): string {
+  const dueDate = task.dueDate ? fromDateInputValue(task.dueDate) : null;
+  return [
+    task.priority ? `Prioridad ${TASK_PRIORITY_LABELS[task.priority].toLowerCase()}` : null,
+    task.estimatedHours !== undefined ? formatHours(task.estimatedHours) : null,
+    dueDate !== null ? formatDueDate(dueDate) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
 
 interface RefinementPreviewPanelProps {
   preview: RefinementPreview;
@@ -60,6 +74,9 @@ export function RefinementPreviewPanel({
                     <Plus className="w-3 h-3 mt-0.5 text-success shrink-0" />
                     <span>{task.title}</span>
                   </div>
+                  {describePlanning(task) && (
+                    <p className="pl-5 mt-0.5 text-muted-foreground">{describePlanning(task)}</p>
+                  )}
                   {task.subtasks.length > 0 && (
                     <ul className="pl-5 mt-1 space-y-0.5">
                       {task.subtasks.map((subtask, i) => (

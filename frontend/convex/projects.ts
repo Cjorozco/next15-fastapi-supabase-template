@@ -307,6 +307,9 @@ export const applyAiRefinement = mutation({
         v.object({
           title: v.string(),
           subtasks: v.optional(v.array(v.string())),
+          priority: v.optional(taskPriorityValidator),
+          estimatedHours: v.optional(v.number()),
+          dueDate: v.optional(v.number()),
         })
       )
     ),
@@ -322,6 +325,10 @@ export const applyAiRefinement = mutation({
   returns: projectWithTasksValidator,
   handler: async (ctx, args) => {
     await requireProjectOwner(ctx, args.projectId);
+
+    for (const task of args.newTasks ?? []) {
+      assertValidTaskPlanning(task);
+    }
 
     // 1. Actualizar descripción si se especificó
     if (args.updatedDescription !== undefined) {
@@ -393,6 +400,11 @@ export const applyAiRefinement = mutation({
             status: "pendiente",
             position: nextPosition++,
             subtasks,
+            ...(newTask.priority ? { priority: newTask.priority } : {}),
+            ...(newTask.estimatedHours !== undefined
+              ? { estimatedHours: newTask.estimatedHours }
+              : {}),
+            ...(newTask.dueDate !== undefined ? { dueDate: newTask.dueDate } : {}),
           });
         }
       }
