@@ -178,6 +178,7 @@ export const useApplyAiRefinement = () => {
           priority?: TaskPriority;
           estimatedHours?: number;
           dueDate?: number;
+          noDeadline?: boolean;
         }>;
         newSubtasksForExistingTasks?: Array<{ taskId: string; subtaskTitles: string[] }>;
       },

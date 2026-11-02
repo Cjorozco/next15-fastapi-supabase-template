@@ -53,10 +53,10 @@ describe('Gemini Client (Client-Side BYOK, Typed Errors & Schema Validation)', (
                   projectName: 'Campaña de Marketing 3 Semanas',
                   description: 'Estrategia integral de marketing digital',
                   tasks: [
-                    { title: 'Definir buyer persona', position: 0 },
-                    { title: 'Crear copy y creatividades', position: 1 },
-                    { title: 'Configurar anuncios Meta y Google', position: 2 },
-                    { title: 'Medir resultados', position: 3, priority: 'media', estimatedHours: 2 },
+                    { title: 'Definir buyer persona', position: 0, noDeadline: true },
+                    { title: 'Crear copy y creatividades', position: 1, noDeadline: true },
+                    { title: 'Configurar anuncios Meta y Google', position: 2, noDeadline: true },
+                    { title: 'Medir resultados', position: 3, priority: 'media', estimatedHours: 2, noDeadline: true },
                   ],
                 }),
               },
@@ -210,10 +210,10 @@ describe('Gemini Client (Client-Side BYOK, Typed Errors & Schema Validation)', (
     projectName: 'Retomar inglés',
     description: 'Retomar el hábito de estudio.',
     tasks: [
-      { title: 'Sesión corta de reenganche', priority: 'alta', estimatedHours: 0.5 },
-      { title: 'Resolver 10 ejercicios', priority: 'media', estimatedHours: 1 },
-      { title: 'Escuchar un podcast', priority: 'baja', estimatedHours: 1 },
-      { title: 'Escribir un párrafo', priority: 'media', estimatedHours: 1 },
+      { title: 'Sesión corta de reenganche', priority: 'alta', estimatedHours: 0.5, noDeadline: true },
+      { title: 'Resolver 10 ejercicios', priority: 'media', estimatedHours: 1, noDeadline: true },
+      { title: 'Escuchar un podcast', priority: 'baja', estimatedHours: 1, noDeadline: true },
+      { title: 'Escribir un párrafo', priority: 'media', estimatedHours: 1, noDeadline: true },
     ],
   };
 

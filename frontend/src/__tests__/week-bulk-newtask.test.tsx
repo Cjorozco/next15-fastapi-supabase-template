@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { NewTaskForm } from '@/domains/tasks/components/NewTaskForm';
 import { parsePastedTasks } from '@/domains/tasks/lib/bulk';
-import { buildWeekTasks, endOfWeek, summarizeWeek } from '@/domains/tasks/lib/week';
+import { buildWeekTasks, endOfWeek, summarizeWeek, bucketFor, effectiveDueDate } from '@/domains/tasks/lib/week';
 import type { Project } from '@/domains/projects/types';
 import type { Task } from '@/domains/tasks/types';
 import type { Id } from '@/convex/_generated/dataModel';
@@ -117,8 +117,13 @@ function project(id: string, tasks: Task[], overrides: Partial<Project> = {}): P
   };
 }
 
+// Wednesday 12 Jun 2030, 10:00 local.
+const NOW = new Date(2030, 5, 12, 10, 0).getTime();
+const TODAY = new Date(2030, 5, 12).getTime();
+const day = (offset: number) => TODAY + offset * DAY;
+
 describe('buildWeekTasks', () => {
-  const ids = (projects: Project[]) => buildWeekTasks(projects).map((item) => item.task._id as string);
+  const ids = (projects: Project[]) => buildWeekTasks(projects, NOW).map((item) => item.task._id as string);
 
   it('leaves out paused and completed projects and finished tasks', () => {
     const projects = [
@@ -129,45 +134,90 @@ describe('buildWeekTasks', () => {
     expect(ids(projects)).toEqual(['open']);
   });
 
-  it('orders by priority, then by date, undated last', () => {
+  it('orders overdue → this week → high-priority no-deadline → later → unplanned → rest no-deadline', () => {
     const projects = [
       project('a', [
-        task('none-soon', { dueDate: 100 }),
-        task('low', { priority: 'baja', dueDate: 50 }),
-        task('high-late', { priority: 'alta', dueDate: 300 }),
-        task('high-undated', { priority: 'alta' }),
-        task('high-soon', { priority: 'alta', dueDate: 200 }),
-        task('mid', { priority: 'media' }),
+        task('no-limit-low', { noDeadline: true, priority: 'baja' }),
+        task('unplanned'),
+        task('later', { dueDate: day(20) }),
+        task('no-limit-high', { noDeadline: true, priority: 'alta' }),
+        task('this-week', { dueDate: day(2) }),
+        task('overdue', { dueDate: day(-3) }),
+        task('habit', { recurrence: 'diaria' }),
       ]),
     ];
-    expect(ids(projects)).toEqual(['high-soon', 'high-late', 'high-undated', 'mid', 'low', 'none-soon']);
+    expect(ids(projects)).toEqual([
+      'overdue',
+      'this-week',
+      'no-limit-high',
+      'later',
+      'unplanned',
+      'no-limit-low',
+      'habit',
+    ]);
   });
 
-  it('mixes projects and keeps the project order on full ties', () => {
+  it('orders by priority and then by date inside a bucket', () => {
     const projects = [
-      project('a', [task('a1'), task('a2')]),
-      project('b', [task('b1', { priority: 'alta' }), task('b2')]),
+      project('a', [
+        task('mid-soon', { priority: 'media', dueDate: day(1) }),
+        task('none-sooner', { dueDate: day(0) }),
+        task('high-late', { priority: 'alta', dueDate: day(3) }),
+        task('high-soon', { priority: 'alta', dueDate: day(2) }),
+      ]),
     ];
-    expect(ids(projects)).toEqual(['b1', 'a1', 'a2', 'b2']);
+    expect(ids(projects)).toEqual(['high-soon', 'high-late', 'mid-soon', 'none-sooner']);
+  });
+
+  it('keeps project and task order on full ties', () => {
+    const projects = [project('a', [task('a1'), task('a2')]), project('b', [task('b1')])];
+    expect(ids(projects)).toEqual(['a1', 'a2', 'b1']);
   });
 
   it('uses the project due date for tasks without their own date, without changing the task', () => {
-    const own = task('own', { dueDate: 500 });
+    const own = task('own', { dueDate: day(3) });
     const inherits = task('inherits');
-    const items = buildWeekTasks([project('a', [own, inherits], { dueDate: 100 })]);
+    const items = buildWeekTasks([project('a', [own, inherits], { dueDate: day(1) })], NOW);
 
     expect(items.map((i) => [i.task._id, i.dueDate])).toEqual([
-      ['inherits', 100],
-      ['own', 500],
+      ['inherits', day(1)],
+      ['own', day(3)],
     ]);
     expect(inherits.dueDate).toBeUndefined();
+  });
+
+  it('does not inherit the project date when the task has no deadline by nature', () => {
+    const open = task('open', { noDeadline: true });
+    const habit = task('habit', { recurrence: 'semanal' });
+    const items = buildWeekTasks([project('a', [open, habit], { dueDate: day(1) })], NOW);
+    expect(items.map((i) => [i.task._id, i.dueDate, i.bucket])).toEqual([
+      ['open', undefined, 'sin_limite'],
+      ['habit', undefined, 'sin_limite'],
+    ]);
+  });
+});
+
+describe('bucketFor / effectiveDueDate', () => {
+  it('classifies by date and by the no-deadline flag', () => {
+    expect(bucketFor({}, day(-1), NOW)).toBe('vencida');
+    expect(bucketFor({}, day(0), NOW)).toBe('esta_semana');
+    expect(bucketFor({}, day(4), NOW)).toBe('esta_semana'); // Sunday
+    expect(bucketFor({}, day(5), NOW)).toBe('mas_adelante'); // next Monday
+    expect(bucketFor({}, undefined, NOW)).toBe('sin_planificar');
+    expect(bucketFor({ noDeadline: true }, undefined, NOW)).toBe('sin_limite');
+    expect(bucketFor({ noDeadline: true, priority: 'alta' }, undefined, NOW)).toBe('sin_limite_alta');
+    expect(bucketFor({ recurrence: 'diaria', priority: 'alta' }, undefined, NOW)).toBe('sin_limite_alta');
+  });
+
+  it('a recurring task with a date is dated, not no-deadline', () => {
+    expect(bucketFor({ recurrence: 'diaria' }, day(1), NOW)).toBe('esta_semana');
+    expect(effectiveDueDate({ dueDate: day(2), recurrence: 'diaria' }, day(9))).toBe(day(2));
   });
 });
 
 describe('week boundaries', () => {
   it('ends on Sunday 23:59:59.999 local time', () => {
-    const wednesday = new Date(2030, 5, 12, 10, 0).getTime();
-    const end = new Date(endOfWeek(wednesday));
+    const end = new Date(endOfWeek(NOW));
     expect(end.getDay()).toBe(0);
     expect([end.getHours(), end.getMinutes(), end.getSeconds()]).toEqual([23, 59, 59]);
     expect(end.getDate()).toBe(16);
@@ -178,18 +228,27 @@ describe('week boundaries', () => {
     expect(new Date(endOfWeek(sunday)).getDate()).toBe(16);
   });
 
-  it('counts overdue, this week, later and undated tasks', () => {
-    const now = new Date(2030, 5, 12, 10, 0).getTime(); // Wednesday
-    const today = new Date(2030, 5, 12).getTime();
-    const items = buildWeekTasks([
-      project('a', [
-        task('late', { dueDate: today - 3 * DAY }),
-        task('today', { dueDate: today }),
-        task('sunday', { dueDate: new Date(2030, 5, 16).getTime() }),
-        task('next-week', { dueDate: new Date(2030, 5, 17).getTime() }),
-        task('undated'),
-      ]),
-    ]);
-    expect(summarizeWeek(items, now)).toEqual({ overdue: 1, thisWeek: 2, later: 1, undated: 1 });
+  it('counts every bucket for the counter line', () => {
+    const items = buildWeekTasks(
+      [
+        project('a', [
+          task('late', { dueDate: day(-3) }),
+          task('today', { dueDate: day(0) }),
+          task('sunday', { dueDate: day(4) }),
+          task('next-week', { dueDate: day(5) }),
+          task('unplanned'),
+          task('open', { noDeadline: true }),
+          task('habit', { recurrence: 'diaria', priority: 'alta' }),
+        ]),
+      ],
+      NOW
+    );
+    expect(summarizeWeek(items)).toEqual({
+      overdue: 1,
+      thisWeek: 2,
+      later: 1,
+      unplanned: 1,
+      noDeadline: 2,
+    });
   });
 });

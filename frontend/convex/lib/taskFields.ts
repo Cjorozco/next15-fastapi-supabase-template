@@ -135,3 +135,17 @@ export function nextOccurrence(params: {
 
   return nextDay * DAY_MS + DAY_MS / 2 + offset * 60_000;
 }
+
+/**
+ * "No deadline by nature" (habits, open-ended tasks), as opposed to "still needs a date".
+ * A task with a date never counts. `noDeadline` is optional in the database (absent means
+ * false), except that a recurring task without the flag is treated as having no deadline.
+ */
+export function hasNoDeadline(task: {
+  noDeadline?: boolean;
+  recurrence?: TaskRecurrence;
+  dueDate?: number;
+}): boolean {
+  if (task.dueDate !== undefined) return false;
+  return task.noDeadline ?? task.recurrence !== undefined;
+}

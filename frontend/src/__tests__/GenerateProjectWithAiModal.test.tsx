@@ -127,6 +127,34 @@ describe('GenerateProjectWithAiModal', () => {
     );
   });
 
+  it('lets the user mark a draft task as "Sin fecha límite", which disables and clears its date', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key-123');
+    vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue({
+      ...sampleProject,
+      tasks: [
+        { title: 'Entrega', position: 0, dueDate: '2030-03-15' },
+        { title: 'Hábito', position: 1, noDeadline: true },
+        ...sampleProject.tasks.slice(2).map((t) => ({ ...t, noDeadline: true as const })),
+      ],
+    });
+
+    await openAndGenerate('Curso con entrega el 15 de marzo');
+
+    const date1 = screen.getByLabelText('Fecha de la tarea 1') as HTMLInputElement;
+    expect(date1.value).toBe('2030-03-15');
+    expect(screen.getByLabelText('Fecha de la tarea 2')).toBeDisabled();
+
+    fireEvent.click(screen.getAllByLabelText(/Sin fecha límite/)[0]);
+    expect(date1).toBeDisabled();
+    expect(date1.value).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: /crear proyecto/i }));
+    const args = mockMutate.mock.calls[0][0];
+    expect(args.tasks[0]).toMatchObject({ title: 'Entrega', noDeadline: true });
+    expect(args.tasks[0]).not.toHaveProperty('dueDate');
+    expect(args.tasks[1]).toMatchObject({ title: 'Hábito', noDeadline: true });
+  });
+
   it('keeps an explicit title from the prompt instead of the AI name', async () => {
     localStorage.setItem('gemini_api_key', 'test-key-123');
     const generateSpy = vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue({

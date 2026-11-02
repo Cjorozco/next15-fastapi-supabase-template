@@ -14,6 +14,7 @@ export interface PreviewNewTask {
   estimatedHours?: number;
   /** `YYYY-MM-DD`, shown as proposed. */
   dueDate?: string;
+  noDeadline?: boolean;
 }
 
 export interface RefinementPreview {
@@ -36,6 +37,7 @@ export interface RefinementApplyPayload {
     priority?: TaskPriority;
     estimatedHours?: number;
     dueDate?: number;
+    noDeadline?: boolean;
   }>;
   newSubtasksForExistingTasks: Array<{ taskId: string; subtaskTitles: string[] }>;
 }
@@ -77,6 +79,7 @@ export function buildRefinementPreview(
     ...(task.priority ? { priority: task.priority } : {}),
     ...(task.estimatedHours !== undefined ? { estimatedHours: task.estimatedHours } : {}),
     ...(task.dueDate ? { dueDate: task.dueDate } : {}),
+    ...(task.noDeadline ? { noDeadline: true } : {}),
   }));
 
   return {

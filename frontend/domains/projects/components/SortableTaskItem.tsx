@@ -10,7 +10,7 @@ import { Task, TaskDetailsInput } from '@/domains/tasks/types';
 import { TaskMeta } from '@/domains/tasks/components/TaskBadges';
 import { TaskEditForm } from '@/domains/tasks/components/TaskEditForm';
 import { ConfirmDelete } from '@/domains/tasks/components/ConfirmDelete';
-import { resolveTaskStatus } from '@/convex/lib/taskFields';
+import { hasNoDeadline, resolveTaskStatus } from '@/convex/lib/taskFields';
 import { Id } from '@/convex/_generated/dataModel';
 
 // Hover-only controls must also appear on keyboard focus and on touch (no hover).
@@ -109,7 +109,8 @@ function SortableTaskItemComponent({
     inheritedDueDate !== undefined ||
     task.estimatedHours !== undefined ||
     task.priority !== undefined ||
-    task.recurrence !== undefined;
+    task.recurrence !== undefined ||
+    hasNoDeadline(task);
   // Remount the form when the task changes on the server so it never shows stale values.
   const formKey = [
     task.title,
@@ -118,6 +119,7 @@ function SortableTaskItemComponent({
     task.estimatedHours,
     task.priority,
     task.recurrence,
+    task.noDeadline,
     task.projectId,
     task.notes,
   ].join('|');

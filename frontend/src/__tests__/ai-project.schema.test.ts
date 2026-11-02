@@ -9,10 +9,10 @@ describe("AiProjectSchema & Client Validation Boundary", () => {
     projectName: "SaaS Analytics Dashboard",
     description: "Build an MVP dashboard for user metrics",
     tasks: [
-      { title: "Define KPI metrics", position: 0 },
-      { title: "Connect database", position: 1 },
-      { title: "Implement charts", position: 2 },
-      { title: "Deploy preview", position: 3 },
+      { title: "Define KPI metrics", position: 0, noDeadline: true },
+      { title: "Connect database", position: 1, noDeadline: true },
+      { title: "Implement charts", position: 2, noDeadline: true },
+      { title: "Deploy preview", position: 3, noDeadline: true },
     ],
   };
 
@@ -35,10 +35,10 @@ describe("AiProjectSchema & Client Validation Boundary", () => {
   "projectName": "AI Task Manager",
   "description": "Smart productivity tool",
   "tasks": [
-    { "title": "Setup repository", "position": 0 },
-    { "title": "Implement Zod schemas", "position": 1 },
-    { "title": "Write tests", "position": 2 },
-    { "title": "Ship", "position": 3 }
+    { "title": "Setup repository", "position": 0, "noDeadline": true },
+    { "title": "Implement Zod schemas", "position": 1, "noDeadline": true },
+    { "title": "Write tests", "position": 2, "noDeadline": true },
+    { "title": "Ship", "position": 3, "noDeadline": true }
   ]
 }
 \`\`\`
@@ -79,7 +79,7 @@ Let me know if you need more tasks!`;
   it("rejects project with more than 8 tasks", () => {
     const result = AiProjectSchema.safeParse({
       ...validAiPayload,
-      tasks: Array.from({ length: 9 }, (_, i) => ({ title: `Task #${i + 1}`, position: i })),
+      tasks: Array.from({ length: 9 }, (_, i) => ({ title: `Task #${i + 1}`, position: i, noDeadline: true })),
     });
 
     expect(result.success).toBe(false);
@@ -94,10 +94,10 @@ Let me know if you need more tasks!`;
       projectName: "Mobile App Redesign",
       description: "UX overhaul",
       tasks: [
-        { title: "Wireframes", position: "0" },
-        { title: "Figma prototypes", position: "1" },
-        { title: "User testing", position: "2" },
-        { title: "Handoff", position: "3" },
+        { title: "Wireframes", position: "0", noDeadline: true },
+        { title: "Figma prototypes", position: "1", noDeadline: true },
+        { title: "User testing", position: "2", noDeadline: true },
+        { title: "Handoff", position: "3", noDeadline: true },
       ],
     });
 
@@ -115,7 +115,7 @@ Let me know if you need more tasks!`;
       _id: "fake_doc_id",
       maliciousScript: "<script>alert(1)</script>",
       tasks: [
-        { title: "Setup API", position: 0, isAdmin: true, internalToken: "secret_leak" },
+        { title: "Setup API", position: 0, noDeadline: true, isAdmin: true, internalToken: "secret_leak" },
         ...validAiPayload.tasks.slice(1),
       ],
     });
@@ -133,7 +133,7 @@ Let me know if you need more tasks!`;
   describe("task planning fields", () => {
     const withFirstTask = (task: Record<string, unknown>) => ({
       ...validAiPayload,
-      tasks: [{ title: "Primera", ...task }, ...validAiPayload.tasks.slice(1)],
+      tasks: [{ title: "Primera", noDeadline: true, ...task }, ...validAiPayload.tasks.slice(1)],
     });
 
     it("keeps valid priority, hours and date", () => {
@@ -179,6 +179,48 @@ Let me know if you need more tasks!`;
       if (result.success) {
         expect(result.data.tasks.map((t) => t.position)).toEqual([0, 1, 2, 3]);
       }
+    });
+  });
+
+  describe("date or no deadline", () => {
+    const only = (task: Record<string, unknown>) => ({
+      ...validAiPayload,
+      tasks: [{ title: "Primera", ...task }, ...validAiPayload.tasks.slice(1)],
+    });
+
+    it("rejects a task with neither a date nor noDeadline and names the field", () => {
+      const result = AiProjectSchema.safeParse(only({}));
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find((i) => i.path.join(".") === "tasks.0.dueDate");
+        expect(issue?.message).toContain("dueDate");
+        expect(issue?.message).toContain("noDeadline");
+      }
+    });
+
+    it("rejects a task whose only date is invalid", () => {
+      expect(AiProjectSchema.safeParse(only({ dueDate: "2026-02-31" })).success).toBe(false);
+    });
+
+    it("accepts a task with only a date or only the flag", () => {
+      expect(AiProjectSchema.safeParse(only({ dueDate: "2030-03-15" })).success).toBe(true);
+      const flagged = AiProjectSchema.safeParse(only({ noDeadline: true }));
+      expect(flagged.success).toBe(true);
+      if (flagged.success) expect(flagged.data.tasks[0].noDeadline).toBe(true);
+    });
+
+    it("keeps the date and drops the flag when the model sends both", () => {
+      const result = AiProjectSchema.safeParse(only({ dueDate: "2030-03-15", noDeadline: true }));
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.tasks[0].dueDate).toBe("2030-03-15");
+        expect(result.data.tasks[0].noDeadline).toBeUndefined();
+      }
+    });
+
+    it("only accepts a real true as the flag", () => {
+      expect(AiProjectSchema.safeParse(only({ noDeadline: "yes" })).success).toBe(false);
+      expect(AiProjectSchema.safeParse(only({ noDeadline: "true" })).success).toBe(true);
     });
   });
 

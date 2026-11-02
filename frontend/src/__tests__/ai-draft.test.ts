@@ -50,9 +50,9 @@ describe('draft conversion', () => {
     description: 'Descripción corta.',
     tasks: [
       { title: 'A', priority: 'alta', estimatedHours: 1.5, dueDate: '2026-03-15' },
-      { title: 'B' },
-      { title: 'C' },
-      { title: 'D' },
+      { title: 'B', noDeadline: true },
+      { title: 'C', noDeadline: true },
+      { title: 'D', noDeadline: true },
     ],
   });
 
@@ -70,7 +70,7 @@ describe('draft conversion', () => {
       estimatedHours: 1.5,
     });
     expect(typeof args.tasks[0].dueDate).toBe('number');
-    expect(args.tasks[1]).toEqual({ title: 'B', position: 1 });
+    expect(args.tasks[1]).toEqual({ title: 'B', position: 1, noDeadline: true });
   });
 
   it('drops empty tasks and renumbers positions after edits', () => {
@@ -85,6 +85,21 @@ describe('draft conversion', () => {
       ['Nueva', 3],
     ]);
     expect(args.tasks[3].estimatedHours).toBe(0.5);
+  });
+
+  it('sends noDeadline only when the task has no date', () => {
+    const draft = projectToDraft(project);
+    expect(draft.tasks[1].noDeadline).toBe(true);
+
+    draft.tasks[1].dueDate = '2030-03-15';
+    const dated = draftToCreateArgs(draft).tasks[1];
+    expect(typeof dated.dueDate).toBe('number');
+    expect(dated).not.toHaveProperty('noDeadline');
+
+    draft.tasks[0].noDeadline = true;
+    draft.tasks[0].dueDate = '';
+    expect(draftToCreateArgs(draft).tasks[0]).toMatchObject({ noDeadline: true });
+    expect(draftToCreateArgs(draft).tasks[0]).not.toHaveProperty('dueDate');
   });
 
   it('ignores invalid hours and dates typed in the form', () => {

@@ -54,6 +54,8 @@ export default defineSchema({
     status: v.optional(taskStatus),
     priority: v.optional(taskPriority),
     dueDate: v.optional(v.number()),
+    // true = no deadline by nature (habit, open task); absent = false.
+    noDeadline: v.optional(v.boolean()),
     estimatedHours: v.optional(v.number()),
     // When set, completing the task reopens it with the next due date.
     recurrence: v.optional(taskRecurrence),

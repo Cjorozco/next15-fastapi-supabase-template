@@ -11,6 +11,7 @@ function describePlanning(task: PreviewNewTask): string {
     task.priority ? `Prioridad ${TASK_PRIORITY_LABELS[task.priority].toLowerCase()}` : null,
     task.estimatedHours !== undefined ? formatHours(task.estimatedHours) : null,
     dueDate !== null ? formatDueDate(dueDate) : null,
+    task.noDeadline ? 'Sin fecha límite' : null,
   ]
     .filter(Boolean)
     .join(' · ');

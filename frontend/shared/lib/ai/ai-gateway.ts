@@ -11,7 +11,11 @@ export const TASK_QUALITY_RULES = `REGLAS PARA LAS TAREAS:
 - Usa las restricciones del usuario: tiempo diario disponible (ajusta las horas estimadas a ese tiempo), plazos y situación actual. Si dice que retoma algo tras un tiempo sin practicar, la primera tarea debe ser de reenganche (una sesión corta y fácil para retomar el hábito).
 - "priority" es "alta", "media" o "baja": alta para lo que desbloquea el resto o es urgente por plazo.
 - "estimatedHours" es un número de horas (0.5 a 8) realista para esa tarea.
-- "dueDate" es "YYYY-MM-DD" SOLO si el usuario menciona un plazo (calcúlala desde la fecha de hoy); si no hay plazo, omite el campo.`;
+- No inventes nombres de módulos, temas, capítulos ni contenidos que el usuario no haya dado. Si no conoces el temario, usa sesiones genéricas ("Sesión 1 de 8 – 2 h", "Sesión 2 de 8 – 2 h") o incluye una única tarea para conseguir el temario.
+- FECHAS: cada tarea lleva "dueDate" o "noDeadline": true. NUNCA dejes una tarea sin ninguno de los dos.
+  - "noDeadline": true para hábitos, práctica continua y tareas abiertas que no tienen un plazo propio.
+  - "dueDate" ("YYYY-MM-DD", calculada desde la fecha de hoy) para las tareas que dependen de un plazo que el usuario mencionó. Si indicó un ritmo (ej. "3 h por semana"), reparte las fechas hasta ese plazo respetando ese ritmo: no acumules más horas por semana que las indicadas.
+  - Si el usuario no menciona ningún plazo, usa "noDeadline": true en todas las tareas. Nunca pongas ambos campos.`;
 
 export function formatPromptDate(today: Date): string {
   const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -32,7 +36,8 @@ DEBES responder OBLIGATORIAMENTE con un objeto JSON válido con esta estructura:
   "projectName": "Nombre conciso del proyecto (3 a 100 caracteres)",
   "description": "Máximo 2 frases",
   "tasks": [
-    { "title": "Acción concreta", "priority": "alta", "estimatedHours": 1.5, "dueDate": "2026-03-15" }
+    { "title": "Acción con plazo", "priority": "alta", "estimatedHours": 1.5, "dueDate": "2026-03-15" },
+    { "title": "Hábito sin plazo", "priority": "media", "estimatedHours": 0.5, "noDeadline": true }
   ]
 }
 

@@ -19,6 +19,8 @@ export interface Task {
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: number;
+  /** No deadline by nature (habit, open task). See `hasNoDeadline`. */
+  noDeadline?: boolean;
   estimatedHours?: number;
   recurrence?: TaskRecurrence;
   notes?: string;
@@ -32,6 +34,7 @@ export interface TaskDetailsInput {
   title: string;
   status: TaskStatus;
   dueDate: number | null;
+  noDeadline: boolean;
   estimatedHours: number | null;
   priority: TaskPriority | null;
   recurrence: TaskRecurrence | null;

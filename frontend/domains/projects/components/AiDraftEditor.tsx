@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
+import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { NativeSelect } from '@/shared/components/ui/native-select';
@@ -132,11 +133,28 @@ export function AiDraftEditor({ draft, onChange, disabled = false }: AiDraftEdit
                   <Input
                     type="date"
                     value={task.dueDate}
-                    disabled={disabled}
+                    disabled={disabled || task.noDeadline}
                     aria-label={`Fecha de la tarea ${n}`}
                     onChange={(e) => updateTask(task.key, { dueDate: e.target.value })}
                     className="bg-background border-border text-xs rounded-lg h-8"
                   />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`draft-no-deadline-${task.key}`}
+                    checked={task.noDeadline}
+                    disabled={disabled}
+                    onCheckedChange={(checked) =>
+                      updateTask(task.key, checked ? { noDeadline: true, dueDate: '' } : { noDeadline: false })
+                    }
+                  />
+                  <Label
+                    htmlFor={`draft-no-deadline-${task.key}`}
+                    className="text-xs text-muted-foreground cursor-pointer"
+                  >
+                    Sin fecha límite
+                    <span className="sr-only"> (tarea {n})</span>
+                  </Label>
                 </div>
               </li>
             );
