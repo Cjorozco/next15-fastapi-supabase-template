@@ -5,8 +5,8 @@ import {
   FolderKanban,
   CalendarCheck,
   LogOut,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -41,19 +41,43 @@ export function Sidebar() {
     }`;
 
   const toggleLabel = collapsed ? 'Expandir menú lateral' : 'Recoger menú lateral';
-  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  const ToggleIcon = collapsed ? ChevronRight : ChevronLeft;
 
   return (
     <>
       {/* Escritorio: barra lateral (se puede recoger a solo íconos) */}
       <aside
         data-collapsed={collapsed}
-        className={`hidden md:flex shrink-0 bg-sidebar border-r border-sidebar-border text-sidebar-foreground min-h-screen flex-col transition-[width,padding] duration-200 motion-reduce:transition-none ${
+        className={`relative hidden md:flex shrink-0 bg-sidebar border-r border-sidebar-border text-sidebar-foreground min-h-screen flex-col transition-[width,padding] duration-200 motion-reduce:transition-none ${
           collapsed ? 'w-[4.5rem] p-3' : 'w-64 p-6'
         }`}
       >
-        <div className={`mb-8 flex ${collapsed ? 'justify-center' : 'items-start justify-between gap-2'}`}>
-          {!collapsed && (
+        {/* Botón en el borde del menú: no le quita espacio al título y no tapa nada. */}
+        <button
+          type="button"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-expanded={!collapsed}
+          aria-controls="sidebar-nav"
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          className={`absolute -right-3.5 top-8 z-20 grid size-7 place-items-center rounded-full border border-sidebar-border bg-sidebar text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground ${FOCUS_RING}`}
+        >
+          <ToggleIcon className="w-4 h-4" aria-hidden="true" />
+        </button>
+
+        <div className={`mb-8 ${collapsed ? 'flex justify-center' : ''}`}>
+          {collapsed ? (
+            <>
+              {/* Recogido: monograma de la marca en lugar del título */}
+              <span
+                aria-hidden="true"
+                className="grid size-10 place-items-center rounded-xl bg-primary/10 text-sm font-bold tracking-tight text-primary"
+              >
+                PM
+              </span>
+              <h1 className="sr-only">Project Manager</h1>
+            </>
+          ) : (
             <div className="min-w-0">
               <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
                 Project <span className="text-primary">Manager</span>
@@ -61,17 +85,6 @@ export function Sidebar() {
               <p className="text-muted-foreground text-xs mt-1 truncate">{user?.email}</p>
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setCollapsed(!collapsed)}
-            aria-expanded={!collapsed}
-            aria-controls="sidebar-nav"
-            aria-label={toggleLabel}
-            title={toggleLabel}
-            className={`shrink-0 p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${FOCUS_RING}`}
-          >
-            <ToggleIcon className="w-5 h-5" aria-hidden="true" />
-          </button>
         </div>
 
         <nav id="sidebar-nav" aria-label="Principal" className="flex-1 space-y-2">
