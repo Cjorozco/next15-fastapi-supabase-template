@@ -135,6 +135,8 @@ export const createWithTasks = mutation({
         dueDate: v.optional(v.number()),
         noDeadline: v.optional(v.boolean()),
         recurrence: v.optional(taskRecurrenceValidator),
+        notes: v.optional(v.string()),
+        subtasks: v.optional(v.array(v.string())),
       })
     ),
   },
@@ -192,6 +194,14 @@ export const createWithTasks = mutation({
     for (const task of args.tasks) {
       const taskTitle = task.title.trim();
       if (taskTitle) {
+        const subtasks = (task.subtasks ?? [])
+          .map((title) => title.trim())
+          .filter(Boolean)
+          .map((title, index) => ({
+            id: `subtask_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 9)}`,
+            title,
+            isCompleted: false,
+          }));
         const taskId = await ctx.db.insert("tasks", {
           projectId,
           title: taskTitle,
@@ -203,6 +213,8 @@ export const createWithTasks = mutation({
           ...(task.dueDate !== undefined ? { dueDate: task.dueDate } : {}),
           ...(task.noDeadline ? { noDeadline: true } : {}),
           ...(task.recurrence ? { recurrence: task.recurrence } : {}),
+          ...(task.notes?.trim() ? { notes: task.notes.trim() } : {}),
+          ...(subtasks.length > 0 ? { subtasks } : {}),
         });
         const createdTask = await ctx.db.get(taskId);
         if (createdTask) {

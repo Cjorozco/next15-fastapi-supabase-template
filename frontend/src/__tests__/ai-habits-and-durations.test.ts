@@ -11,7 +11,7 @@ import {
   projectToDraft,
 } from '@/domains/projects/lib/ai-draft';
 import { formatHours } from '@/domains/tasks/lib/dates';
-import { TASK_QUALITY_RULES } from '@/shared/lib/ai/ai-gateway';
+import { buildProjectSystemInstruction, TASK_QUALITY_RULES } from '@/shared/lib/ai/ai-gateway';
 
 const habit = {
   title: 'Practicar 10 minutos de inglés',
@@ -23,8 +23,9 @@ const filler = Array.from({ length: 3 }, (_, i) => ({ title: `Extra ${i}`, noDea
 
 describe('durations from the AI', () => {
   it('keeps short durations instead of rounding them to half hours', () => {
-    expect(normalizeAiHours(0.17)).toBe(0.17);
-    expect(normalizeAiHours(10 / 60)).toBe(0.17);
+    expect(normalizeAiHours(0.17)).toBe(0.1667); // 10 min
+    expect(normalizeAiHours(10 / 60)).toBe(0.1667);
+    expect(normalizeAiHours(0.08)).toBe(0.0833); // 5 min
     expect(normalizeAiHours('0.25')).toBe(0.25);
     expect(normalizeAiHours(0.5)).toBe(0.5);
     expect(normalizeAiHours(1.5)).toBe(1.5);
@@ -48,9 +49,10 @@ describe('durations from the AI', () => {
 
   it('survives the whole draft round trip', () => {
     const parsed = AiProjectSchema.parse({ projectName: 'Inglés', tasks: [habit, ...filler] });
-    expect(parsed.tasks[0].estimatedHours).toBe(0.17);
-    const args = draftToCreateArgs(projectToDraft(parsed));
-    expect(args.tasks[0].estimatedHours).toBe(0.17);
+    expect(parsed.tasks[0].estimatedHours).toBe(0.1667);
+    const draft = projectToDraft(parsed);
+    expect(draft.tasks[0].estimatedHours).toBe('10 min');
+    expect(draftToCreateArgs(draft).tasks[0].estimatedHours).toBe(0.1667);
   });
 });
 
@@ -90,7 +92,63 @@ describe('recurrence from the AI', () => {
   });
 });
 
+describe('a single habit with rotating content', () => {
+  it('flows from the AI response to the creation arguments', () => {
+    const parsed = AiProjectSchema.parse({
+      projectName: 'Inglés diario',
+      tasks: [
+        {
+          title: 'Practicar inglés',
+          estimatedHours: 10 / 60,
+          noDeadline: true,
+          recurrence: 'diaria',
+          subtasks: ['Vocabulario', 'Pronunciación'],
+          notes: 'Rota el foco',
+        },
+      ],
+    });
+    const args = draftToCreateArgs(projectToDraft(parsed));
+    expect(args.tasks).toEqual([
+      {
+        title: 'Practicar inglés',
+        position: 0,
+        estimatedHours: 0.1667,
+        noDeadline: true,
+        recurrence: 'diaria',
+        subtasks: ['Vocabulario', 'Pronunciación'],
+        notes: 'Rota el foco',
+      },
+    ]);
+  });
+
+  it('lets the user edit the duration in minutes and the subtasks line by line', () => {
+    const parsed = AiProjectSchema.parse({
+      projectName: 'Inglés diario',
+      tasks: [{ title: 'Practicar', estimatedHours: 0.17, noDeadline: true, subtasks: ['A'] }],
+    });
+    const draft = projectToDraft(parsed);
+    draft.tasks[0].estimatedHours = '15 min';
+    draft.tasks[0].subtasks = 'Uno\n\n  Dos  \n';
+    draft.tasks[0].notes = '  ';
+    const [task] = draftToCreateArgs(draft).tasks;
+    expect(task.estimatedHours).toBe(0.25);
+    expect(task.subtasks).toEqual(['Uno', 'Dos']);
+    expect(task).not.toHaveProperty('notes');
+  });
+});
+
 describe('prompt rules for habits and durations', () => {
+  it('cap the recurring time by the total the user gave and ask for a single habit task', () => {
+    expect(TASK_QUALITY_RULES).toContain('TIEMPO TOTAL');
+    expect(TASK_QUALITY_RULES).toMatch(/NO puede superarlo/);
+    expect(TASK_QUALITY_RULES).toMatch(/UNA sola tarea recurrente/);
+    expect(TASK_QUALITY_RULES).toContain('"subtasks"');
+  });
+
+  it('allow a single task in the project instruction', () => {
+    expect(buildProjectSystemInstruction()).toMatch(/entre 1 y 8 tareas/);
+  });
+
   it('ask for recurrence on daily/weekly habits', () => {
     expect(TASK_QUALITY_RULES).toContain('"recurrence": "diaria" o "semanal"');
   });

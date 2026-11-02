@@ -63,16 +63,60 @@ Let me know if you need more tasks!`;
     }
   });
 
-  it("rejects project with fewer than 4 tasks", () => {
-    const result = AiProjectSchema.safeParse({
-      ...validAiPayload,
-      tasks: validAiPayload.tasks.slice(0, 3),
-    });
+  it("rejects a project with no tasks", () => {
+    const result = AiProjectSchema.safeParse({ ...validAiPayload, tasks: [] });
 
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues.find((i) => i.path.includes("tasks"));
-      expect(issue?.message).toContain("al menos 4 tareas");
+      expect(issue?.message).toContain("al menos 1 tarea");
+    }
+  });
+
+  it("accepts a single task: one recurring habit does not need padding", () => {
+    const result = AiProjectSchema.safeParse({
+      projectName: "Inglés diario",
+      tasks: [
+        {
+          title: "Practicar inglés",
+          estimatedHours: 0.17,
+          noDeadline: true,
+          recurrence: "diaria",
+          subtasks: ["Vocabulario", "Pronunciación", "Podcast corto"],
+          notes: "Rota el foco cada día",
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.tasks).toHaveLength(1);
+      expect(result.data.tasks[0]).toMatchObject({
+        estimatedHours: 0.1667,
+        recurrence: "diaria",
+        subtasks: ["Vocabulario", "Pronunciación", "Podcast corto"],
+        notes: "Rota el foco cada día",
+      });
+    }
+  });
+
+  it("cleans subtasks and notes instead of failing on them", () => {
+    const result = AiProjectSchema.safeParse({
+      projectName: "Inglés diario",
+      tasks: [
+        {
+          title: "Practicar",
+          noDeadline: true,
+          subtasks: ["  A  ", "", 5, ...Array.from({ length: 12 }, (_, i) => `S${i}`)],
+          notes: 42,
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const [task] = result.data.tasks;
+      expect(task.subtasks).toHaveLength(8);
+      expect(task.subtasks![0]).toBe("A");
+      expect(task.notes).toBeUndefined();
     }
   });
 

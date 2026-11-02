@@ -1,4 +1,5 @@
 import { resolveTaskStatus } from '@/convex/lib/taskFields';
+import { formatDurationInput } from '@/domains/tasks/lib/duration';
 import type { Task } from '@/domains/tasks/types';
 
 const DATE_INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -49,8 +50,7 @@ export function formatDueDate(timestamp: number, now: number = Date.now()): stri
   });
 }
 
-/** "10 min" under one hour, otherwise "1.5 h" / "2 h". */
+/** "10 min" under one hour, otherwise "1.5 h" / "2 h" (same text as the duration inputs). */
 export function formatHours(hours: number): string {
-  if (hours > 0 && hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
-  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`;
+  return formatDurationInput(hours);
 }

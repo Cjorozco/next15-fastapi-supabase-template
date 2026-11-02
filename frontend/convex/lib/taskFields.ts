@@ -24,6 +24,12 @@ export const TASK_RECURRENCE_LABELS: Record<TaskRecurrence, string> = {
   semanal: "Todas las semanas",
 };
 
+/** Short labels for narrow selects ("Todos los días" gets cut off). */
+export const TASK_RECURRENCE_SHORT_LABELS: Record<TaskRecurrence, string> = {
+  diaria: "Diaria",
+  semanal: "Semanal",
+};
+
 export const LEGACY_TASK_STATUSES = ["todo", "in_progress", "done"] as const;
 export type LegacyTaskStatus = (typeof LEGACY_TASK_STATUSES)[number];
 
