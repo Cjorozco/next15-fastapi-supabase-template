@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAiRefinementResponse } from '@/domains/projects/schemas/ai-refine.schema';
+import { AiRefinementSchema, validateAiRefinementResponse } from '@/domains/projects/schemas/ai-refine.schema';
 
 describe('AiRefinementSchema & Validation (Surgical AI Copilot)', () => {
   it('validates a complete refinement response', () => {
@@ -77,5 +77,31 @@ describe('AiRefinementSchema & Validation (Surgical AI Copilot)', () => {
     if (!result.success) {
       expect(result.formattedError).toContain('El título de la tarea no puede estar vacío');
     }
+  });
+});
+
+describe('AiRefinementSchema planning fields', () => {
+  it('accepts priority, hours and date on new tasks and drops invalid ones', () => {
+    const result = AiRefinementSchema.safeParse({
+      newTasks: [
+        { title: 'A', priority: 'media', estimatedHours: '1.5', dueDate: '2030-01-10' },
+        { title: 'B', priority: 'nunca', estimatedHours: 0, dueDate: 'mañana' },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.newTasks[0]).toMatchObject({ priority: 'media', estimatedHours: 1.5, dueDate: '2030-01-10' });
+      expect(result.data.newTasks[1].priority).toBeUndefined();
+      expect(result.data.newTasks[1].estimatedHours).toBeUndefined();
+      expect(result.data.newTasks[1].dueDate).toBeUndefined();
+    }
+  });
+
+  it('limits the proposed description to two sentences', () => {
+    const result = AiRefinementSchema.safeParse({
+      updatedDescription: 'Uno. Dos. Tres. Cuatro.',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.updatedDescription).toBe('Uno. Dos.');
   });
 });

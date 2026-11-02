@@ -56,6 +56,7 @@ describe('Gemini Client (Client-Side BYOK, Typed Errors & Schema Validation)', (
                     { title: 'Definir buyer persona', position: 0 },
                     { title: 'Crear copy y creatividades', position: 1 },
                     { title: 'Configurar anuncios Meta y Google', position: 2 },
+                    { title: 'Medir resultados', position: 3, priority: 'media', estimatedHours: 2 },
                   ],
                 }),
               },
@@ -77,7 +78,8 @@ describe('Gemini Client (Client-Side BYOK, Typed Errors & Schema Validation)', (
 
     expect(result.projectName).toBe('Campaña de Marketing 3 Semanas');
     expect(result.description).toBe('Estrategia integral de marketing digital');
-    expect(result.tasks).toHaveLength(3);
+    expect(result.tasks).toHaveLength(4);
+    expect(result.tasks[3]).toMatchObject({ priority: 'media', estimatedHours: 2 });
     expect(result.tasks[0].title).toBe('Definir buyer persona');
     expect(result.tasks[0].position).toBe(0);
   });
@@ -188,5 +190,70 @@ describe('Gemini Client (Client-Side BYOK, Typed Errors & Schema Validation)', (
       const { message } = mapAIErrorToUserMessage(err);
       expect(message).toContain('La IA generó una respuesta con formato inválido');
     }
+  });
+
+  const geminiResponse = (payload: unknown) =>
+    ({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: typeof payload === 'string' ? payload : JSON.stringify(payload) }],
+            },
+          },
+        ],
+      }),
+    }) as Response;
+
+  const validProject = {
+    projectName: 'Retomar inglés',
+    description: 'Retomar el hábito de estudio.',
+    tasks: [
+      { title: 'Sesión corta de reenganche', priority: 'alta', estimatedHours: 0.5 },
+      { title: 'Resolver 10 ejercicios', priority: 'media', estimatedHours: 1 },
+      { title: 'Escuchar un podcast', priority: 'baja', estimatedHours: 1 },
+      { title: 'Escribir un párrafo', priority: 'media', estimatedHours: 1 },
+    ],
+  };
+
+  it('retries once with the validation issues when the first answer is invalid', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(geminiResponse({ projectName: 'Retomar inglés', tasks: [] }))
+      .mockResolvedValueOnce(geminiResponse(validProject));
+    globalThis.fetch = fetchMock;
+
+    const result = await generateProjectWithAi({ prompt: 'Retomo inglés', apiKey: 'k' });
+
+    expect(result.tasks).toHaveLength(4);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const retryBody = String(fetchMock.mock.calls[1][1].body);
+    expect(retryBody).toContain('no cumplió el formato');
+    expect(retryBody).toContain('tasks');
+  });
+
+  it('gives up after one retry with a schema validation error', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(geminiResponse('esto no es json'));
+    globalThis.fetch = fetchMock;
+
+    await expect(
+      generateProjectWithAi({ prompt: 'Retomo inglés', apiKey: 'k' })
+    ).rejects.toThrowError(AISchemaValidationError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the name written by the user over the one returned by the model', async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(geminiResponse({ ...validProject, projectName: 'Otro nombre' }));
+
+    const result = await generateProjectWithAi({
+      prompt: 'Quiero practicar 30 min al día',
+      apiKey: 'k',
+      fixedName: 'Inglés B2',
+    });
+
+    expect(result.projectName).toBe('Inglés B2');
   });
 });

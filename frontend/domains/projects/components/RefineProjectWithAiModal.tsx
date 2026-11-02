@@ -15,6 +15,7 @@ import { Label } from '@/shared/components/ui/label';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Sparkles, Loader2, Key, AlertCircle, CheckCircle2, Wand2 } from 'lucide-react';
 import { useAiClient, mapAIErrorToUserMessage, AiProviderId } from '@/shared/lib/ai';
+import { formatPromptDate, TASK_QUALITY_RULES } from '@/shared/lib/ai/ai-gateway';
 import {
   AiRefinementSchema,
   type AiRefinement,
@@ -29,35 +30,34 @@ import { RefinementPreviewPanel } from './RefinementPreviewPanel';
 import { Id } from '@/convex/_generated/dataModel';
 import { toast } from 'sonner';
 
-export const SURGICAL_REFINEMENT_SYSTEM_INSTRUCTION = `Eres un copiloto y asesor experto en gestión de proyectos.
-Tu objetivo es analizar un proyecto existente con sus tareas y subtareas actuales, y aplicar las mejoras e instrucciones solicitadas por el usuario de forma quirúrgica y NO DESTRUCTIVA.
+export function buildRefinementSystemInstruction(today: Date = new Date()): string {
+  return `Eres un copiloto y asesor experto en gestión de proyectos.
+Analizas un proyecto existente con sus tareas y subtareas actuales y aplicas las mejoras que pide el usuario de forma quirúrgica y NO DESTRUCTIVA.
+Fecha de hoy: ${formatPromptDate(today)}.
 
 REGLAS OBLIGATORIAS:
-1. NUNCA borres ni reemplaces tareas existentes que el usuario ya tenga.
-2. Si el usuario solicita nuevas tareas, devuélvelas en la propiedad "newTasks" con sus subtareas correspondientes si aplica.
-3. Si el usuario solicita desglosar o agregar subtareas a tareas existentes, identifica el "taskId" exacto de la tarea existente y devuélvelo en "newSubtasksForExistingTasks" con su lista de títulos en "subtaskTitles".
-4. Si el usuario solicita mejorar, reescribir o añadir una descripción, devuélvela en "updatedDescription". Si no se solicitó cambiar la descripción, omite esta propiedad o déjala como string opcional.
-5. Provee un "summary" conciso (máximo 300 caracteres) explicando exactamente qué mejoras se aplicaron (ej: "Se añadieron 3 tareas de testing y 2 subtareas a Diseño UI").
+1. NUNCA borres ni reemplaces tareas existentes.
+2. Si el usuario pide nuevas tareas, devuélvelas en "newTasks" (con subtareas si aplica).
+3. Si pide desglosar tareas existentes, usa el "taskId" exacto en "newSubtasksForExistingTasks" con "subtaskTitles".
+4. Si pide mejorar o reescribir la descripción, devuélvela en "updatedDescription" con MÁXIMO 2 frases cortas que no repitan la instrucción. Si no, omite la propiedad.
+5. "summary" es un resumen conciso (máximo 300 caracteres) de lo que se propone.
 
-DEBES responder OBLIGATORIAMENTE con un objeto JSON válido con la siguiente estructura:
+${TASK_QUALITY_RULES}
+
+DEBES responder OBLIGATORIAMENTE con un objeto JSON válido con esta estructura:
 {
-  "summary": "Breve resumen de las mejoras aplicadas",
-  "updatedDescription": "Descripción mejorada (opcional)",
+  "summary": "Breve resumen",
+  "updatedDescription": "Descripción de máximo 2 frases (opcional)",
   "newTasks": [
-    {
-      "title": "Nombre de la nueva tarea",
-      "subtasks": ["Subtarea 1", "Subtarea 2"]
-    }
+    { "title": "Acción concreta", "subtasks": ["Subtarea 1"], "priority": "media", "estimatedHours": 1, "dueDate": "2026-03-15" }
   ],
   "newSubtasksForExistingTasks": [
-    {
-      "taskId": "id_de_la_tarea_existente",
-      "subtaskTitles": ["Nueva subtarea A", "Nueva subtarea B"]
-    }
+    { "taskId": "id_de_la_tarea_existente", "subtaskTitles": ["Nueva subtarea"] }
   ]
 }
 
-No incluyas explicaciones adicionales ni texto fuera del objeto JSON.`;
+No incluyas explicaciones ni texto fuera del objeto JSON.`;
+}
 
 interface RefineTaskInfo {
   _id: Id<'tasks'> | string;
@@ -175,7 +175,7 @@ ${activeInstruction}`;
       const refinementResult: AiRefinement = await generateStructured(
         contextualPrompt,
         AiRefinementSchema,
-        SURGICAL_REFINEMENT_SYSTEM_INSTRUCTION
+        buildRefinementSystemInstruction()
       );
 
       // 3. Mostrar vista previa: no se guarda nada hasta que el usuario confirme

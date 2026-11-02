@@ -1,10 +1,5 @@
 import { AiProjectSchema, type AiProject } from '@/domains/projects/schemas/ai-project.schema';
-import { extractJsonFromAIResponse } from '@/shared/lib/ai/safe-ai-parser';
-import {
-  AISchemaValidationError,
-  AIAuthenticationError,
-} from './ai-errors';
-import { ZodError } from 'zod';
+import { AIAuthenticationError } from './ai-errors';
 import {
   GEMINI_STORAGE_KEY,
   AI_STORAGE_KEY,
@@ -14,7 +9,8 @@ import {
   getStoredProvider,
   setStoredProvider,
 } from './ai-storage';
-import { executeAiPrompt, UNIFIED_SYSTEM_INSTRUCTION } from './ai-gateway';
+import { buildProjectSystemInstruction, DEFAULT_AI_TIMEOUT_MS } from './ai-gateway';
+import { requestValidatedAiJson } from './validated-request';
 import { DEFAULT_GEMINI_MODEL, GEMINI_FALLBACK_MODELS } from './adapters/gemini-adapter';
 import { AiProviderId } from './types';
 
@@ -31,10 +27,22 @@ export {
 export const DEFAULT_MODEL = DEFAULT_GEMINI_MODEL;
 export const FALLBACK_MODELS = GEMINI_FALLBACK_MODELS;
 
+/** Overwrites `projectName` in the model's JSON so a name chosen by the user is kept as is. */
+function forceProjectName(fixedName: string) {
+  return (extracted: unknown): unknown =>
+    extracted && typeof extracted === 'object' && !Array.isArray(extracted)
+      ? { ...extracted, projectName: fixedName }
+      : extracted;
+}
+
 /**
  * Client-Side LLM invocation using Bring-Your-Own-Key (BYOK).
  * Powered by the Multi-Provider AI Gateway.
- * Strictly enforces AiProjectSchema.parse() validation on the response with typed error handling.
+ * The response is validated with AiProjectSchema (safeParse); an invalid answer is
+ * retried once with the validation issues and then reported as AISchemaValidationError.
+ *
+ * @param params.fixedName - Name written by the user: it is sent to the model as
+ *   context but always wins over whatever the model returns.
  */
 export async function generateProjectWithAi(params: {
   prompt: string;
@@ -42,6 +50,8 @@ export async function generateProjectWithAi(params: {
   provider?: AiProviderId;
   model?: string;
   timeoutMs?: number;
+  fixedName?: string;
+  today?: Date;
 }): Promise<AiProject> {
   const provider = params.provider || getStoredProvider();
   const apiKey = params.apiKey?.trim() || getStoredApiKey(provider);
@@ -52,36 +62,21 @@ export async function generateProjectWithAi(params: {
     );
   }
 
-  // 1. Invocar el orquestador Gateway (con timeout de 8s por defecto y thinkingBudget: 0)
-  const rawText = await executeAiPrompt({
-    prompt: params.prompt,
-    systemInstruction: UNIFIED_SYSTEM_INSTRUCTION,
+  const fixedName = params.fixedName?.trim();
+  const prompt = fixedName
+    ? `Nombre del proyecto (fijo, no lo cambies): ${fixedName}\n\n${params.prompt}`
+    : params.prompt;
+
+  return requestValidatedAiJson({
+    schema: AiProjectSchema,
+    prompt,
+    systemInstruction: buildProjectSystemInstruction(params.today ?? new Date()),
     provider,
     apiKey,
     model: params.model,
-    timeoutMs: params.timeoutMs ?? 8000,
-    responseFormat: 'json',
+    timeoutMs: params.timeoutMs ?? DEFAULT_AI_TIMEOUT_MS,
+    prepare: fixedName ? forceProjectName(fixedName) : undefined,
   });
-
-  // 2. Extraer y sanitizar estructura JSON de la respuesta
-  let extracted: unknown;
-  try {
-    extracted = extractJsonFromAIResponse(rawText);
-  } catch (extractError: unknown) {
-    throw new AISchemaValidationError(extractError, 'No se pudo decodificar el formato JSON generado');
-  }
-
-  // 3. Validación OBLIGATORIA con AiProjectSchema.parse()
-  try {
-    const validatedProject: AiProject = AiProjectSchema.parse(extracted);
-    return validatedProject;
-  } catch (validationError: unknown) {
-    if (validationError instanceof ZodError) {
-      const details = validationError.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(', ');
-      throw new AISchemaValidationError(validationError, details);
-    }
-    throw new AISchemaValidationError(validationError);
-  }
 }
 
 export * from './ai-errors';

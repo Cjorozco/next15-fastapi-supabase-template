@@ -1,3 +1,5 @@
+import type { TaskPriority } from '@/convex/lib/taskFields';
+import { fromDateInputValue } from '@/domains/tasks/lib/dates';
 import type { AiRefinement } from '@/domains/projects/schemas/ai-refine.schema';
 
 export interface RefinementProjectSnapshot {
@@ -5,11 +7,20 @@ export interface RefinementProjectSnapshot {
   tasks: Array<{ _id: string; title: string }>;
 }
 
+export interface PreviewNewTask {
+  title: string;
+  subtasks: string[];
+  priority?: TaskPriority;
+  estimatedHours?: number;
+  /** `YYYY-MM-DD`, shown as proposed. */
+  dueDate?: string;
+}
+
 export interface RefinementPreview {
   summary: string;
   /** Present only when the description would actually change. */
   description: { before: string; after: string } | null;
-  newTasks: Array<{ title: string; subtasks: string[] }>;
+  newTasks: PreviewNewTask[];
   /** Subtasks proposed for tasks that exist in the project. */
   existingTaskSubtasks: Array<{ taskId: string; taskTitle: string; subtaskTitles: string[] }>;
   /** Proposals pointing to a task id that is not in this project (ignored). */
@@ -19,7 +30,13 @@ export interface RefinementPreview {
 
 export interface RefinementApplyPayload {
   updatedDescription?: string;
-  newTasks: Array<{ title: string; subtasks: string[] }>;
+  newTasks: Array<{
+    title: string;
+    subtasks: string[];
+    priority?: TaskPriority;
+    estimatedHours?: number;
+    dueDate?: number;
+  }>;
   newSubtasksForExistingTasks: Array<{ taskId: string; subtaskTitles: string[] }>;
 }
 
@@ -57,6 +74,9 @@ export function buildRefinementPreview(
   const newTasks = refinement.newTasks.map((task) => ({
     title: task.title,
     subtasks: task.subtasks,
+    ...(task.priority ? { priority: task.priority } : {}),
+    ...(task.estimatedHours !== undefined ? { estimatedHours: task.estimatedHours } : {}),
+    ...(task.dueDate ? { dueDate: task.dueDate } : {}),
   }));
 
   return {
@@ -73,7 +93,10 @@ export function buildRefinementPreview(
 export function toApplyPayload(preview: RefinementPreview): RefinementApplyPayload {
   return {
     ...(preview.description ? { updatedDescription: preview.description.after } : {}),
-    newTasks: preview.newTasks,
+    newTasks: preview.newTasks.map(({ dueDate, ...task }) => {
+      const timestamp = dueDate ? fromDateInputValue(dueDate) : null;
+      return timestamp === null ? task : { ...task, dueDate: timestamp };
+    }),
     newSubtasksForExistingTasks: preview.existingTaskSubtasks.map(({ taskId, subtaskTitles }) => ({
       taskId,
       subtaskTitles,

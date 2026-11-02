@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { safeParseAIResponse, AISafeResult } from "@/shared/lib/ai/safe-ai-parser";
+import { aiDateField, aiHoursField, aiPriorityField, limitSentences } from "./ai-fields";
 
 /**
  * Task specification for new tasks to be appended by the refinement AI.
@@ -19,6 +20,9 @@ export const AiNewTaskSchema = z.object({
         .max(200, "El título de la subtarea no puede exceder 200 caracteres")
     )
     .default([]),
+  priority: aiPriorityField,
+  estimatedHours: aiHoursField,
+  dueDate: aiDateField,
 });
 
 /**
@@ -47,11 +51,7 @@ export const AiRefinementSchema = z.object({
     .trim()
     .max(300, "El resumen no puede exceder 300 caracteres")
     .default("Proyecto actualizado con éxito."),
-  updatedDescription: z
-    .string()
-    .trim()
-    .max(1000, "La descripción no puede exceder 1000 caracteres")
-    .optional(),
+  updatedDescription: z.string().trim().transform(limitSentences).optional(),
   newTasks: z.array(AiNewTaskSchema).default([]),
   newSubtasksForExistingTasks: z.array(AiExistingTaskSubtasksSchema).default([]),
 });
