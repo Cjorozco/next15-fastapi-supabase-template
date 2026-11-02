@@ -202,7 +202,7 @@ describe('GenerateProjectWithAiModal', () => {
 
   describe('closing and reopening', () => {
     const openModal = () => fireEvent.click(screen.getByRole('button', { name: /generar con ia/i }));
-    const closeWithX = () => fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    const closeWithX = () => fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
     const promptField = () => screen.getByLabelText(/¿Qué proyecto deseas construir\?/i) as HTMLTextAreaElement;
 
     it('reopens on the prompt step with no draft after closing an untouched draft', async () => {
@@ -256,6 +256,139 @@ describe('GenerateProjectWithAiModal', () => {
       expect(promptField().value).toBe('');
       expect(screen.queryByLabelText('Título de la tarea 1')).not.toBeInTheDocument();
       expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+    });
+
+    // Every way of dismissing a Radix dialog must go through the same confirmation as the X.
+    const dismissWithEscape = () => fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    const dismissByClickingOutside = () => {
+      const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+      expect(overlay).not.toBeNull();
+      fireEvent.pointerDown(overlay);
+      fireEvent.pointerUp(overlay);
+      fireEvent.click(overlay);
+    };
+
+    it.each([
+      ['the X button', closeWithX],
+      ['the Escape key', dismissWithEscape],
+      ['a click outside the modal', dismissByClickingOutside],
+    ])('asks to discard an edited draft when closing with %s', async (_label, dismiss) => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      fireEvent.change(screen.getByLabelText('Nombre del proyecto'), { target: { value: 'Editado' } });
+      dismiss();
+
+      await waitFor(() => expect(screen.getByText('¿Descartar borrador?')).toBeInTheDocument());
+      // Still open, edits intact.
+      expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Editado');
+
+      fireEvent.click(screen.getByRole('button', { name: /^No/ }));
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Editado');
+
+      // A second attempt asks again, and "Sí" really closes and resets.
+      dismiss();
+      await waitFor(() => expect(screen.getByText('¿Descartar borrador?')).toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: /^Sí/ }));
+      await waitFor(() => expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument());
+
+      openModal();
+      expect(promptField().value).toBe('');
+    });
+
+    it.each([
+      ['the Escape key', dismissWithEscape],
+      ['a click outside the modal', dismissByClickingOutside],
+    ])('closes an untouched draft without asking when dismissed with %s', async (_label, dismiss) => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      dismiss();
+
+      await waitFor(() => expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument());
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+    });
+
+    it('does not close while the draft is being regenerated, whatever the way', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key-123');
+      let release: (value: typeof sampleProject) => void = () => {};
+      vi.spyOn(geminiClient, 'generateProjectWithAi')
+        .mockResolvedValueOnce(sampleProject)
+        .mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+
+      await openAndGenerate('Campaña de marketing en 3 semanas');
+      fireEvent.click(screen.getByRole('button', { name: /regenerar/i }));
+
+      dismissWithEscape();
+      dismissByClickingOutside();
+      closeWithX();
+      expect(screen.getByLabelText('Nombre del proyecto')).toBeInTheDocument();
+      expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+
+      release(sampleProject);
+      await waitFor(() => expect(screen.getByRole('button', { name: /regenerar/i })).not.toBeDisabled());
+    });
+
+    describe('"Editar prompt"', () => {
+      const generate = async () => {
+        localStorage.setItem('gemini_api_key', 'test-key-123');
+        vi.spyOn(geminiClient, 'generateProjectWithAi').mockResolvedValue(sampleProject);
+        await openAndGenerate('Campaña de marketing en 3 semanas');
+      };
+
+      it('goes straight back to the prompt when the draft has no changes', async () => {
+        await generate();
+        fireEvent.click(screen.getByRole('button', { name: /editar prompt/i }));
+
+        expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+        expect(promptField().value).toBe('Campaña de marketing en 3 semanas');
+        expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument();
+      });
+
+      it('asks before throwing away edits; "No" keeps them', async () => {
+        await generate();
+        fireEvent.change(screen.getByLabelText('Nombre del proyecto'), { target: { value: 'Editado' } });
+        fireEvent.click(screen.getByRole('button', { name: /editar prompt/i }));
+
+        expect(screen.getByText('¿Descartar borrador?')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /^No/ }));
+
+        expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Nombre del proyecto')).toHaveValue('Editado');
+      });
+
+      it('"Sí" returns to the prompt step (the modal stays open)', async () => {
+        await generate();
+        fireEvent.change(screen.getByLabelText('Nombre del proyecto'), { target: { value: 'Editado' } });
+        fireEvent.click(screen.getByRole('button', { name: /editar prompt/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^Sí/ }));
+
+        expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument();
+        expect(promptField().value).toBe('Campaña de marketing en 3 semanas');
+        expect(screen.queryByText('¿Descartar borrador?')).not.toBeInTheDocument();
+      });
+
+      it('if the user also tries to close while asked, "Sí" closes the modal', async () => {
+        await generate();
+        fireEvent.change(screen.getByLabelText('Nombre del proyecto'), { target: { value: 'Editado' } });
+        fireEvent.click(screen.getByRole('button', { name: /editar prompt/i }));
+        closeWithX();
+        expect(screen.getAllByText('¿Descartar borrador?')).toHaveLength(1);
+
+        fireEvent.click(screen.getByRole('button', { name: /^Sí/ }));
+        await waitFor(() => expect(screen.queryByLabelText('Nombre del proyecto')).not.toBeInTheDocument());
+        expect(screen.queryByLabelText(/¿Qué proyecto deseas construir?/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('labels the close button in Spanish', async () => {
+      render(<GenerateProjectWithAiModal />);
+      openModal();
+      expect(screen.getByRole('button', { name: 'Cerrar' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
     });
 
     it('does not ask again once the user undoes every change', async () => {
