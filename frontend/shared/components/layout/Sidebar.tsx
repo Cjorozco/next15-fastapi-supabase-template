@@ -1,9 +1,17 @@
 'use client';
 
-import { LayoutDashboard, FolderKanban, CalendarCheck, LogOut } from 'lucide-react';
+import {
+  LayoutDashboard,
+  FolderKanban,
+  CalendarCheck,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/shared/context/AuthContext';
+import { useSidebarCollapsed } from '@/shared/lib/useSidebarCollapsed';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', Icon: LayoutDashboard },
@@ -11,56 +19,92 @@ const NAV_ITEMS = [
   { href: '/week', label: 'Esta semana', Icon: CalendarCheck },
 ] as const;
 
+const FOCUS_RING =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
 export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
 
   // `/projects/[id]` también cuenta como sección Proyectos
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 
   const linkClass = (href: string) =>
-    `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+    `flex items-center rounded-xl font-medium transition-colors ${FOCUS_RING} ${
+      collapsed ? 'justify-center p-3' : 'gap-3 px-4 py-3'
+    } ${
       isActive(href)
         ? 'bg-primary text-primary-foreground font-semibold shadow-md shadow-primary/20'
         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
     }`;
 
+  const toggleLabel = collapsed ? 'Expandir menú lateral' : 'Recoger menú lateral';
+  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+
   return (
     <>
-      {/* Escritorio: barra lateral */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-sidebar border-r border-sidebar-border text-sidebar-foreground min-h-screen p-6 flex-col transition-colors">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
-            Project <span className="text-primary">Manager</span>
-          </h1>
-          <p className="text-muted-foreground text-xs mt-1 truncate">{user?.email}</p>
+      {/* Escritorio: barra lateral (se puede recoger a solo íconos) */}
+      <aside
+        data-collapsed={collapsed}
+        className={`hidden md:flex shrink-0 bg-sidebar border-r border-sidebar-border text-sidebar-foreground min-h-screen flex-col transition-[width,padding] duration-200 motion-reduce:transition-none ${
+          collapsed ? 'w-[4.5rem] p-3' : 'w-64 p-6'
+        }`}
+      >
+        <div className={`mb-8 flex ${collapsed ? 'justify-center' : 'items-start justify-between gap-2'}`}>
+          {!collapsed && (
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
+                Project <span className="text-primary">Manager</span>
+              </h1>
+              <p className="text-muted-foreground text-xs mt-1 truncate">{user?.email}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            aria-expanded={!collapsed}
+            aria-controls="sidebar-nav"
+            aria-label={toggleLabel}
+            title={toggleLabel}
+            className={`shrink-0 p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors ${FOCUS_RING}`}
+          >
+            <ToggleIcon className="w-5 h-5" aria-hidden="true" />
+          </button>
         </div>
 
-        <nav aria-label="Principal" className="flex-1 space-y-2">
+        <nav id="sidebar-nav" aria-label="Principal" className="flex-1 space-y-2">
           {NAV_ITEMS.map(({ href, label, Icon }) => (
             <Link
               key={href}
               href={href}
               className={linkClass(href)}
               aria-current={isActive(href) ? 'page' : undefined}
+              // Recogido: el texto se oculta, pero el nombre accesible y el tooltip se conservan.
+              title={collapsed ? label : undefined}
             >
-              <Icon className="w-5 h-5" aria-hidden="true" />
-              {label}
+              <Icon className="w-5 h-5 shrink-0" aria-hidden="true" />
+              {collapsed ? <span className="sr-only">{label}</span> : label}
             </Link>
           ))}
         </nav>
 
-        <div className="pt-6 border-t border-sidebar-border">
+        <div className={`pt-6 border-t border-sidebar-border ${collapsed ? 'flex justify-center' : ''}`}>
           <button
             type="button"
             onClick={signOut}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-full rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            title={collapsed ? 'Cerrar sesión' : undefined}
+            className={`flex items-center text-sm text-muted-foreground hover:text-primary transition-colors rounded ${FOCUS_RING} ${
+              collapsed ? 'justify-center p-2.5 hover:bg-muted' : 'gap-2 w-full'
+            }`}
           >
-            <LogOut className="w-4 h-4" aria-hidden="true" />
-            Cerrar sesión
+            <LogOut className="w-4 h-4 shrink-0" aria-hidden="true" />
+            {collapsed ? <span className="sr-only">Cerrar sesión</span> : 'Cerrar sesión'}
           </button>
-          <p className="text-xs text-muted-foreground mt-3">© 2026 Project Manager SaaS</p>
+          {!collapsed && (
+            <p className="text-xs text-muted-foreground mt-3">© 2026 Project Manager SaaS</p>
+          )}
         </div>
       </aside>
 
