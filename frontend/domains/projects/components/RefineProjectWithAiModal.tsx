@@ -49,7 +49,8 @@ DEBES responder OBLIGATORIAMENTE con un objeto JSON válido con esta estructura:
   "summary": "Breve resumen",
   "updatedDescription": "Descripción de máximo 2 frases (opcional)",
   "newTasks": [
-    { "title": "Acción concreta", "subtasks": ["Subtarea 1"], "priority": "media", "estimatedHours": 1, "dueDate": "2026-03-15" }
+    { "title": "Acción con plazo", "subtasks": ["Subtarea 1"], "priority": "media", "estimatedHours": 1, "dueDate": "2026-03-15" },
+    { "title": "Hábito sin plazo", "priority": "baja", "estimatedHours": 0.5, "noDeadline": true }
   ],
   "newSubtasksForExistingTasks": [
     { "taskId": "id_de_la_tarea_existente", "subtaskTitles": ["Nueva subtarea"] }
