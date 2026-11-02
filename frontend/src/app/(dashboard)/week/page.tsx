@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { Suspense, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { CalendarCheck, FolderKanban, Loader2 } from 'lucide-react';
 import { Header } from '@/shared/components/layout/Header';
@@ -13,7 +13,7 @@ import { buildWeekTasks, summarizeWeek } from '@/domains/tasks/lib/week';
 import { useNow } from '@/shared/lib/useNow';
 import type { Id } from '@/convex/_generated/dataModel';
 
-export default function WeekPage() {
+function WeekContent() {
   const { data: projects, isLoading } = useProjects();
   const { mutate: updateTask } = useUpdateTask();
   const now = useNow();
@@ -105,5 +105,13 @@ export default function WeekPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function WeekPage() {
+  return (
+    <Suspense>
+      <WeekContent />
+    </Suspense>
   );
 }
