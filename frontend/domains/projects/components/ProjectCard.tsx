@@ -3,12 +3,13 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Project } from '@/domains/projects/types';
-import { useUpdateTask, useCreateTask, useDeleteTask, useReorderTasks } from '@/domains/tasks/hooks/useTaskMutations';
+import { useUpdateTask, useCreateTasks, useDeleteTask, useReorderTasks } from '@/domains/tasks/hooks/useTaskMutations';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { SortableTaskItem } from './SortableTaskItem';
 import { EditProjectDialog } from './EditProjectDialog';
+import { ProjectBadges } from './ProjectBadges';
 import { NewTaskForm } from '@/domains/tasks/components/NewTaskForm';
 import { Plus } from 'lucide-react';
 import { Id } from '@/convex/_generated/dataModel';
@@ -22,7 +23,7 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
   const totalTasks = project.tasks.length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
   const { mutate: updateTask } = useUpdateTask();
-  const { mutate: createTask, isPending: isCreating } = useCreateTask();
+  const { mutate: createTasks, isPending: isCreating } = useCreateTasks();
   const { mutate: deleteTask } = useDeleteTask();
   const { mutate: reorderTasks } = useReorderTasks();
 
@@ -52,19 +53,11 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
   };
 
   const projectId = project._id;
-  const handleCreateTask = useCallback(
-    (title: string, onCreated: () => void) => {
-      createTask(
-        { projectId, title },
-        {
-          onSuccess: () => {
-            onCreated();
-            setShowInput(false);
-          },
-        }
-      );
+  const handleCreateTasks = useCallback(
+    (titles: string[], onCreated: () => void) => {
+      createTasks({ projectId, titles }, { onSuccess: onCreated });
     },
-    [createTask, projectId]
+    [createTasks, projectId]
   );
   const handleCancelCreate = useCallback(() => setShowInput(false), []);
 
@@ -80,6 +73,9 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
         projectId={project._id}
         name={project.name}
         description={project.description}
+        priority={project.priority}
+        status={project.status}
+        dueDate={project.dueDate}
         className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-primary p-2.5 rounded-lg hover:bg-muted transition-colors"
       />
 
@@ -89,6 +85,13 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
             {project.name}
           </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">{project.description || 'Sin descripción'}</p>
+          <div className="mt-2">
+            <ProjectBadges
+              priority={project.priority}
+              status={project.status}
+              dueDate={project.dueDate}
+            />
+          </div>
         </div>
 
         <div className="mb-4">
@@ -121,6 +124,7 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
                     task={task}
                     onUpdateStatus={handleUpdateStatus}
                     onDelete={handleDeleteTask}
+                    inheritedDueDate={project.dueDate}
                   />
                 ))}
               </SortableContext>
@@ -131,7 +135,7 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
         {showInput ? (
           <NewTaskForm
             isCreating={isCreating}
-            onSubmit={handleCreateTask}
+            onSubmit={handleCreateTasks}
             onCancel={handleCancelCreate}
           />
         ) : (

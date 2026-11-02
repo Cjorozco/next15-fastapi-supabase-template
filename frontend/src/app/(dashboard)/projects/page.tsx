@@ -10,6 +10,13 @@ import { Loader2, PlusCircle, FolderKanban, Trash2, Search } from 'lucide-react'
 import { CreateProjectForm } from '@/domains/projects/components/CreateProjectForm';
 import { GenerateProjectWithAiModal } from '@/domains/projects/components/GenerateProjectWithAiModal';
 import { Button } from '@/shared/components/ui/button';
+import { ProjectFilterBar } from '@/domains/projects/components/ProjectFilterBar';
+import {
+  NO_PROJECT_FILTERS,
+  resolveProjectStatus,
+  sortAndFilterProjects,
+  type ProjectFilters,
+} from '@/convex/lib/projectFields';
 import { Id } from '@/convex/_generated/dataModel';
 
 export function ProjectsContent() {
@@ -18,15 +25,21 @@ export function ProjectsContent() {
 
   const searchParams = useSearchParams();
   const query = searchParams.get('q')?.toLowerCase() ?? '';
+  const [filters, setFilters] = useState<ProjectFilters>(NO_PROJECT_FILTERS);
   const filteredProjects = useMemo(
     () =>
-      projects?.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          (p.description ?? '').toLowerCase().includes(query)
+      projects &&
+      sortAndFilterProjects(
+        projects.filter(
+          (p) =>
+            p.name.toLowerCase().includes(query) ||
+            (p.description ?? '').toLowerCase().includes(query)
+        ),
+        filters
       ),
-    [projects, query]
+    [projects, query, filters]
   );
+  const hasActiveFilters = filters.status !== 'todos' || filters.priority !== 'todas';
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState<Id<'projects'> | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<Id<'projects'> | null>(null);
@@ -71,6 +84,10 @@ export function ProjectsContent() {
           {/* Formulario de creación: su estado vive dentro del componente, no en la página */}
           {showForm && <CreateProjectForm onClose={() => setShowForm(false)} />}
 
+          {!isLoading && projects && projects.length > 0 && (
+            <ProjectFilterBar filters={filters} onChange={setFilters} />
+          )}
+
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-20">
@@ -104,8 +121,23 @@ export function ProjectsContent() {
           {!isLoading && projects && projects.length > 0 && filteredProjects?.length === 0 && (
             <div className="text-center py-20 bg-card border border-border rounded-2xl p-12 shadow-sm">
               <Search className="w-12 h-12 text-muted-foreground/40 mx-auto mb-4" />
-              <p className="text-foreground text-base font-medium">No se encontraron resultados para &ldquo;{searchParams.get('q')}&rdquo;</p>
-              <p className="text-muted-foreground text-xs mt-1">Intenta con otro término de búsqueda</p>
+              <p className="text-foreground text-base font-medium">
+                {query
+                  ? <>No se encontraron resultados para &ldquo;{searchParams.get('q')}&rdquo;</>
+                  : 'Ningún proyecto coincide con los filtros'}
+              </p>
+              <p className="text-muted-foreground text-xs mt-1">
+                {hasActiveFilters ? 'Prueba quitando algún filtro' : 'Intenta con otro término de búsqueda'}
+              </p>
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  onClick={() => setFilters(NO_PROJECT_FILTERS)}
+                  className="mt-4 border-border text-foreground text-xs rounded-xl"
+                >
+                  Quitar filtros
+                </Button>
+              )}
             </div>
           )}
 
@@ -113,7 +145,14 @@ export function ProjectsContent() {
           {filteredProjects && filteredProjects.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProjects.map((project) => (
-                <div key={project._id} className="relative group">
+                <div
+                  key={project._id}
+                  className={`relative group transition-opacity ${
+                    resolveProjectStatus(project) === 'en_pausa'
+                      ? 'opacity-60 hover:opacity-100 focus-within:opacity-100'
+                      : ''
+                  }`}
+                >
                   <ProjectCard project={project} />
 
                   {/* Botón borrar — aparece al hacer hover */}

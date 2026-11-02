@@ -111,8 +111,54 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ver detalles y subtareas' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar subtarea Subtarea 1' }));
+    expect(onRemoveSubtask).not.toHaveBeenCalled();
+    expect(screen.getByText('¿Borrar?')).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: /^Sí/ }));
     expect(onRemoveSubtask).toHaveBeenCalledWith('task_1', 'sub_1');
+  });
+
+  it('keeps the subtask when the deletion is cancelled', () => {
+    const onRemoveSubtask = vi.fn();
+    render(
+      <SortableTaskItem
+        task={mockTask}
+        isDetailView={true}
+        onUpdateStatus={vi.fn()}
+        onDelete={vi.fn()}
+        onRemoveSubtask={onRemoveSubtask}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles y subtareas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar subtarea Subtarea 1' }));
+    fireEvent.click(screen.getByRole('button', { name: /^No/ }));
+
+    expect(onRemoveSubtask).not.toHaveBeenCalled();
+    expect(screen.queryByText('¿Borrar?')).not.toBeInTheDocument();
+    expect(screen.getByText('Subtarea 1')).toBeInTheDocument();
+  });
+
+  it.each([true, false])('asks for confirmation before deleting a task (detail view: %s)', (isDetailView) => {
+    const onDelete = vi.fn();
+    render(
+      <SortableTaskItem
+        task={mockTask}
+        isDetailView={isDetailView}
+        onUpdateStatus={vi.fn()}
+        onDelete={onDelete}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar tarea Tarea con subtareas' }));
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /^No/ }));
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eliminar tarea Tarea con subtareas' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Sí/ }));
+    expect(onDelete).toHaveBeenCalledWith('task_1');
   });
 
   it('displays droppable subtask conversion zone when another task is dragging', () => {

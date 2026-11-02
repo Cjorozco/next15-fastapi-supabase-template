@@ -1,7 +1,7 @@
 import { Id } from '@/convex/_generated/dataModel';
-import type { TaskPriority, TaskStatus } from '@/convex/lib/taskFields';
+import type { TaskPriority, TaskRecurrence, TaskStatus } from '@/convex/lib/taskFields';
 
-export type { TaskPriority, TaskStatus };
+export type { TaskPriority, TaskRecurrence, TaskStatus };
 
 export interface Subtask {
   id: string;
@@ -20,6 +20,7 @@ export interface Task {
   priority?: TaskPriority;
   dueDate?: number;
   estimatedHours?: number;
+  recurrence?: TaskRecurrence;
   notes?: string;
   assignee?: string;
   subtasks?: Subtask[];
@@ -33,5 +34,8 @@ export interface TaskDetailsInput {
   dueDate: number | null;
   estimatedHours: number | null;
   priority: TaskPriority | null;
+  recurrence: TaskRecurrence | null;
   notes: string | null;
+  /** Only present when the task is moved to another project. */
+  projectId?: Id<'projects'>;
 }

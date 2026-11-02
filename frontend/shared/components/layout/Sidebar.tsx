@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, FolderKanban, LogOut } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, CalendarCheck, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -8,6 +8,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', Icon: LayoutDashboard },
   { href: '/projects', label: 'Proyectos', Icon: FolderKanban },
+  { href: '/week', label: 'Esta semana', Icon: CalendarCheck },
 ] as const;
 
 export function Sidebar() {

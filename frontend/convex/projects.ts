@@ -1,8 +1,9 @@
 import { query, mutation, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import { requireAuthenticatedUser, requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
+import { projectPriorityValidator, projectStatusValidator } from "./lib/projectDto";
 import { assertValidTaskPlanning } from "./lib/taskValidation";
 import { taskPriorityValidator, taskValidator, toTaskDto } from "./lib/taskDto";
 import {
@@ -20,6 +21,9 @@ const projectWithTasksValidator = v.object({
   ownerId: v.id("users"),
   name: v.string(),
   description: v.optional(v.string()),
+  priority: v.optional(projectPriorityValidator),
+  status: v.optional(projectStatusValidator),
+  dueDate: v.optional(v.number()),
   tasks: v.array(taskValidator),
 });
 
@@ -220,11 +224,15 @@ export const updateProject = mutation({
     name: v.optional(v.string()),
     // Empty string clears the description.
     description: v.optional(v.string()),
+    priority: v.optional(projectPriorityValidator),
+    status: v.optional(projectStatusValidator),
+    // `null` clears the due date; omitted leaves it untouched.
+    dueDate: v.optional(v.union(v.number(), v.null())),
   },
   returns: projectWithTasksValidator,
   handler: async (ctx, args) => {
     const project = await requireProjectOwner(ctx, args.projectId);
-    const patch: { name?: string; description?: string | undefined } = {};
+    const patch: Partial<Doc<"projects">> = {};
 
     if (args.name !== undefined) {
       const name = args.name.trim();
@@ -265,6 +273,19 @@ export const updateProject = mutation({
         );
       }
       patch.description = description || undefined;
+    }
+
+    if (args.priority !== undefined) {
+      patch.priority = args.priority;
+    }
+    if (args.status !== undefined) {
+      patch.status = args.status;
+    }
+    if (args.dueDate !== undefined) {
+      if (args.dueDate !== null && (!Number.isFinite(args.dueDate) || args.dueDate <= 0)) {
+        throw new DomainException("INVALID_INPUT", "Invalid due date");
+      }
+      patch.dueDate = args.dueDate ?? undefined;
     }
 
     await ctx.db.patch(args.projectId, patch);
