@@ -127,6 +127,43 @@ interface GenerateProjectBodyProps {
   onDiscard: () => void;
 }
 
+/** "¿Descartar borrador?" Sí / No, used when closing or going back would lose edits. */
+function DiscardDraftConfirm({
+  onDiscard,
+  onKeepEditing,
+}: {
+  onDiscard: () => void;
+  onKeepEditing: () => void;
+}) {
+  return (
+    <div
+      role="alertdialog"
+      aria-label="Confirmar descartar borrador"
+      className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs"
+    >
+      <span className="text-destructive font-medium flex-1 min-w-32">¿Descartar borrador?</span>
+      <Button
+        type="button"
+        size="sm"
+        onClick={onDiscard}
+        className="h-8 text-xs rounded-lg bg-destructive text-white hover:bg-destructive/90"
+      >
+        Sí<span className="sr-only">, descartar el borrador</span>
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        autoFocus
+        onClick={onKeepEditing}
+        className="h-8 text-xs rounded-lg border-border"
+      >
+        No<span className="sr-only">, seguir editando</span>
+      </Button>
+    </div>
+  );
+}
+
 function GenerateProjectBody({
   onSuccess,
   onFallbackManual,
@@ -145,6 +182,7 @@ function GenerateProjectBody({
   const [draft, setDraft] = useState<ProjectDraft | null>(null);
   // The draft exactly as the AI produced it, to know whether the user changed anything.
   const [initialDraft, setInitialDraft] = useState<ProjectDraft | null>(null);
+  const [confirmingEditPrompt, setConfirmingEditPrompt] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const lastRequest = useRef<{ prompt: string; fixedName?: string } | null>(null);
 
@@ -170,6 +208,22 @@ function GenerateProjectBody({
     setProvider(newProvider);
     setErrorMessage(null);
     setInputKey('');
+  };
+
+  const discardToPrompt = () => {
+    setConfirmingEditPrompt(false);
+    setDraft(null);
+    setInitialDraft(null);
+    setErrorMessage(null);
+  };
+
+  /** Back to the prompt; an edited draft is only thrown away after the user confirms. */
+  const handleEditPrompt = () => {
+    if (draft && initialDraft && isDraftDirty(initialDraft, draft)) {
+      setConfirmingEditPrompt(true);
+      return;
+    }
+    discardToPrompt();
   };
 
   const handleManualFallback = () => {
@@ -297,32 +351,15 @@ function GenerateProjectBody({
     </DialogDescription>
   </DialogHeader>
 
-  {confirmingDiscard && (
-    <div
-      role="alertdialog"
-      aria-label="Confirmar descartar borrador"
-      className="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-xs"
-    >
-      <span className="text-destructive font-medium flex-1 min-w-32">¿Descartar borrador?</span>
-      <Button
-        type="button"
-        size="sm"
-        onClick={onDiscard}
-        className="h-8 text-xs rounded-lg bg-destructive text-white hover:bg-destructive/90"
-      >
-        Sí<span className="sr-only">, descartar el borrador</span>
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        autoFocus
-        onClick={onKeepEditing}
-        className="h-8 text-xs rounded-lg border-border"
-      >
-        No<span className="sr-only">, seguir editando</span>
-      </Button>
-    </div>
+  {(confirmingDiscard || confirmingEditPrompt) && (
+    <DiscardDraftConfirm
+      // Trying to close wins: "Sí" then closes instead of only going back to the prompt.
+      onDiscard={confirmingDiscard ? onDiscard : discardToPrompt}
+      onKeepEditing={() => {
+        setConfirmingEditPrompt(false);
+        onKeepEditing();
+      }}
+    />
   )}
 
   {draft ? (
@@ -341,10 +378,7 @@ function GenerateProjectBody({
           type="button"
           variant="outline"
           disabled={isGenerating || isCreating}
-          onClick={() => {
-            setDraft(null);
-            setErrorMessage(null);
-          }}
+          onClick={handleEditPrompt}
           className="border-border text-foreground/80 hover:bg-muted text-xs rounded-xl h-9"
         >
           <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
