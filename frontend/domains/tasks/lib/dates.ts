@@ -49,6 +49,8 @@ export function formatDueDate(timestamp: number, now: number = Date.now()): stri
   });
 }
 
+/** "10 min" under one hour, otherwise "1.5 h" / "2 h". */
 export function formatHours(hours: number): string {
+  if (hours > 0 && hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
   return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`;
 }

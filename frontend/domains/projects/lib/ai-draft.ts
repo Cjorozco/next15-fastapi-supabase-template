@@ -1,4 +1,4 @@
-import type { TaskPriority } from '@/convex/lib/taskFields';
+import type { TaskPriority, TaskRecurrence } from '@/convex/lib/taskFields';
 import { fromDateInputValue } from '@/domains/tasks/lib/dates';
 import type { AiProject } from '@/domains/projects/schemas/ai-project.schema';
 
@@ -34,6 +34,7 @@ export interface DraftTask {
   dueDate: string;
   /** No deadline by nature (habit, open task). Mutually exclusive with a date. */
   noDeadline: boolean;
+  recurrence: TaskRecurrence | '';
 }
 
 export interface ProjectDraft {
@@ -52,6 +53,7 @@ export interface CreateProjectArgs {
     estimatedHours?: number;
     dueDate?: number;
     noDeadline?: boolean;
+    recurrence?: TaskRecurrence;
   }>;
 }
 
@@ -66,6 +68,7 @@ export function newDraftTask(partial: Partial<Omit<DraftTask, 'key'>> = {}): Dra
     estimatedHours: '',
     dueDate: '',
     noDeadline: false,
+    recurrence: '',
     ...partial,
   };
 }
@@ -82,6 +85,7 @@ export function projectToDraft(project: AiProject, fixedName?: string): ProjectD
         estimatedHours: task.estimatedHours === undefined ? '' : String(task.estimatedHours),
         dueDate: task.dueDate ?? '',
         noDeadline: task.noDeadline === true,
+        recurrence: task.recurrence ?? '',
       })
     ),
   };
@@ -102,6 +106,7 @@ export function draftToCreateArgs(draft: ProjectDraft): CreateProjectArgs {
           ? { estimatedHours: hours }
           : {}),
         ...(dueDate !== null ? { dueDate } : task.noDeadline ? { noDeadline: true } : {}),
+        ...(task.recurrence ? { recurrence: task.recurrence } : {}),
       };
     });
 

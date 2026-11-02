@@ -5,6 +5,7 @@ import {
   aiHoursField,
   aiNoDeadlineField,
   aiPriorityField,
+  aiRecurrenceField,
   DATE_OR_NO_DEADLINE_MESSAGE,
   dropFlagWhenDated,
   hasDateOrNoDeadline,
@@ -37,6 +38,7 @@ export const AiTaskSchema = z
   estimatedHours: aiHoursField,
   dueDate: aiDateField,
   noDeadline: aiNoDeadlineField,
+  recurrence: aiRecurrenceField,
 })
   .transform(dropFlagWhenDated)
   .refine(hasDateOrNoDeadline, { message: DATE_OR_NO_DEADLINE_MESSAGE, path: ['dueDate'] });

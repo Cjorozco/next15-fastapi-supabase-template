@@ -10,7 +10,8 @@ export const TASK_QUALITY_RULES = `REGLAS PARA LAS TAREAS:
 - PROHIBIDO generar tareas de planificación genérica ("evaluar nivel", "crear calendario", "seleccionar recursos", "definir objetivos", "investigar opciones") salvo que el usuario las pida de forma explícita.
 - Usa las restricciones del usuario: tiempo diario disponible (ajusta las horas estimadas a ese tiempo), plazos y situación actual. Si dice que retoma algo tras un tiempo sin practicar, la primera tarea debe ser de reenganche (una sesión corta y fácil para retomar el hábito).
 - "priority" es "alta", "media" o "baja": alta para lo que desbloquea el resto o es urgente por plazo.
-- "estimatedHours" es un número de horas (0.5 a 8) realista para esa tarea.
+- "estimatedHours" es un número en HORAS (decimales permitidos, hasta 8) y respeta la duración que dio el usuario: 10 min = 0.17, 15 min = 0.25, 30 min = 0.5. Nunca la redondees hacia arriba.
+- Si una tarea es un hábito que se repite cada día o cada semana, pon además "recurrence": "diaria" o "semanal" (y "noDeadline": true). Si no se repite, omite "recurrence".
 - No inventes nombres de módulos, temas, capítulos ni contenidos que el usuario no haya dado. Si no conoces el temario, usa sesiones genéricas ("Sesión 1 de 8 – 2 h", "Sesión 2 de 8 – 2 h") o incluye una única tarea para conseguir el temario.
 - FECHAS: cada tarea lleva "dueDate" o "noDeadline": true. NUNCA dejes una tarea sin ninguno de los dos.
   - "noDeadline": true para hábitos, práctica continua y tareas abiertas que no tienen un plazo propio.
@@ -37,7 +38,7 @@ DEBES responder OBLIGATORIAMENTE con un objeto JSON válido con esta estructura:
   "description": "Máximo 2 frases",
   "tasks": [
     { "title": "Acción con plazo", "priority": "alta", "estimatedHours": 1.5, "dueDate": "2026-03-15" },
-    { "title": "Hábito sin plazo", "priority": "media", "estimatedHours": 0.5, "noDeadline": true }
+    { "title": "Hábito diario sin plazo", "priority": "media", "estimatedHours": 0.17, "noDeadline": true, "recurrence": "diaria" }
   ]
 }
 
