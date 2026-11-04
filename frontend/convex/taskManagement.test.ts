@@ -670,3 +670,70 @@ describe("a completed project goes back to active when it gets open work again",
     expect(loaded!.status).toBe("en_pausa");
   });
 });
+
+describe("editing and reordering subtasks", () => {
+  async function withSubtasks(titles: string[]) {
+    const ctx = await setup();
+    for (const title of titles) {
+      await ctx.owner.mutation(api.tasks.addSubtask, { taskId: ctx.task._id, title });
+    }
+    const read = async () => {
+      const project = await ctx.owner.query(api.projects.get, { projectId: ctx.project._id });
+      return project!.tasks[0].subtasks!;
+    };
+    return { ...ctx, read };
+  }
+
+  test("updateSubtask renames only that subtask and keeps its state", async () => {
+    const { owner, task, read } = await withSubtasks(["Uno", "Dos"]);
+    const [first, second] = await read();
+    await owner.mutation(api.tasks.toggleSubtask, { taskId: task._id, subtaskId: first.id, isCompleted: true });
+
+    await owner.mutation(api.tasks.updateSubtask, { taskId: task._id, subtaskId: first.id, title: "  Uno bis  " });
+
+    expect(await read()).toEqual([
+      { id: first.id, title: "Uno bis", isCompleted: true },
+      second,
+    ]);
+  });
+
+  test("updateSubtask rejects blank/too long titles and unknown subtasks", async () => {
+    const { owner, task, read } = await withSubtasks(["Uno"]);
+    const [first] = await read();
+    await expect(
+      owner.mutation(api.tasks.updateSubtask, { taskId: task._id, subtaskId: first.id, title: "   " })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.tasks.updateSubtask, { taskId: task._id, subtaskId: first.id, title: "x".repeat(201) })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.tasks.updateSubtask, { taskId: task._id, subtaskId: "nope", title: "Ok" })
+    ).rejects.toThrow();
+  });
+
+  test("moveSubtask swaps with the neighbour and ignores the ends", async () => {
+    const { owner, task, read } = await withSubtasks(["A", "B", "C"]);
+    const titles = async () => (await read()).map((s) => s.title);
+    const [a, , c] = await read();
+
+    await owner.mutation(api.tasks.moveSubtask, { taskId: task._id, subtaskId: c.id, direction: "up" });
+    expect(await titles()).toEqual(["A", "C", "B"]);
+
+    await owner.mutation(api.tasks.moveSubtask, { taskId: task._id, subtaskId: a.id, direction: "down" });
+    expect(await titles()).toEqual(["C", "A", "B"]);
+
+    await owner.mutation(api.tasks.moveSubtask, { taskId: task._id, subtaskId: c.id, direction: "up" });
+    expect(await titles()).toEqual(["C", "A", "B"]);
+  });
+
+  test("another user cannot edit or move subtasks", async () => {
+    const { intruder, task, read } = await withSubtasks(["A", "B"]);
+    const [a] = await read();
+    await expect(
+      intruder.mutation(api.tasks.updateSubtask, { taskId: task._id, subtaskId: a.id, title: "X" })
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.tasks.moveSubtask, { taskId: task._id, subtaskId: a.id, direction: "down" })
+    ).rejects.toThrow();
+  });
+});

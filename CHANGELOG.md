@@ -8,6 +8,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ## [Unreleased]
 
 ### Added
+- **Subtareas:** se pueden editar (lápiz, edición en línea con Enter/Escape) y reordenar (botones subir/bajar) en el detalle del proyecto. Mutations `tasks.updateSubtask` y `tasks.moveSubtask`; requiere `npx convex deploy`. Sin cambios de esquema.
 - **Vista "Hoy" (`/hoy`):** primera pantalla de la app. Lista las tareas pendientes de proyectos activos con fecha de hoy o vencida, más las diarias que ya arrancaron y las semanales cuya fecha llegó; muestra prioridad, repetición, avance de subtareas y la siguiente subtarea pendiente, con checkbox para completar tarea o subtarea. "Hoy" se calcula en `America/Bogota`. `/` redirige a `/hoy` y el Dashboard pasa a `/dashboard`. Sin cambios de esquema. Ver ADR 005.
 - **Flujo de ramas `develop` → `master`:** regla única en `.agents/rules/working-style.md` y ADR 004; la CI corre en PR hacia `develop` y `master` y en push a ambas. Solo documentación y CI, sin cambio de versión.
 - **Sin protección de rama a propósito:** enmienda al ADR 004; el flujo se sostiene por convención porque la protección del host requiere plan de pago.

@@ -14,6 +14,8 @@ import {
   useAddSubtask,
   useToggleSubtask,
   useRemoveSubtask,
+  useUpdateSubtask,
+  useMoveSubtask,
   useConvertTaskToSubtask,
   useUpdateTaskDetails,
 } from '@/domains/tasks/hooks/useTaskMutations';
@@ -43,6 +45,8 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { mutate: addSubtask } = useAddSubtask();
   const { mutate: toggleSubtask } = useToggleSubtask();
   const { mutate: removeSubtask } = useRemoveSubtask();
+  const { mutate: updateSubtask } = useUpdateSubtask();
+  const { mutate: moveSubtask } = useMoveSubtask();
   const { mutate: convertTaskToSubtask } = useConvertTaskToSubtask();
   const { mutate: saveTaskDetails } = useUpdateTaskDetails();
 
@@ -118,6 +122,16 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
     (taskId: Id<'tasks'>, subtaskId: string, isCompleted: boolean) =>
       toggleSubtask({ taskId, subtaskId, isCompleted }),
     [toggleSubtask]
+  );
+  const handleRenameSubtask = useCallback(
+    (taskId: Id<'tasks'>, subtaskId: string, title: string, onSaved: () => void) =>
+      updateSubtask({ taskId, subtaskId, title }, { onSuccess: onSaved }),
+    [updateSubtask]
+  );
+  const handleMoveSubtask = useCallback(
+    (taskId: Id<'tasks'>, subtaskId: string, direction: 'up' | 'down') =>
+      moveSubtask({ taskId, subtaskId, direction }),
+    [moveSubtask]
   );
   const handleRemoveSubtask = useCallback(
     (taskId: Id<'tasks'>, subtaskId: string) => removeSubtask({ taskId, subtaskId }),
@@ -269,6 +283,8 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                           onAddSubtask={handleAddSubtask}
                           onToggleSubtask={handleToggleSubtask}
                           onRemoveSubtask={handleRemoveSubtask}
+                          onRenameSubtask={handleRenameSubtask}
+                          onMoveSubtask={handleMoveSubtask}
                           onSaveDetails={saveTaskDetails}
                           inheritedDueDate={project.dueDate}
                           projects={projectOptions}

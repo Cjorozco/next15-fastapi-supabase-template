@@ -5,7 +5,17 @@ import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Checkbox } from '@/shared/components/ui/checkbox';
-import { X, GripVertical, CheckCircle2, ChevronRight, ChevronDown, Plus, CornerDownRight } from 'lucide-react';
+import {
+  X,
+  GripVertical,
+  CheckCircle2,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  CornerDownRight,
+  Pencil,
+} from 'lucide-react';
 import { Task, TaskDetailsInput } from '@/domains/tasks/types';
 import { TaskMeta } from '@/domains/tasks/components/TaskBadges';
 import { TaskEditForm } from '@/domains/tasks/components/TaskEditForm';
@@ -32,6 +42,9 @@ interface SortableTaskItemProps {
   onDelete: (taskId: Id<'tasks'>) => void;
   onAddSubtask?: (taskId: Id<'tasks'>, title: string) => void;
   onToggleSubtask?: (taskId: Id<'tasks'>, subtaskId: string, isCompleted: boolean) => void;
+  /** Saves a new subtask title; `onSaved` closes the inline editor. */
+  onRenameSubtask?: (taskId: Id<'tasks'>, subtaskId: string, title: string, onSaved: () => void) => void;
+  onMoveSubtask?: (taskId: Id<'tasks'>, subtaskId: string, direction: 'up' | 'down') => void;
   onRemoveSubtask?: (taskId: Id<'tasks'>, subtaskId: string) => void;
   /** Project due date, shown (not saved) when the task has no date of its own. */
   inheritedDueDate?: number;
@@ -49,6 +62,8 @@ function SortableTaskItemComponent({
   onDelete,
   onAddSubtask,
   onToggleSubtask,
+  onRenameSubtask,
+  onMoveSubtask,
   onRemoveSubtask,
   onSaveDetails,
   inheritedDueDate,
@@ -61,6 +76,8 @@ function SortableTaskItemComponent({
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
   const [confirmingTaskDelete, setConfirmingTaskDelete] = useState(false);
   const [confirmingSubtaskId, setConfirmingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
   const {
     attributes,
@@ -102,6 +119,20 @@ function SortableTaskItemComponent({
   const subtasks = task.subtasks || [];
   const completedSubtasksCount = subtasks.filter((s) => s.isCompleted).length;
   const totalSubtasksCount = subtasks.length;
+
+  const startEditingSubtask = (subtaskId: string, title: string) => {
+    setEditingSubtaskId(subtaskId);
+    setEditingTitle(title);
+  };
+  const stopEditingSubtask = () => setEditingSubtaskId(null);
+  const saveSubtaskTitle = (subtaskId: string, currentTitle: string) => {
+    const title = editingTitle.trim();
+    if (!title || title === currentTitle) {
+      stopEditingSubtask();
+      return;
+    }
+    onRenameSubtask?.(task._id, subtaskId, title, stopEditingSubtask);
+  };
 
   const handleAddSubtaskSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,8 +318,9 @@ function SortableTaskItemComponent({
 
         {isExpanded && (
           <div className="pl-11 pr-4 pb-3 space-y-1.5 animate-in fade-in-50 duration-150">
-            {subtasks.map((subtask) => {
+            {subtasks.map((subtask, index) => {
               const subtaskCheckboxId = `subtask-${subtask.id}`;
+              const isEditing = editingSubtaskId === subtask.id;
               return (
                 <div
                   key={subtask.id}
@@ -302,34 +334,107 @@ function SortableTaskItemComponent({
                       onToggleSubtask?.(task._id, subtask.id, !!value)
                     }
                   />
-                  <label
-                    htmlFor={subtaskCheckboxId}
-                    className={`flex-1 text-xs cursor-pointer ${
-                      subtask.isCompleted
-                        ? 'line-through text-muted-foreground'
-                        : 'text-foreground'
-                    }`}
-                  >
-                    {subtask.title}
-                  </label>
-                  {confirmingSubtaskId === subtask.id ? (
-                    <ConfirmDelete
-                      subject={`subtarea ${subtask.title}`}
-                      onConfirm={() => {
-                        setConfirmingSubtaskId(null);
-                        onRemoveSubtask?.(task._id, subtask.id);
+                  {isEditing ? (
+                    <form
+                      className="flex-1 flex items-center gap-1.5"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        saveSubtaskTitle(subtask.id, subtask.title);
                       }}
-                      onCancel={() => setConfirmingSubtaskId(null)}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingSubtaskId(subtask.id)}
-                      className={`${REVEAL_SUBTASK} transition-opacity text-muted-foreground hover:text-destructive p-2 -m-1.5 rounded ${FOCUS_RING}`}
-                      aria-label={`Eliminar subtarea ${subtask.title}`}
                     >
-                      <X className="w-3 h-3" aria-hidden="true" />
-                    </button>
+                      <input
+                        type="text"
+                        autoFocus
+                        aria-label={`Nombre de la subtarea ${subtask.title}`}
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') stopEditingSubtask();
+                        }}
+                        className="flex-1 min-w-0 text-xs bg-muted/40 border border-border rounded-lg px-2 py-1 text-foreground outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring/50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!editingTitle.trim()}
+                        className={`text-xs bg-primary text-primary-foreground font-medium px-2 py-1 rounded-md hover:opacity-90 disabled:opacity-50 ${FOCUS_RING}`}
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopEditingSubtask}
+                        className={`text-muted-foreground hover:text-foreground p-2 -m-1 rounded ${FOCUS_RING}`}
+                        aria-label="Cancelar edición de la subtarea"
+                      >
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <label
+                        htmlFor={subtaskCheckboxId}
+                        className={`flex-1 text-xs cursor-pointer ${
+                          subtask.isCompleted
+                            ? 'line-through text-muted-foreground'
+                            : 'text-foreground'
+                        }`}
+                      >
+                        {subtask.title}
+                      </label>
+                      {confirmingSubtaskId === subtask.id ? (
+                        <ConfirmDelete
+                          subject={`subtarea ${subtask.title}`}
+                          onConfirm={() => {
+                            setConfirmingSubtaskId(null);
+                            onRemoveSubtask?.(task._id, subtask.id);
+                          }}
+                          onCancel={() => setConfirmingSubtaskId(null)}
+                        />
+                      ) : (
+                        <div className={`${REVEAL_SUBTASK} transition-opacity flex items-center`}>
+                          {onMoveSubtask && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => onMoveSubtask(task._id, subtask.id, 'up')}
+                                className={`text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none p-2 -m-0.5 rounded ${FOCUS_RING}`}
+                                aria-label={`Subir subtarea ${subtask.title}`}
+                              >
+                                <ChevronUp className="w-3 h-3" aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === subtasks.length - 1}
+                                onClick={() => onMoveSubtask(task._id, subtask.id, 'down')}
+                                className={`text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none p-2 -m-0.5 rounded ${FOCUS_RING}`}
+                                aria-label={`Bajar subtarea ${subtask.title}`}
+                              >
+                                <ChevronDown className="w-3 h-3" aria-hidden="true" />
+                              </button>
+                            </>
+                          )}
+                          {onRenameSubtask && (
+                            <button
+                              type="button"
+                              onClick={() => startEditingSubtask(subtask.id, subtask.title)}
+                              className={`text-muted-foreground hover:text-primary p-2 -m-0.5 rounded ${FOCUS_RING}`}
+                              aria-label={`Editar subtarea ${subtask.title}`}
+                            >
+                              <Pencil className="w-3 h-3" aria-hidden="true" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingSubtaskId(subtask.id)}
+                            className={`text-muted-foreground hover:text-destructive p-2 -m-0.5 rounded ${FOCUS_RING}`}
+                            aria-label={`Eliminar subtarea ${subtask.title}`}
+                          >
+                            <X className="w-3 h-3" aria-hidden="true" />
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               );

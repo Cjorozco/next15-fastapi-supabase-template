@@ -190,6 +190,49 @@ export const useToggleSubtask = () => {
   return { mutate };
 };
 
+export const useUpdateSubtask = () => {
+  const updateSubtask = useMutation(api.tasks.updateSubtask);
+
+  const mutate = useCallback(
+    (
+      { taskId, subtaskId, title }: { taskId: Id<'tasks'>; subtaskId: string; title: string },
+      options?: { onSuccess?: () => void }
+    ) => {
+      updateSubtask({ taskId, subtaskId, title })
+        .then(() => options?.onSuccess?.())
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al editar la subtarea'));
+        });
+    },
+    [updateSubtask]
+  );
+
+  return { mutate };
+};
+
+export const useMoveSubtask = () => {
+  const moveSubtask = useMutation(api.tasks.moveSubtask);
+
+  const mutate = useCallback(
+    ({
+      taskId,
+      subtaskId,
+      direction,
+    }: {
+      taskId: Id<'tasks'>;
+      subtaskId: string;
+      direction: 'up' | 'down';
+    }) => {
+      moveSubtask({ taskId, subtaskId, direction }).catch((err: unknown) => {
+        toast.error(mapErrorToUserMessage(err, 'Error al reordenar la subtarea'));
+      });
+    },
+    [moveSubtask]
+  );
+
+  return { mutate };
+};
+
 export const useRemoveSubtask = () => {
   const removeSubtask = useMutation(api.tasks.removeSubtask);
 

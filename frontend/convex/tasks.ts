@@ -455,6 +455,79 @@ export const toggleSubtask = mutation({
   },
 });
 
+export const updateSubtask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    subtaskId: v.string(),
+    title: v.string(),
+  },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    const title = requireValidTitle(args.title);
+    const subtasks = task.subtasks ?? [];
+    if (!subtasks.some((subtask) => subtask.id === args.subtaskId)) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Subtask not found");
+    }
+
+    await ctx.db.patch(args.taskId, {
+      subtasks: subtasks.map((subtask) =>
+        subtask.id === args.subtaskId ? { ...subtask, title } : subtask
+      ),
+    });
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
+  },
+});
+
+/** Moves a subtask one place up or down. Moving past either end is a no-op. */
+export const moveSubtask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    subtaskId: v.string(),
+    direction: v.union(v.literal("up"), v.literal("down")),
+  },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    const subtasks = [...(task.subtasks ?? [])];
+    const from = subtasks.findIndex((subtask) => subtask.id === args.subtaskId);
+    if (from === -1) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Subtask not found");
+    }
+
+    const to = args.direction === "up" ? from - 1 : from + 1;
+    if (to >= 0 && to < subtasks.length) {
+      [subtasks[from], subtasks[to]] = [subtasks[to], subtasks[from]];
+      await ctx.db.patch(args.taskId, { subtasks });
+    }
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
+  },
+});
+
 export const removeSubtask = mutation({
   args: {
     taskId: v.id("tasks"),
