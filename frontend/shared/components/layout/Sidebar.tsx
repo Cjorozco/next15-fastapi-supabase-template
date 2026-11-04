@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   FolderKanban,
   CalendarCheck,
+  Sun,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -14,7 +15,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { useSidebarCollapsed } from '@/shared/lib/useSidebarCollapsed';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', Icon: LayoutDashboard },
+  { href: '/hoy', label: 'Hoy', Icon: Sun },
+  { href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { href: '/projects', label: 'Proyectos', Icon: FolderKanban },
   { href: '/week', label: 'Esta semana', Icon: CalendarCheck },
 ] as const;
@@ -28,8 +30,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useSidebarCollapsed();
 
   // `/projects/[id]` también cuenta como sección Proyectos
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   const linkClass = (href: string) =>
     `flex items-center rounded-xl font-medium transition-colors ${FOCUS_RING} ${

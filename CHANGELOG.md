@@ -8,6 +8,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ## [Unreleased]
 
 ### Added
+- **Vista "Hoy" (`/hoy`):** primera pantalla de la app. Lista las tareas pendientes de proyectos activos con fecha de hoy o vencida, más las diarias que ya arrancaron y las semanales cuya fecha llegó; muestra prioridad, repetición, avance de subtareas y la siguiente subtarea pendiente, con checkbox para completar tarea o subtarea. "Hoy" se calcula en `America/Bogota`. `/` redirige a `/hoy` y el Dashboard pasa a `/dashboard`. Sin cambios de esquema. Ver ADR 005.
 - **Flujo de ramas `develop` → `master`:** regla única en `.agents/rules/working-style.md` y ADR 004; la CI corre en PR hacia `develop` y `master` y en push a ambas. Solo documentación y CI, sin cambio de versión.
 - **Sin protección de rama a propósito:** enmienda al ADR 004; el flujo se sostiene por convención porque la protección del host requiere plan de pago.
 - **Gestión de tareas:** `status` (`pendiente` / `en_progreso` / `completada`), `dueDate`, `estimatedHours`, `priority` (`baja` / `media` / `alta`) y `notes`. Formulario de edición al expandir una tarea (`tasks.updateTask`), badges de estado y prioridad alta, fecha límite en rojo si está vencida y horas estimadas. El checkbox sigue funcionando y sincroniza el estado.
@@ -27,6 +28,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 - Mutación `projects.cleanupAll` y reglas/skills para agentes IA.
 
 ### Fixed
+- **Esta semana:** al completar una tarea recurrente, ya no se queda en la lista con el checkbox vacío (parecía que no hizo nada y se volvía a marcar, saltando más ciclos). Las recurrentes con fecha posterior a hoy salen de `/week` y vuelven el día que les toca; las de hoy, vencidas o sin fecha siguen.
 - **INP:** el formulario "Crear Nuevo Proyecto" y el input "Nombre de la tarea" guardaban su texto en la página/tarjeta, así que cada tecla re-renderizaba toda la lista. El estado ahora es local (`CreateProjectForm`, `NewTaskForm`) y `ProjectCard`/`SortableTaskItem` están memoizados con callbacks estables.
 - **Seguridad:** IDOR entre tenants en `tasks.reorder`; ahora exige ser dueño del proyecto y que cada tarea pertenezca a él.
 - Redirección indeseada al dashboard al cambiar de pestaña del navegador (auth).

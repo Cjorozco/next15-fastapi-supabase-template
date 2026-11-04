@@ -4,7 +4,8 @@ import { startOfDay } from '@/domains/tasks/lib/dates';
 import type { Project } from '@/domains/projects/types';
 import type { Task } from '@/domains/tasks/types';
 
-const PRIORITY_RANK: Record<TaskPriority | 'none', number> = {
+/** Sort rank of a priority: high first, none last. Shared with the "Hoy" view. */
+export const PRIORITY_RANK: Record<TaskPriority | 'none', number> = {
   alta: 0,
   media: 1,
   baja: 2,
@@ -66,9 +67,22 @@ export function bucketFor(
 }
 
 /**
+ * A recurring task whose next occurrence is after today. Completing a recurring task
+ * reopens it with such a date, so it leaves the list right away (otherwise it looks like
+ * the checkbox did nothing and users tick it again, skipping more cycles).
+ */
+function isUpcomingRecurrence(task: Pick<Task, 'recurrence' | 'dueDate'>, now: number): boolean {
+  if (!task.recurrence || task.dueDate === undefined) return false;
+  const today = new Date(startOfDay(now));
+  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime();
+  return task.dueDate >= tomorrow;
+}
+
+/**
  * Pending tasks of every active project. Paused and completed projects are left out.
  * Order: bucket (see `WEEK_BUCKETS`), then priority (high first, none last), then date
- * (soonest first). Ties keep project and task order.
+ * (soonest first). Ties keep project and task order. Recurring tasks dated after today
+ * are left out: they come back on their day (see `isUpcomingRecurrence`).
  */
 export function buildWeekTasks(projects: readonly Project[], now: number): WeekTask[] {
   const items: WeekTask[] = [];
@@ -77,6 +91,7 @@ export function buildWeekTasks(projects: readonly Project[], now: number): WeekT
     const tasks = [...project.tasks].sort((a, b) => a.position - b.position);
     for (const task of tasks) {
       if (resolveTaskStatus(task) === 'completada') continue;
+      if (isUpcomingRecurrence(task, now)) continue;
       const dueDate = effectiveDueDate(task, project.dueDate);
       items.push({ task, project, dueDate, bucket: bucketFor(task, dueDate, now) });
     }
