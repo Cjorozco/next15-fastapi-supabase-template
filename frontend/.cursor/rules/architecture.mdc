@@ -51,7 +51,7 @@ shared/
   lib/                 # ai/ (gateway BYOK), convex-provider, supabase, themeEngine, utils, userFacingError
 src/app/
   (auth)/              # login, register
-  (dashboard)/         # page (dashboard), projects/, projects/[id]/
+  (dashboard)/         # page (redirige a /hoy), hoy/, dashboard/, week/, projects/, projects/[id]/
 ```
 
 - **Código compartido (`shared/`):** Exclusivamente componentes y utilidades reutilizables agnósticos de la lógica de negocio específica.
