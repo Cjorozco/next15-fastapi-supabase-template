@@ -215,6 +215,31 @@ describe('bucketFor / effectiveDueDate', () => {
   });
 });
 
+describe('recurring tasks dated after today', () => {
+  const ids = (tasks: Task[]) =>
+    buildWeekTasks([project('a', tasks)], NOW).map((item) => item.task._id as string);
+
+  it('leave the list once completed (next occurrence is after today)', () => {
+    expect(
+      ids([
+        task('daily-tomorrow', { recurrence: 'diaria', dueDate: day(1) }),
+        task('weekly-next', { recurrence: 'semanal', dueDate: day(7) }),
+      ])
+    ).toEqual([]);
+  });
+
+  it('stay when due today, overdue or without a date, and plain tasks are unaffected', () => {
+    expect(
+      ids([
+        task('daily-today', { recurrence: 'diaria', dueDate: day(0) }),
+        task('weekly-late', { recurrence: 'semanal', dueDate: day(-2) }),
+        task('habit', { recurrence: 'diaria' }),
+        task('plain-tomorrow', { dueDate: day(1) }),
+      ]).sort()
+    ).toEqual(['daily-today', 'habit', 'plain-tomorrow', 'weekly-late']);
+  });
+});
+
 describe('week boundaries', () => {
   it('ends on Sunday 23:59:59.999 local time', () => {
     const end = new Date(endOfWeek(NOW));
