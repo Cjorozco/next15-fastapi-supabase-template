@@ -28,6 +28,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 - Mutación `projects.cleanupAll` y reglas/skills para agentes IA.
 
 ### Fixed
+- **Esta semana:** al completar una tarea recurrente, ya no se queda en la lista con el checkbox vacío (parecía que no hizo nada y se volvía a marcar, saltando más ciclos). Las recurrentes con fecha posterior a hoy salen de `/week` y vuelven el día que les toca; las de hoy, vencidas o sin fecha siguen.
 - **INP:** el formulario "Crear Nuevo Proyecto" y el input "Nombre de la tarea" guardaban su texto en la página/tarjeta, así que cada tecla re-renderizaba toda la lista. El estado ahora es local (`CreateProjectForm`, `NewTaskForm`) y `ProjectCard`/`SortableTaskItem` están memoizados con callbacks estables.
 - **Seguridad:** IDOR entre tenants en `tasks.reorder`; ahora exige ser dueño del proyecto y que cada tarea pertenezca a él.
 - Redirección indeseada al dashboard al cambiar de pestaña del navegador (auth).
