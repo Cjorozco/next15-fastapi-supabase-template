@@ -112,7 +112,7 @@ function SortableTaskItemComponent({
   // A completed recurring task reopens with its next date: show it as done until then,
   // so the checkbox does not look broken and cannot be ticked again (skipping cycles).
   const now = useNow();
-  const doneUntilNext = isUpcomingRecurrence(task, now);
+  const doneUntilNext = !task.isCompleted && isUpcomingRecurrence(task, now);
   const checked = task.isCompleted || doneUntilNext;
   const nextText =
     doneUntilNext && task.dueDate !== undefined ? `Hecha · vuelve el ${formatDueDate(task.dueDate, now)}` : null;

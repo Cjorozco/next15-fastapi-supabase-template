@@ -44,6 +44,6 @@ Esta enmienda sustituye la frase de "Decisión" que dice que, al completarse, un
 - Marcar una subtarea cuenta como el trabajo del día: la tarea queda hecha por hoy (su fecha pasa a la siguiente ocurrencia) y las subtareas marcadas **se conservan**, de modo que mañana la "siguiente subtarea" es la que sigue.
 - Se pueden marcar varias subtareas el mismo día; la fecha avanza una sola vez (`isDoneForNow` en `convex/lib/taskFields.ts`).
 - Marcar la tarea directamente significa "eso fue todo por hoy": avanza la fecha y deja las subtareas como están, hayan o no avanzado.
-- Solo al completar la última subtarea empieza una vuelta nueva y todas se desmarcan.
+- Completar la última subtarea **termina la tarea** (es un plan que llegó a su fin): queda Completada, con todas las subtareas marcadas, y no vuelve sola. Al hacerlo la app pregunta "¿Quieres reiniciarla?": "Reiniciar" desmarca las subtareas y la deja de nuevo pendiente en su próxima fecha, y "No" la deja terminada.
 - Las repetitivas **sin subtareas** no cambian.
 - Sin cambios de esquema.

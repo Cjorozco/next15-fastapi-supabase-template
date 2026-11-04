@@ -17,6 +17,18 @@ function notifyIfReopened(task: Pick<Task, 'recurrence' | 'isCompleted' | 'dueDa
   }
 }
 
+/**
+ * Finishing the last subtask of a recurring task ends it: ask whether to start it over
+ * (unchecked subtasks, back on its next date) instead of doing it silently.
+ */
+function offerRestart(task: Pick<Task, '_id' | 'title'>, restart: (taskId: Id<'tasks'>) => void) {
+  toast(`Terminaste «${task.title}». ¿Quieres reiniciarla?`, {
+    duration: Infinity,
+    action: { label: 'Reiniciar', onClick: () => restart(task._id) },
+    cancel: { label: 'No', onClick: () => {} },
+  });
+}
+
 // Every `mutate` is memoized so list items wrapped in React.memo keep stable props.
 
 export const useCreateTask = () => {
@@ -167,6 +179,18 @@ export const useAddSubtask = () => {
 
 export const useToggleSubtask = () => {
   const toggleSubtask = useMutation(api.tasks.toggleSubtask);
+  const update = useMutation(api.tasks.update);
+
+  const restart = useCallback(
+    (taskId: Id<'tasks'>) => {
+      update({ taskId, isCompleted: false, tzOffsetMinutes: tzOffsetMinutes() })
+        .then(() => toast.success('Tarea reiniciada'))
+        .catch((err: unknown) => {
+          toast.error(mapErrorToUserMessage(err, 'Error al reiniciar la tarea'));
+        });
+    },
+    [update]
+  );
 
   const mutate = useCallback(
     ({
@@ -179,12 +203,15 @@ export const useToggleSubtask = () => {
       isCompleted: boolean;
     }) => {
       toggleSubtask({ taskId, subtaskId, isCompleted, tzOffsetMinutes: tzOffsetMinutes() })
-        .then((task) => notifyIfReopened(task, isCompleted))
+        .then((task) => {
+          if (isCompleted && task.recurrence && task.isCompleted) offerRestart(task, restart);
+          else notifyIfReopened(task, isCompleted);
+        })
         .catch((err: unknown) => {
           toast.error(mapErrorToUserMessage(err, 'Error al actualizar la subtarea'));
         });
     },
-    [toggleSubtask]
+    [toggleSubtask, restart]
   );
 
   return { mutate };

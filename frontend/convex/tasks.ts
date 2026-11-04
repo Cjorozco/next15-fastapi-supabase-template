@@ -66,19 +66,18 @@ export const create = mutation({
  * Completing a recurring task does not close it: it is reopened with the next due date.
  * Returns null when the task does not repeat.
  *
- * With `resetSubtasks` the subtasks are unchecked too (a whole round was finished).
- * Otherwise they keep their progress, so tomorrow continues with the next one. A task
- * with subtasks can be advanced several times in a day (one subtask, then another):
- * once its date is already after today, the date is not moved again.
+ * Subtasks keep their progress, so tomorrow continues with the next one. A task with
+ * subtasks can be advanced several times in a day (one subtask, then another): once its
+ * date is already after today, the date is not moved again.
  */
 function reopenPatchIfRecurring(
   task: Pick<Doc<"tasks">, "recurrence" | "dueDate" | "subtasks">,
-  options: { tzOffsetMinutes: number | undefined; resetSubtasks: boolean }
+  tzOffsetMinutes: number | undefined
 ): Partial<Doc<"tasks">> | null {
   if (!task.recurrence) return null;
   const now = Date.now();
   const alreadyAdvancedToday =
-    (task.subtasks?.length ?? 0) > 0 && isDoneForNow(task, now, options.tzOffsetMinutes);
+    (task.subtasks?.length ?? 0) > 0 && isDoneForNow(task, now, tzOffsetMinutes);
   return {
     isCompleted: false,
     status: "pendiente",
@@ -89,16 +88,10 @@ function reopenPatchIfRecurring(
             dueDate: task.dueDate,
             recurrence: task.recurrence,
             now,
-            tzOffsetMinutes: options.tzOffsetMinutes,
+            tzOffsetMinutes,
           }),
         }),
-    ...(task.subtasks
-      ? {
-          subtasks: options.resetSubtasks
-            ? task.subtasks.map((subtask) => ({ ...subtask, isCompleted: false }))
-            : task.subtasks,
-        }
-      : {}),
+    ...(task.subtasks ? { subtasks: task.subtasks } : {}),
   };
 }
 
@@ -199,10 +192,7 @@ export const update = mutation({
 
     const reopenPatch =
       args.isCompleted && !task.isCompleted
-        ? reopenPatchIfRecurring(task, {
-            tzOffsetMinutes: args.tzOffsetMinutes,
-            resetSubtasks: false,
-          })
+        ? reopenPatchIfRecurring(task, args.tzOffsetMinutes)
         : null;
 
     await ctx.db.patch(
@@ -355,7 +345,7 @@ export const updateTask = mutation({
             dueDate: "dueDate" in patch ? patch.dueDate : task.dueDate,
             subtasks: task.subtasks,
           },
-          { tzOffsetMinutes: args.tzOffsetMinutes, resetSubtasks: false }
+          args.tzOffsetMinutes
         );
         if (reopenPatch) Object.assign(patch, reopenPatch);
       }
@@ -452,24 +442,24 @@ export const toggleSubtask = mutation({
       updatedSubtasks.length > 0 && updatedSubtasks.every((st) => st.isCompleted);
 
     // In a recurring task, checking a subtask means "worked on it today": the task is
-    // done for today (it comes back on its next date) and the progress is kept. Only
-    // finishing the last subtask starts a new round with every subtask unchecked.
-    const reopenPatch =
-      args.isCompleted && (allCompleted ? !task.isCompleted : true)
-        ? reopenPatchIfRecurring(
-            { ...task, subtasks: updatedSubtasks },
-            { tzOffsetMinutes: args.tzOffsetMinutes, resetSubtasks: allCompleted }
-          )
+    // done for today (it comes back on its next date) and the progress is kept. Finishing
+    // the last subtask finishes the task for good (it is a plan that came to an end); the
+    // client then offers to restart it.
+    const progressPatch =
+      args.isCompleted && !task.isCompleted
+        ? reopenPatchIfRecurring({ ...task, subtasks: updatedSubtasks }, args.tzOffsetMinutes)
         : null;
+    const patch: Partial<Doc<"tasks">> = progressPatch
+      ? allCompleted
+        ? { ...progressPatch, isCompleted: true, status: "completada" }
+        : progressPatch
+      : {
+          subtasks: updatedSubtasks,
+          isCompleted: allCompleted,
+          status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
+        };
 
-    await ctx.db.patch(
-      args.taskId,
-      reopenPatch ?? {
-        subtasks: updatedSubtasks,
-        isCompleted: allCompleted,
-        status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
-      }
-    );
+    await ctx.db.patch(args.taskId, patch);
     if (task.isCompleted && !allCompleted) {
       await reopenProjectIfCompleted(ctx, task.projectId);
     }

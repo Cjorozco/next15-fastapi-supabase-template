@@ -333,7 +333,7 @@ describe("recurring tasks", () => {
     expect(reopened.dueDate).toBeGreaterThan(Date.now());
   });
 
-  test("checking the last subtask completes the parent, which reopens", async () => {
+  test("checking the last subtask of a recurring task finishes it for good", async () => {
     const { owner, task } = await setup();
     const withSub = await owner.mutation(api.tasks.addSubtask, { taskId: task._id, title: "Único" });
     await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
@@ -345,9 +345,9 @@ describe("recurring tasks", () => {
       tzOffsetMinutes: TZ,
     });
 
-    expect(result.isCompleted).toBe(false);
-    expect(result.subtasks![0].isCompleted).toBe(false);
-    expect(result.dueDate).toBeGreaterThan(Date.now());
+    expect(result.isCompleted).toBe(true);
+    expect(result.status).toBe("completada");
+    expect(result.subtasks![0].isCompleted).toBe(true);
   });
 
   test("a task without recurrence still completes normally", async () => {
@@ -828,7 +828,7 @@ describe("recurring tasks with subtasks keep their progress", () => {
     expect(done.subtasks!.every((s) => !s.isCompleted)).toBe(true);
   });
 
-  test("finishing the last subtask starts a new round with every subtask unchecked", async () => {
+  test("finishing the last subtask ends the task and restarting it unchecks everything", async () => {
     const { owner, task, ids } = await recurringWithSubtasks();
     let last;
     for (const subtaskId of ids) {
@@ -839,8 +839,21 @@ describe("recurring tasks with subtasks keep their progress", () => {
         tzOffsetMinutes: TZ,
       });
     }
-    expect(last!.isCompleted).toBe(false);
-    expect(last!.subtasks!.every((s) => !s.isCompleted)).toBe(true);
+    expect(last!.isCompleted).toBe(true);
+    expect(last!.status).toBe("completada");
+    expect(last!.subtasks!.every((s) => s.isCompleted)).toBe(true);
+    const nextDate = last!.dueDate;
+    expect(nextDate).toBeGreaterThan(Date.now());
+
+    const restarted = await owner.mutation(api.tasks.update, {
+      taskId: task._id,
+      isCompleted: false,
+      tzOffsetMinutes: TZ,
+    });
+    expect(restarted.isCompleted).toBe(false);
+    expect(restarted.status).toBe("pendiente");
+    expect(restarted.subtasks!.every((s) => !s.isCompleted)).toBe(true);
+    expect(restarted.dueDate).toBe(nextDate);
   });
 
   test("completada from the edit form keeps the progress too", async () => {
