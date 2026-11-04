@@ -15,6 +15,7 @@ import {
   MAX_TASK_NOTES_LENGTH,
   MAX_TASK_TITLE_LENGTH,
   MAX_TASKS_PER_REQUEST,
+  isDoneForNow,
   nextOccurrence,
   resolveTaskStatus,
   statusAfterCompletion,
@@ -62,26 +63,35 @@ export const create = mutation({
 });
 
 /**
- * Completing a recurring task does not close it: it is reopened with the next due date
- * and its subtasks unchecked. Returns null when the task does not repeat.
+ * Completing a recurring task does not close it: it is reopened with the next due date.
+ * Returns null when the task does not repeat.
+ *
+ * Subtasks keep their progress, so tomorrow continues with the next one. A task with
+ * subtasks can be advanced several times in a day (one subtask, then another): once its
+ * date is already after today, the date is not moved again.
  */
 function reopenPatchIfRecurring(
   task: Pick<Doc<"tasks">, "recurrence" | "dueDate" | "subtasks">,
   tzOffsetMinutes: number | undefined
 ): Partial<Doc<"tasks">> | null {
   if (!task.recurrence) return null;
+  const now = Date.now();
+  const alreadyAdvancedToday =
+    (task.subtasks?.length ?? 0) > 0 && isDoneForNow(task, now, tzOffsetMinutes);
   return {
     isCompleted: false,
     status: "pendiente",
-    dueDate: nextOccurrence({
-      dueDate: task.dueDate,
-      recurrence: task.recurrence,
-      now: Date.now(),
-      tzOffsetMinutes,
-    }),
-    ...(task.subtasks
-      ? { subtasks: task.subtasks.map((subtask) => ({ ...subtask, isCompleted: false })) }
-      : {}),
+    ...(alreadyAdvancedToday
+      ? {}
+      : {
+          dueDate: nextOccurrence({
+            dueDate: task.dueDate,
+            recurrence: task.recurrence,
+            now,
+            tzOffsetMinutes,
+          }),
+        }),
+    ...(task.subtasks ? { subtasks: task.subtasks } : {}),
   };
 }
 
@@ -318,8 +328,10 @@ export const updateTask = mutation({
       const isCompleted = args.status === "completada";
       patch.status = args.status;
       patch.isCompleted = isCompleted;
-      // Same rule as the checkbox: completing a task completes its subtasks.
-      if (isCompleted && task.subtasks) {
+      const recurrence = "recurrence" in patch ? patch.recurrence : task.recurrence;
+      // Same rule as the checkbox: completing a task completes its subtasks, except in a
+      // recurring one, where it only means "that is all for today" and progress is kept.
+      if (isCompleted && task.subtasks && !recurrence) {
         patch.subtasks = task.subtasks.map((subtask) => ({
           ...subtask,
           isCompleted: true,
@@ -329,7 +341,7 @@ export const updateTask = mutation({
       if (isCompleted && !task.isCompleted) {
         const reopenPatch = reopenPatchIfRecurring(
           {
-            recurrence: "recurrence" in patch ? patch.recurrence : task.recurrence,
+            recurrence,
             dueDate: "dueDate" in patch ? patch.dueDate : task.dueDate,
             subtasks: task.subtasks,
           },
@@ -429,21 +441,100 @@ export const toggleSubtask = mutation({
     const allCompleted =
       updatedSubtasks.length > 0 && updatedSubtasks.every((st) => st.isCompleted);
 
-    const reopenPatch =
-      allCompleted && !task.isCompleted
+    // In a recurring task, checking a subtask means "worked on it today": the task is
+    // done for today (it comes back on its next date) and the progress is kept. Finishing
+    // the last subtask finishes the task for good (it is a plan that came to an end); the
+    // client then offers to restart it.
+    const progressPatch =
+      args.isCompleted && !task.isCompleted
         ? reopenPatchIfRecurring({ ...task, subtasks: updatedSubtasks }, args.tzOffsetMinutes)
         : null;
+    const patch: Partial<Doc<"tasks">> = progressPatch
+      ? allCompleted
+        ? { ...progressPatch, isCompleted: true, status: "completada" }
+        : progressPatch
+      : {
+          subtasks: updatedSubtasks,
+          isCompleted: allCompleted,
+          status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
+        };
 
-    await ctx.db.patch(
-      args.taskId,
-      reopenPatch ?? {
-        subtasks: updatedSubtasks,
-        isCompleted: allCompleted,
-        status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
-      }
-    );
+    await ctx.db.patch(args.taskId, patch);
     if (task.isCompleted && !allCompleted) {
       await reopenProjectIfCompleted(ctx, task.projectId);
+    }
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
+  },
+});
+
+export const updateSubtask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    subtaskId: v.string(),
+    title: v.string(),
+  },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    const title = requireValidTitle(args.title);
+    const subtasks = task.subtasks ?? [];
+    if (!subtasks.some((subtask) => subtask.id === args.subtaskId)) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Subtask not found");
+    }
+
+    await ctx.db.patch(args.taskId, {
+      subtasks: subtasks.map((subtask) =>
+        subtask.id === args.subtaskId ? { ...subtask, title } : subtask
+      ),
+    });
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
+  },
+});
+
+/** Moves a subtask one place up or down. Moving past either end is a no-op. */
+export const moveSubtask = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    subtaskId: v.string(),
+    direction: v.union(v.literal("up"), v.literal("down")),
+  },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    const subtasks = [...(task.subtasks ?? [])];
+    const from = subtasks.findIndex((subtask) => subtask.id === args.subtaskId);
+    if (from === -1) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Subtask not found");
+    }
+
+    const to = args.direction === "up" ? from - 1 : from + 1;
+    if (to >= 0 && to < subtasks.length) {
+      [subtasks[from], subtasks[to]] = [subtasks[to], subtasks[from]];
+      await ctx.db.patch(args.taskId, { subtasks });
     }
 
     const updated = await ctx.db.get(args.taskId);

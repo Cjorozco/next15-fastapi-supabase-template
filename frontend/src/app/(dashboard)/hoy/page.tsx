@@ -74,9 +74,10 @@ function TodayContent() {
   const handleToggleSubtask = useCallback(
     ({ task, nextSubtask }: TodayTask) => {
       if (!nextSubtask) return;
-      // Completing the last pending subtask completes the task too.
+      // Completing the last pending subtask completes the task too, and a subtask of a
+      // recurring task counts as done for today: either way the task leaves the list.
       const pending = (task.subtasks ?? []).filter((subtask) => !subtask.isCompleted).length;
-      if (pending === 1) markTicked(task._id);
+      if (pending === 1 || task.recurrence) markTicked(task._id);
       toggleSubtask({ taskId: task._id, subtaskId: nextSubtask.id, isCompleted: true });
     },
     [markTicked, toggleSubtask]

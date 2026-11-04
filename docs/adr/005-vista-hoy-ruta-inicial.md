@@ -34,3 +34,16 @@ Además, "hoy" depende de la zona horaria. Vercel ejecuta en UTC, y a las 19:00 
 - **Costo:** `/week` y las badges de fecha siguen usando la zona del dispositivo (`startOfDay`), por lo que fuera de Bogotá ambas vistas podrían discrepar cerca de la medianoche. No se unificó para no cambiar `/week`.
 - **Límite:** el contador no cuenta tareas completadas antes de abrir la vista. Contarlas de forma persistente requeriría guardar la fecha de la última finalización (cambio de esquema), que no se hizo.
 - **Enlaces a `/`:** quien tenga `/` guardado llega a `/hoy` por el redirect. El Dashboard se abre en `/dashboard`.
+
+## Enmiendas
+
+### 2026-11-04: repetitivas con subtareas conservan el progreso
+
+Esta enmienda sustituye la frase de "Decisión" que dice que, al completarse, una repetitiva se reabre con las subtareas sin marcar; el texto original se conserva como registro histórico. Para una repetitiva **con subtareas**:
+
+- Marcar una subtarea cuenta como el trabajo del día: la tarea queda hecha por hoy (su fecha pasa a la siguiente ocurrencia) y las subtareas marcadas **se conservan**, de modo que mañana la "siguiente subtarea" es la que sigue.
+- Se pueden marcar varias subtareas el mismo día; la fecha avanza una sola vez (`isDoneForNow` en `convex/lib/taskFields.ts`).
+- Marcar la tarea directamente significa "eso fue todo por hoy": avanza la fecha y deja las subtareas como están, hayan o no avanzado.
+- Completar la última subtarea **termina la tarea** (es un plan que llegó a su fin): queda Completada, con todas las subtareas marcadas, y no vuelve sola. Al hacerlo la app pregunta "¿Quieres reiniciarla?": "Reiniciar" desmarca las subtareas y la deja de nuevo pendiente en su próxima fecha, y "No" la deja terminada.
+- Las repetitivas **sin subtareas** no cambian.
+- Sin cambios de esquema.
