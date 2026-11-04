@@ -737,3 +737,126 @@ describe("editing and reordering subtasks", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("recurring tasks with subtasks keep their progress", () => {
+  async function recurringWithSubtasks() {
+    const ctx = await setup();
+    for (const title of ["Uno", "Dos", "Tres"]) {
+      await ctx.owner.mutation(api.tasks.addSubtask, { taskId: ctx.task._id, title });
+    }
+    await ctx.owner.mutation(api.tasks.updateTask, { taskId: ctx.task._id, recurrence: "diaria" });
+    const read = async () => {
+      const project = await ctx.owner.query(api.projects.get, { projectId: ctx.project._id });
+      return project!.tasks[0];
+    };
+    const ids = (await read()).subtasks!.map((s) => s.id);
+    return { ...ctx, read, ids };
+  }
+  const TZ = 0;
+
+  test("checking one subtask is the work of the day: task done for today, progress kept", async () => {
+    const { owner, task, ids } = await recurringWithSubtasks();
+
+    const result = await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[0],
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+
+    expect(result.isCompleted).toBe(false);
+    expect(result.dueDate).toBeGreaterThan(Date.now());
+    expect(result.subtasks!.map((s) => s.isCompleted)).toEqual([true, false, false]);
+  });
+
+  test("a second subtask the same day does not skip another day", async () => {
+    const { owner, task, ids } = await recurringWithSubtasks();
+    const first = await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[0],
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+    const second = await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[1],
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+
+    expect(second.dueDate).toBe(first.dueDate);
+    expect(second.subtasks!.map((s) => s.isCompleted)).toEqual([true, true, false]);
+  });
+
+  test("unchecking a subtask does not move the date", async () => {
+    const { owner, task, ids } = await recurringWithSubtasks();
+    const first = await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[0],
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+    const undone = await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[0],
+      isCompleted: false,
+      tzOffsetMinutes: TZ,
+    });
+    expect(undone.dueDate).toBe(first.dueDate);
+    expect(undone.subtasks!.every((s) => !s.isCompleted)).toBe(true);
+  });
+
+  test("checking the task itself means 'that is all for today' and keeps the subtasks as they are", async () => {
+    const { owner, task, ids } = await recurringWithSubtasks();
+    await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[0],
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+
+    const done = await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true, tzOffsetMinutes: TZ });
+
+    expect(done.isCompleted).toBe(false);
+    expect(done.subtasks!.map((s) => s.isCompleted)).toEqual([true, false, false]);
+  });
+
+  test("checking the task with no subtask done is allowed and keeps them unchecked", async () => {
+    const { owner, task } = await recurringWithSubtasks();
+    const done = await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true, tzOffsetMinutes: TZ });
+    expect(done.dueDate).toBeGreaterThan(Date.now());
+    expect(done.subtasks!.every((s) => !s.isCompleted)).toBe(true);
+  });
+
+  test("finishing the last subtask starts a new round with every subtask unchecked", async () => {
+    const { owner, task, ids } = await recurringWithSubtasks();
+    let last;
+    for (const subtaskId of ids) {
+      last = await owner.mutation(api.tasks.toggleSubtask, {
+        taskId: task._id,
+        subtaskId,
+        isCompleted: true,
+        tzOffsetMinutes: TZ,
+      });
+    }
+    expect(last!.isCompleted).toBe(false);
+    expect(last!.subtasks!.every((s) => !s.isCompleted)).toBe(true);
+  });
+
+  test("completada from the edit form keeps the progress too", async () => {
+    const { owner, task, ids } = await recurringWithSubtasks();
+    await owner.mutation(api.tasks.toggleSubtask, {
+      taskId: task._id,
+      subtaskId: ids[1],
+      isCompleted: true,
+      tzOffsetMinutes: TZ,
+    });
+    const done = await owner.mutation(api.tasks.updateTask, {
+      taskId: task._id,
+      status: "completada",
+      tzOffsetMinutes: TZ,
+    });
+    expect(done.isCompleted).toBe(false);
+    expect(done.subtasks!.map((s) => s.isCompleted)).toEqual([false, true, false]);
+  });
+});

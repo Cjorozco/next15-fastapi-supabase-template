@@ -15,6 +15,7 @@ import {
   MAX_TASK_NOTES_LENGTH,
   MAX_TASK_TITLE_LENGTH,
   MAX_TASKS_PER_REQUEST,
+  isDoneForNow,
   nextOccurrence,
   resolveTaskStatus,
   statusAfterCompletion,
@@ -62,25 +63,41 @@ export const create = mutation({
 });
 
 /**
- * Completing a recurring task does not close it: it is reopened with the next due date
- * and its subtasks unchecked. Returns null when the task does not repeat.
+ * Completing a recurring task does not close it: it is reopened with the next due date.
+ * Returns null when the task does not repeat.
+ *
+ * With `resetSubtasks` the subtasks are unchecked too (a whole round was finished).
+ * Otherwise they keep their progress, so tomorrow continues with the next one. A task
+ * with subtasks can be advanced several times in a day (one subtask, then another):
+ * once its date is already after today, the date is not moved again.
  */
 function reopenPatchIfRecurring(
   task: Pick<Doc<"tasks">, "recurrence" | "dueDate" | "subtasks">,
-  tzOffsetMinutes: number | undefined
+  options: { tzOffsetMinutes: number | undefined; resetSubtasks: boolean }
 ): Partial<Doc<"tasks">> | null {
   if (!task.recurrence) return null;
+  const now = Date.now();
+  const alreadyAdvancedToday =
+    (task.subtasks?.length ?? 0) > 0 && isDoneForNow(task, now, options.tzOffsetMinutes);
   return {
     isCompleted: false,
     status: "pendiente",
-    dueDate: nextOccurrence({
-      dueDate: task.dueDate,
-      recurrence: task.recurrence,
-      now: Date.now(),
-      tzOffsetMinutes,
-    }),
+    ...(alreadyAdvancedToday
+      ? {}
+      : {
+          dueDate: nextOccurrence({
+            dueDate: task.dueDate,
+            recurrence: task.recurrence,
+            now,
+            tzOffsetMinutes: options.tzOffsetMinutes,
+          }),
+        }),
     ...(task.subtasks
-      ? { subtasks: task.subtasks.map((subtask) => ({ ...subtask, isCompleted: false })) }
+      ? {
+          subtasks: options.resetSubtasks
+            ? task.subtasks.map((subtask) => ({ ...subtask, isCompleted: false }))
+            : task.subtasks,
+        }
       : {}),
   };
 }
@@ -182,7 +199,10 @@ export const update = mutation({
 
     const reopenPatch =
       args.isCompleted && !task.isCompleted
-        ? reopenPatchIfRecurring(task, args.tzOffsetMinutes)
+        ? reopenPatchIfRecurring(task, {
+            tzOffsetMinutes: args.tzOffsetMinutes,
+            resetSubtasks: false,
+          })
         : null;
 
     await ctx.db.patch(
@@ -318,8 +338,10 @@ export const updateTask = mutation({
       const isCompleted = args.status === "completada";
       patch.status = args.status;
       patch.isCompleted = isCompleted;
-      // Same rule as the checkbox: completing a task completes its subtasks.
-      if (isCompleted && task.subtasks) {
+      const recurrence = "recurrence" in patch ? patch.recurrence : task.recurrence;
+      // Same rule as the checkbox: completing a task completes its subtasks, except in a
+      // recurring one, where it only means "that is all for today" and progress is kept.
+      if (isCompleted && task.subtasks && !recurrence) {
         patch.subtasks = task.subtasks.map((subtask) => ({
           ...subtask,
           isCompleted: true,
@@ -329,11 +351,11 @@ export const updateTask = mutation({
       if (isCompleted && !task.isCompleted) {
         const reopenPatch = reopenPatchIfRecurring(
           {
-            recurrence: "recurrence" in patch ? patch.recurrence : task.recurrence,
+            recurrence,
             dueDate: "dueDate" in patch ? patch.dueDate : task.dueDate,
             subtasks: task.subtasks,
           },
-          args.tzOffsetMinutes
+          { tzOffsetMinutes: args.tzOffsetMinutes, resetSubtasks: false }
         );
         if (reopenPatch) Object.assign(patch, reopenPatch);
       }
@@ -429,9 +451,15 @@ export const toggleSubtask = mutation({
     const allCompleted =
       updatedSubtasks.length > 0 && updatedSubtasks.every((st) => st.isCompleted);
 
+    // In a recurring task, checking a subtask means "worked on it today": the task is
+    // done for today (it comes back on its next date) and the progress is kept. Only
+    // finishing the last subtask starts a new round with every subtask unchecked.
     const reopenPatch =
-      allCompleted && !task.isCompleted
-        ? reopenPatchIfRecurring({ ...task, subtasks: updatedSubtasks }, args.tzOffsetMinutes)
+      args.isCompleted && (allCompleted ? !task.isCompleted : true)
+        ? reopenPatchIfRecurring(
+            { ...task, subtasks: updatedSubtasks },
+            { tzOffsetMinutes: args.tzOffsetMinutes, resetSubtasks: allCompleted }
+          )
         : null;
 
     await ctx.db.patch(

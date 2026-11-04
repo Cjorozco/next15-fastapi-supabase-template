@@ -29,6 +29,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 - Mutación `projects.cleanupAll` y reglas/skills para agentes IA.
 
 ### Fixed
+- **Repetitivas con subtareas:** marcar una subtarea cuenta como el trabajo del día (la tarea vuelve en su próxima fecha) y el progreso de las subtareas se conserva en vez de reiniciarse; marcar la tarea directa es "eso fue todo por hoy". Se pueden marcar varias subtareas el mismo día sin saltar días; solo al terminar la última empieza una vuelta nueva. Ver enmienda del ADR 005. Requiere `npx convex deploy`.
 - **Proyectos y detalle del proyecto:** una tarea recurrente recién completada se muestra tachada con "Hecha · vuelve el …" y el checkbox bloqueado hasta su próxima fecha, en vez de quedar sin marcar y poder completarse otra vez.
 - **Proyecto "Completado":** vuelve solo a "Activo" cuando se le agrega una tarea o subtarea, o se desmarca una tarea o subtarea completada (`convex/tasks.ts`). Marcarlo como completado sigue siendo manual. Requiere `npx convex deploy`.
 - **Esta semana:** al completar una tarea recurrente, ya no se queda en la lista con el checkbox vacío (parecía que no hizo nada y se volvía a marcar, saltando más ciclos). Las recurrentes con fecha posterior a hoy salen de `/week` y vuelven el día que les toca; las de hoy, vencidas o sin fecha siguen.

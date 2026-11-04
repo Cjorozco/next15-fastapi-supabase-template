@@ -114,6 +114,24 @@ export function statusAfterCompletion(
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECURRENCE_STEP_DAYS: Record<TaskRecurrence, number> = { diaria: 1, semanal: 7 };
 
+/** Calendar day number of a timestamp in the user's timezone (`Date#getTimezoneOffset` minutes). */
+function localDayNumber(timestamp: number, tzOffsetMinutes = 0): number {
+  return Math.floor((timestamp - tzOffsetMinutes * 60_000) / DAY_MS);
+}
+
+/**
+ * A recurring task whose next occurrence is after today: this cycle is already done.
+ * Used to count a cycle once when a task with subtasks is advanced several times a day.
+ */
+export function isDoneForNow(
+  task: { recurrence?: TaskRecurrence; dueDate?: number },
+  now: number,
+  tzOffsetMinutes?: number
+): boolean {
+  if (!task.recurrence || task.dueDate === undefined) return false;
+  return localDayNumber(task.dueDate, tzOffsetMinutes) > localDayNumber(now, tzOffsetMinutes);
+}
+
 /**
  * Due date of the next occurrence of a recurring task that was just completed.
  *
@@ -131,7 +149,7 @@ export function nextOccurrence(params: {
   tzOffsetMinutes?: number;
 }): number {
   const offset = params.tzOffsetMinutes ?? 0;
-  const localDay = (timestamp: number) => Math.floor((timestamp - offset * 60_000) / DAY_MS);
+  const localDay = (timestamp: number) => localDayNumber(timestamp, offset);
 
   const today = localDay(params.now);
   const base = params.dueDate === undefined ? today : localDay(params.dueDate);
