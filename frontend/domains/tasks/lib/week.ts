@@ -71,7 +71,7 @@ export function bucketFor(
  * reopens it with such a date, so it leaves the list right away (otherwise it looks like
  * the checkbox did nothing and users tick it again, skipping more cycles).
  */
-function isUpcomingRecurrence(task: Pick<Task, 'recurrence' | 'dueDate'>, now: number): boolean {
+export function isUpcomingRecurrence(task: Pick<Task, 'recurrence' | 'dueDate'>, now: number): boolean {
   if (!task.recurrence || task.dueDate === undefined) return false;
   const today = new Date(startOfDay(now));
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).getTime();

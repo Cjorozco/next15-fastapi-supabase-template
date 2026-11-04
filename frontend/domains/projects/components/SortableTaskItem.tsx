@@ -12,6 +12,9 @@ import { TaskEditForm } from '@/domains/tasks/components/TaskEditForm';
 import { ConfirmDelete } from '@/domains/tasks/components/ConfirmDelete';
 import { hasNoDeadline, resolveTaskStatus } from '@/convex/lib/taskFields';
 import { Id } from '@/convex/_generated/dataModel';
+import { formatDueDate } from '@/domains/tasks/lib/dates';
+import { isUpcomingRecurrence } from '@/domains/tasks/lib/week';
+import { useNow } from '@/shared/lib/useNow';
 
 // Hover-only controls must also appear on keyboard focus and on touch (no hover).
 const REVEAL_ROW =
@@ -89,6 +92,13 @@ function SortableTaskItemComponent({
   };
 
   const statusLabelId = `task-${isDetailView ? 'detail-' : ''}${task._id}`;
+  // A completed recurring task reopens with its next date: show it as done until then,
+  // so the checkbox does not look broken and cannot be ticked again (skipping cycles).
+  const now = useNow();
+  const doneUntilNext = isUpcomingRecurrence(task, now);
+  const checked = task.isCompleted || doneUntilNext;
+  const nextText =
+    doneUntilNext && task.dueDate !== undefined ? `Hecha · vuelve el ${formatDueDate(task.dueDate, now)}` : null;
   const subtasks = task.subtasks || [];
   const completedSubtasksCount = subtasks.filter((s) => s.isCompleted).length;
   const totalSubtasksCount = subtasks.length;
@@ -167,18 +177,21 @@ function SortableTaskItemComponent({
 
           <Checkbox
             id={statusLabelId}
-            checked={task.isCompleted}
-            onCheckedChange={(checked) => onUpdateStatus(task._id, !!checked)}
+            checked={checked}
+            disabled={doneUntilNext}
+            onCheckedChange={(value) => onUpdateStatus(task._id, !!value)}
           />
 
           <label
             htmlFor={statusLabelId}
             className={`flex-1 text-xs cursor-pointer font-medium ${
-              task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
+              checked ? 'line-through text-muted-foreground' : 'text-foreground'
             }`}
           >
             {task.title}
           </label>
+
+          {nextText && <span className="text-xs text-muted-foreground whitespace-nowrap">{nextText}</span>}
 
           {/* Badge de subtareas */}
           {totalSubtasksCount > 0 && (
@@ -193,7 +206,7 @@ function SortableTaskItemComponent({
             </span>
           )}
 
-          {task.isCompleted && (
+          {checked && (
             <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" aria-hidden="true" />
           )}
 
@@ -285,8 +298,8 @@ function SortableTaskItemComponent({
                   <Checkbox
                     id={subtaskCheckboxId}
                     checked={subtask.isCompleted}
-                    onCheckedChange={(checked) =>
-                      onToggleSubtask?.(task._id, subtask.id, !!checked)
+                    onCheckedChange={(value) =>
+                      onToggleSubtask?.(task._id, subtask.id, !!value)
                     }
                   />
                   <label
@@ -396,17 +409,20 @@ function SortableTaskItemComponent({
 
         <Checkbox
           id={statusLabelId}
-          checked={task.isCompleted}
-          onCheckedChange={(checked) => onUpdateStatus(task._id, !!checked)}
+          checked={checked}
+          disabled={doneUntilNext}
+          onCheckedChange={(value) => onUpdateStatus(task._id, !!value)}
         />
         <label
           htmlFor={statusLabelId}
           className={`flex-1 text-xs cursor-pointer ${
-            task.isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
+            checked ? 'line-through text-muted-foreground' : 'text-foreground'
           }`}
         >
           {task.title}
         </label>
+
+        {nextText && <span className="text-xs text-muted-foreground whitespace-nowrap">{nextText}</span>}
 
         {totalSubtasksCount > 0 && (
           <span

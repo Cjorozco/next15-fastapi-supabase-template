@@ -606,3 +606,67 @@ describe("AI habit created as one task with subtasks and notes", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("a completed project goes back to active when it gets open work again", () => {
+  async function completedProject() {
+    const ctx = await setup();
+    await ctx.owner.mutation(api.tasks.update, { taskId: ctx.task._id, isCompleted: true });
+    await ctx.owner.mutation(api.projects.updateProject, {
+      projectId: ctx.project._id,
+      status: "completado",
+    });
+    const status = async () =>
+      (await ctx.owner.query(api.projects.get, { projectId: ctx.project._id }))!.status;
+    return { ...ctx, status };
+  }
+
+  test("un-checking a task", async () => {
+    const { owner, task, status } = await completedProject();
+    expect(await status()).toBe("completado");
+    await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: false });
+    expect(await status()).toBe("activo");
+  });
+
+  test("changing a completed task to another status", async () => {
+    const { owner, task, status } = await completedProject();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, status: "en_progreso" });
+    expect(await status()).toBe("activo");
+  });
+
+  test("adding a task or several", async () => {
+    const one = await completedProject();
+    await one.owner.mutation(api.tasks.create, { projectId: one.project._id, title: "Nueva" });
+    expect(await one.status()).toBe("activo");
+
+    const many = await completedProject();
+    await many.owner.mutation(api.tasks.createMany, { projectId: many.project._id, titles: ["A", "B"] });
+    expect(await many.status()).toBe("activo");
+  });
+
+  test("adding a subtask", async () => {
+    const { owner, task, status } = await completedProject();
+    await owner.mutation(api.tasks.addSubtask, { taskId: task._id, title: "Paso" });
+    expect(await status()).toBe("activo");
+  });
+
+  test("un-checking a subtask of a completed task", async () => {
+    const ctx = await setup();
+    await ctx.owner.mutation(api.tasks.addSubtask, { taskId: ctx.task._id, title: "Paso" });
+    const withSub = await ctx.owner.query(api.projects.get, { projectId: ctx.project._id });
+    const subtaskId = withSub!.tasks[0].subtasks![0].id;
+    await ctx.owner.mutation(api.tasks.toggleSubtask, { taskId: ctx.task._id, subtaskId, isCompleted: true });
+    await ctx.owner.mutation(api.projects.updateProject, { projectId: ctx.project._id, status: "completado" });
+    await ctx.owner.mutation(api.tasks.toggleSubtask, { taskId: ctx.task._id, subtaskId, isCompleted: false });
+    const after = await ctx.owner.query(api.projects.get, { projectId: ctx.project._id });
+    expect(after!.status).toBe("activo");
+  });
+
+  test("does not touch paused projects or completing tasks", async () => {
+    const { owner, project, task } = await setup();
+    await owner.mutation(api.projects.updateProject, { projectId: project._id, status: "en_pausa" });
+    await owner.mutation(api.tasks.create, { projectId: project._id, title: "Otra" });
+    await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true });
+    const loaded = await owner.query(api.projects.get, { projectId: project._id });
+    expect(loaded!.status).toBe("en_pausa");
+  });
+});
