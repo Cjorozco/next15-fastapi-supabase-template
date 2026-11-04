@@ -70,7 +70,8 @@ describe('Sidebar (collapsible)', () => {
     fireEvent.click(within(aside).getByRole('button', { name: 'Recoger menú lateral' }));
 
     for (const [name, href] of [
-      ['Dashboard', '/'],
+      ['Hoy', '/hoy'],
+      ['Dashboard', '/dashboard'],
       ['Proyectos', '/projects'],
       ['Esta semana', '/week'],
     ]) {
@@ -142,6 +143,7 @@ describe('Sidebar (collapsible)', () => {
 
     const mobile = container.querySelector('nav.md\\:hidden') as HTMLElement;
     expect(mobile).not.toBeNull();
+    expect(within(mobile).getByText('Hoy')).toBeVisible();
     expect(within(mobile).getByText('Dashboard')).toBeVisible();
     expect(within(mobile).getByText('Esta semana')).toBeVisible();
   });

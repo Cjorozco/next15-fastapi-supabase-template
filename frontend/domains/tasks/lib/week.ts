@@ -4,7 +4,8 @@ import { startOfDay } from '@/domains/tasks/lib/dates';
 import type { Project } from '@/domains/projects/types';
 import type { Task } from '@/domains/tasks/types';
 
-const PRIORITY_RANK: Record<TaskPriority | 'none', number> = {
+/** Sort rank of a priority: high first, none last. Shared with the "Hoy" view. */
+export const PRIORITY_RANK: Record<TaskPriority | 'none', number> = {
   alta: 0,
   media: 1,
   baja: 2,

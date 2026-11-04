@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (event === 'SIGNED_IN') {
         if (pathname === '/login' || pathname === '/register') {
-          router.push('/');
+          router.push('/hoy');
         }
       }
     });

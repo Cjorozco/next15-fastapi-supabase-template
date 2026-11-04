@@ -26,7 +26,7 @@ export default function LoginPage() {
       const res = await fetch('/api/demo-login', { method: 'POST' });
       if (!res.ok) throw new Error();
       // Recarga completa para que el cliente lea la sesión recién creada.
-      window.location.assign('/');
+      window.location.assign('/hoy');
     } catch {
       setError('No se pudo iniciar la demo. Inténtalo de nuevo.');
       setIsDemoLoading(false);
@@ -47,7 +47,7 @@ export default function LoginPage() {
       );
       setIsLoading(false);
     } else {
-      router.push('/');
+      router.push('/hoy');
     }
   };
 

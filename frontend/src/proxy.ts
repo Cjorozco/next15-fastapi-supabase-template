@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
   // Redirigir al dashboard si ya está autenticado y accede a login/register
   if (user && isPublicRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = '/hoy';
     return NextResponse.redirect(url);
   }
 
