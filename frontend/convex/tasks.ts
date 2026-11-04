@@ -50,6 +50,7 @@ export const create = mutation({
       position: nextPosition,
       subtasks: [],
     });
+    await reopenProjectIfCompleted(ctx, args.projectId);
 
     const task = await ctx.db.get(taskId);
     if (!task) {
@@ -82,6 +83,17 @@ function reopenPatchIfRecurring(
       ? { subtasks: task.subtasks.map((subtask) => ({ ...subtask, isCompleted: false })) }
       : {}),
   };
+}
+
+/**
+ * A "completado" project that gets an open task again (new task, task or subtask
+ * un-completed) is active again. Marking a project completed stays manual.
+ */
+async function reopenProjectIfCompleted(ctx: MutationCtx, projectId: Id<"projects">) {
+  const project = await ctx.db.get(projectId);
+  if (project?.status === "completado") {
+    await ctx.db.patch(projectId, { status: "activo" });
+  }
 }
 
 async function nextPositionInProject(ctx: MutationCtx, projectId: Id<"projects">) {
@@ -141,6 +153,7 @@ export const createMany = mutation({
       const task = await ctx.db.get(taskId);
       if (task) created.push(toTaskDto(task));
     }
+    await reopenProjectIfCompleted(ctx, args.projectId);
     return created;
   },
 });
@@ -180,6 +193,9 @@ export const update = mutation({
         ...(updatedSubtasks ? { subtasks: updatedSubtasks } : {}),
       }
     );
+    if (task.isCompleted && !args.isCompleted) {
+      await reopenProjectIfCompleted(ctx, task.projectId);
+    }
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {
@@ -327,6 +343,9 @@ export const updateTask = mutation({
     }
 
     await ctx.db.patch(args.taskId, patch);
+    if (task.isCompleted && patch.isCompleted === false) {
+      await reopenProjectIfCompleted(ctx, patch.projectId ?? task.projectId);
+    }
     if (movesProject) {
       await reindexProjectTasks(ctx, task.projectId);
     }
@@ -374,6 +393,7 @@ export const addSubtask = mutation({
       isCompleted: false,
       status: statusAfterCompletion(resolveTaskStatus(task), false),
     });
+    await reopenProjectIfCompleted(ctx, task.projectId);
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {
@@ -422,6 +442,9 @@ export const toggleSubtask = mutation({
         status: statusAfterCompletion(resolveTaskStatus(task), allCompleted),
       }
     );
+    if (task.isCompleted && !allCompleted) {
+      await reopenProjectIfCompleted(ctx, task.projectId);
+    }
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {

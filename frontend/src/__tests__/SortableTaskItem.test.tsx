@@ -178,3 +178,50 @@ describe('SortableTaskItem (Subtasks Support & Interaction)', () => {
   });
 });
 
+describe('SortableTaskItem (recurring task already completed)', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const recurring: Task = {
+    _id: 'task_r' as Id<'tasks'>,
+    projectId: 'project_1' as Id<'projects'>,
+    title: 'Prospección del día',
+    isCompleted: false,
+    position: 0,
+    recurrence: 'diaria',
+  };
+
+  it('shows it as done, locked, with the date it comes back, when its next date is after today', () => {
+    const onUpdateStatus = vi.fn();
+    render(
+      <SortableTaskItem
+        task={{ ...recurring, dueDate: Date.now() + 2 * DAY }}
+        isDetailView={true}
+        onUpdateStatus={onUpdateStatus}
+        onDelete={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByRole('checkbox', { name: /Prospección del día/ });
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+    expect(screen.getByText(/Hecha · vuelve el/)).toBeInTheDocument();
+    fireEvent.click(checkbox);
+    expect(onUpdateStatus).not.toHaveBeenCalled();
+  });
+
+  it('stays open when it is due today', () => {
+    const onUpdateStatus = vi.fn();
+    render(
+      <SortableTaskItem
+        task={{ ...recurring, dueDate: Date.now() }}
+        isDetailView={true}
+        onUpdateStatus={onUpdateStatus}
+        onDelete={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByRole('checkbox', { name: /Prospección del día/ });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    expect(onUpdateStatus).toHaveBeenCalledWith('task_r', true);
+  });
+});
