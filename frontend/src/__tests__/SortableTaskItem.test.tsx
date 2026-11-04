@@ -225,3 +225,73 @@ describe('SortableTaskItem (recurring task already completed)', () => {
     expect(onUpdateStatus).toHaveBeenCalledWith('task_r', true);
   });
 });
+
+describe('SortableTaskItem (edit and reorder subtasks)', () => {
+  const task: Task = {
+    _id: 'task_s' as Id<'tasks'>,
+    projectId: 'project_1' as Id<'projects'>,
+    title: 'Con pasos',
+    isCompleted: false,
+    position: 0,
+    subtasks: [
+      { id: 'a', title: 'Primero', isCompleted: false },
+      { id: 'b', title: 'Segundo', isCompleted: false },
+    ],
+  };
+
+  function renderExpanded(handlers: { rename?: ReturnType<typeof vi.fn>; move?: ReturnType<typeof vi.fn> }) {
+    render(
+      <SortableTaskItem
+        task={task}
+        isDetailView={true}
+        onUpdateStatus={vi.fn()}
+        onDelete={vi.fn()}
+        onRenameSubtask={handlers.rename}
+        onMoveSubtask={handlers.move}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles y subtareas' }));
+  }
+
+  it('renames a subtask inline and closes the editor once saved', () => {
+    const rename = vi.fn((_t: string, _s: string, _title: string, onSaved: () => void) => onSaved());
+    renderExpanded({ rename });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar subtarea Primero' }));
+    const input = screen.getByRole('textbox', { name: 'Nombre de la subtarea Primero' });
+    fireEvent.change(input, { target: { value: '  Primero corregido ' } });
+    fireEvent.submit(input);
+
+    expect(rename).toHaveBeenCalledWith('task_s', 'a', 'Primero corregido', expect.any(Function));
+    expect(screen.queryByRole('textbox', { name: /Nombre de la subtarea Primero/ })).not.toBeInTheDocument();
+  });
+
+  it('does not save an unchanged or blank title, and Escape cancels', () => {
+    const rename = vi.fn();
+    renderExpanded({ rename });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar subtarea Primero' }));
+    fireEvent.submit(screen.getByRole('textbox', { name: 'Nombre de la subtarea Primero' }));
+    expect(rename).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editar subtarea Segundo' }));
+    const input = screen.getByRole('textbox', { name: 'Nombre de la subtarea Segundo' });
+    fireEvent.change(input, { target: { value: 'Otro' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(rename).not.toHaveBeenCalled();
+    expect(screen.queryByRole('textbox', { name: /Nombre de la subtarea Segundo/ })).not.toBeInTheDocument();
+  });
+
+  it('moves subtasks with up/down buttons and disables them at the ends', () => {
+    const move = vi.fn();
+    renderExpanded({ move });
+
+    expect(screen.getByRole('button', { name: 'Subir subtarea Primero' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Bajar subtarea Segundo' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bajar subtarea Primero' }));
+    expect(move).toHaveBeenCalledWith('task_s', 'a', 'down');
+    fireEvent.click(screen.getByRole('button', { name: 'Subir subtarea Segundo' }));
+    expect(move).toHaveBeenCalledWith('task_s', 'b', 'up');
+  });
+});

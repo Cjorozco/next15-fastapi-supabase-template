@@ -8,6 +8,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ## [Unreleased]
 
 ### Added
+- **Subtareas:** se pueden editar (lápiz, edición en línea con Enter/Escape) y reordenar (botones subir/bajar) en el detalle del proyecto. Mutations `tasks.updateSubtask` y `tasks.moveSubtask`; requiere `npx convex deploy`. Sin cambios de esquema.
 - **Vista "Hoy" (`/hoy`):** primera pantalla de la app. Lista las tareas pendientes de proyectos activos con fecha de hoy o vencida, más las diarias que ya arrancaron y las semanales cuya fecha llegó; muestra prioridad, repetición, avance de subtareas y la siguiente subtarea pendiente, con checkbox para completar tarea o subtarea. "Hoy" se calcula en `America/Bogota`. `/` redirige a `/hoy` y el Dashboard pasa a `/dashboard`. Sin cambios de esquema. Ver ADR 005.
 - **Flujo de ramas `develop` → `master`:** regla única en `.agents/rules/working-style.md` y ADR 004; la CI corre en PR hacia `develop` y `master` y en push a ambas. Solo documentación y CI, sin cambio de versión.
 - **Sin protección de rama a propósito:** enmienda al ADR 004; el flujo se sostiene por convención porque la protección del host requiere plan de pago.
@@ -28,6 +29,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 - Mutación `projects.cleanupAll` y reglas/skills para agentes IA.
 
 ### Fixed
+- **Repetitivas con subtareas:** marcar una subtarea cuenta como el trabajo del día (la tarea vuelve en su próxima fecha) y el progreso de las subtareas se conserva en vez de reiniciarse; marcar la tarea directa es "eso fue todo por hoy". Se pueden marcar varias subtareas el mismo día sin saltar días. Al completar la última subtarea la tarea termina y la app pregunta si quieres reiniciarla (nunca se reinicia sola). Ver enmienda del ADR 005. Requiere `npx convex deploy`.
 - **Proyectos y detalle del proyecto:** una tarea recurrente recién completada se muestra tachada con "Hecha · vuelve el …" y el checkbox bloqueado hasta su próxima fecha, en vez de quedar sin marcar y poder completarse otra vez.
 - **Proyecto "Completado":** vuelve solo a "Activo" cuando se le agrega una tarea o subtarea, o se desmarca una tarea o subtarea completada (`convex/tasks.ts`). Marcarlo como completado sigue siendo manual. Requiere `npx convex deploy`.
 - **Esta semana:** al completar una tarea recurrente, ya no se queda en la lista con el checkbox vacío (parecía que no hizo nada y se volvía a marcar, saltando más ciclos). Las recurrentes con fecha posterior a hoy salen de `/week` y vuelven el día que les toca; las de hoy, vencidas o sin fecha siguen.
