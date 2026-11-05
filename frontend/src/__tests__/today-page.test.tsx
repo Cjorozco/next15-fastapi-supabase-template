@@ -91,6 +91,19 @@ describe('Hoy page', () => {
     expect(toggleSubtask).toHaveBeenCalledWith({ taskId: 't4', subtaskId: 's2', isCompleted: true });
   });
 
+  it('shows the ticked subtask checked for a moment before the next one replaces it', async () => {
+    render(<TodayPage />);
+    const checkbox = () => screen.getByRole('checkbox', { name: 'Completar subtarea Segunda' });
+
+    fireEvent.click(checkbox());
+    expect(checkbox()).toBeChecked();
+    expect(checkbox()).toBeDisabled();
+
+    // The mocked data never advances, so it goes back to open once the moment passes.
+    await waitFor(() => expect(checkbox()).not.toBeChecked(), { timeout: 2000 });
+    expect(toggleSubtask).toHaveBeenCalledTimes(1);
+  });
+
   it('completes a task with the app mutation, shows the tick and counts it as done once it leaves the list', async () => {
     const { rerender } = render(<TodayPage />);
     expect(screen.getByText('0 de 3 hechas')).toBeInTheDocument();
