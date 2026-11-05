@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Project } from '@/domains/projects/types';
 import type { Id } from '@/convex/_generated/dataModel';
@@ -91,17 +91,23 @@ describe('Hoy page', () => {
     expect(toggleSubtask).toHaveBeenCalledWith({ taskId: 't4', subtaskId: 's2', isCompleted: true });
   });
 
-  it('completes a task with the app mutation and counts it as done once it leaves the list', () => {
+  it('completes a task with the app mutation, shows the tick and counts it as done once it leaves the list', async () => {
     const { rerender } = render(<TodayPage />);
     expect(screen.getByText('0 de 3 hechas')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Completar De hoy' }));
     expect(updateTask).toHaveBeenCalledWith({ taskId: 't1', isCompleted: true });
+    // The tick is shown right away: checked and struck through.
+    expect(screen.getByRole('checkbox', { name: 'Completar De hoy' })).toBeChecked();
+    expect(screen.getByText('De hoy').closest('li')).toHaveAttribute('data-status', 'done');
 
     // Convex pushes the update: the task is no longer pending.
     projects = [{ ...projects[0], tasks: projects[0].tasks.filter((t) => t._id !== 't1') }, projects[1]];
     rerender(<TodayPage />);
-    expect(screen.queryByText('De hoy')).not.toBeInTheDocument();
+    // It stays on screen for a moment so the tick can be seen, then leaves.
+    expect(screen.getByText('De hoy')).toBeInTheDocument();
+    expect(screen.getByText('1 de 3 hechas')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('De hoy')).not.toBeInTheDocument(), { timeout: 2000 });
     expect(screen.getByText('1 de 3 hechas')).toBeInTheDocument();
   });
 
