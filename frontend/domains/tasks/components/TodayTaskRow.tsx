@@ -1,10 +1,14 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { FolderKanban, ListChecks, Repeat } from 'lucide-react';
 import { TASK_RECURRENCE_LABELS } from '@/convex/lib/taskFields';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { TaskPriorityBadge } from '@/domains/tasks/components/TaskBadges';
 import type { TodayTask } from '@/domains/tasks/lib/today';
+import type { Subtask } from '@/domains/tasks/types';
+
+/** How long a ticked subtask stays visible, struck through, before the next one replaces it. */
+const SUBTASK_TICK_MS = 600;
 
 /** `done`: just ticked (struck through, highlighted). `leaving`: collapsing out of the list. */
 export type TodayRowStatus = 'open' | 'done' | 'leaving';
@@ -28,6 +32,21 @@ export const TodayTaskRow = memo(function TodayTaskRow({
   const doneSubtasks = subtasks.filter((subtask) => subtask.isCompleted).length;
   const taskCheckboxId = `today-task-${task._id}`;
   const isOpen = status === 'open';
+
+  // Ticking the next subtask shows it checked for a moment before the following one
+  // takes its place, so the tick is seen instead of the text just changing.
+  const [tickingSubtask, setTickingSubtask] = useState<Subtask | null>(null);
+  const tickTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(tickTimer.current), []);
+  const shownSubtask = tickingSubtask ?? nextSubtask;
+
+  const handleSubtaskTick = () => {
+    if (!nextSubtask || tickingSubtask) return;
+    setTickingSubtask(nextSubtask);
+    window.clearTimeout(tickTimer.current);
+    tickTimer.current = window.setTimeout(() => setTickingSubtask(null), SUBTASK_TICK_MS);
+    onToggleSubtask(item);
+  };
 
   return (
     // The grid-rows trick lets the row collapse smoothly to zero height when it leaves.
@@ -95,22 +114,35 @@ export const TodayTaskRow = memo(function TodayTaskRow({
         </div>
       </div>
 
-      {nextSubtask && isOpen && (
-        <div className="ml-7 flex items-start gap-3 rounded-xl bg-muted/50 px-3 py-2">
+      {shownSubtask && (isOpen || tickingSubtask) && (
+        // Keyed by subtask so each new "next subtask" fades in.
+        <div
+          key={shownSubtask.id}
+          className={`ml-7 flex items-start gap-3 rounded-xl px-3 py-2 transition-colors duration-300 motion-reduce:transition-none animate-in fade-in duration-300 ${
+            tickingSubtask ? 'bg-success/10' : 'bg-muted/50'
+          }`}
+        >
           <label
             htmlFor={`today-subtask-${task._id}`}
             className="-m-2 p-2 cursor-pointer"
           >
             <Checkbox
               id={`today-subtask-${task._id}`}
-              checked={false}
-              aria-label={`Completar subtarea ${nextSubtask.title}`}
-              onCheckedChange={() => onToggleSubtask(item)}
+              checked={!!tickingSubtask}
+              disabled={!!tickingSubtask}
+              aria-label={`Completar subtarea ${shownSubtask.title}`}
+              onCheckedChange={handleSubtaskTick}
             />
           </label>
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Siguiente subtarea</p>
-            <p className="text-xs text-foreground break-words">{nextSubtask.title}</p>
+            <p
+              className={`text-xs break-words transition-colors duration-300 motion-reduce:transition-none ${
+                tickingSubtask ? 'line-through text-muted-foreground' : 'text-foreground'
+              }`}
+            >
+              {shownSubtask.title}
+            </p>
           </div>
         </div>
       )}
