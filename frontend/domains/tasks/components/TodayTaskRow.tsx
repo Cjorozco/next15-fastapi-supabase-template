@@ -5,17 +5,21 @@ import { TASK_RECURRENCE_LABELS } from '@/convex/lib/taskFields';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { TaskPriorityBadge } from '@/domains/tasks/components/TaskBadges';
 import type { TodayTask } from '@/domains/tasks/lib/today';
-import type { Id } from '@/convex/_generated/dataModel';
+
+/** `done`: just ticked (struck through, highlighted). `leaving`: collapsing out of the list. */
+export type TodayRowStatus = 'open' | 'done' | 'leaving';
 
 interface TodayTaskRowProps {
   item: TodayTask;
-  onToggleTask: (taskId: Id<'tasks'>) => void;
+  status?: TodayRowStatus;
+  onToggleTask: (item: TodayTask) => void;
   onToggleSubtask: (item: TodayTask) => void;
 }
 
 /** One task of the "Hoy" view: title, project, priority, repetition, subtask progress and next subtask. */
 export const TodayTaskRow = memo(function TodayTaskRow({
   item,
+  status = 'open',
   onToggleTask,
   onToggleSubtask,
 }: TodayTaskRowProps) {
@@ -23,21 +27,41 @@ export const TodayTaskRow = memo(function TodayTaskRow({
   const subtasks = task.subtasks ?? [];
   const doneSubtasks = subtasks.filter((subtask) => subtask.isCompleted).length;
   const taskCheckboxId = `today-task-${task._id}`;
+  const isOpen = status === 'open';
 
   return (
-    <li className="p-3 space-y-2" data-testid="today-task">
+    // The grid-rows trick lets the row collapse smoothly to zero height when it leaves.
+    <li
+      data-testid="today-task"
+      data-status={status}
+      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${
+        status === 'leaving' ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+      }`}
+    >
+      <div
+        className={`min-h-0 overflow-hidden p-3 space-y-2 transition-colors duration-300 motion-reduce:transition-none ${
+          isOpen ? '' : 'bg-success/10'
+        }`}
+      >
       <div className="flex items-start gap-3">
         {/* Larger hit area for touch screens, same visual size as the rest of the app. */}
         <label htmlFor={taskCheckboxId} className="-m-2 p-2 cursor-pointer">
           <Checkbox
             id={taskCheckboxId}
-            checked={false}
+            checked={!isOpen}
+            disabled={!isOpen}
             aria-label={`Completar ${task.title}`}
-            onCheckedChange={() => onToggleTask(task._id)}
+            onCheckedChange={() => onToggleTask(item)}
           />
         </label>
         <div className="flex-1 min-w-0 space-y-1.5">
-          <p className="text-sm font-medium text-foreground break-words">{task.title}</p>
+          <p
+            className={`text-sm font-medium break-words transition-colors duration-300 motion-reduce:transition-none ${
+              isOpen ? 'text-foreground' : 'line-through text-muted-foreground'
+            }`}
+          >
+            {task.title}
+          </p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
             <Link
               href={`/projects/${project._id}`}
@@ -71,7 +95,7 @@ export const TodayTaskRow = memo(function TodayTaskRow({
         </div>
       </div>
 
-      {nextSubtask && (
+      {nextSubtask && isOpen && (
         <div className="ml-7 flex items-start gap-3 rounded-xl bg-muted/50 px-3 py-2">
           <label
             htmlFor={`today-subtask-${task._id}`}
@@ -90,6 +114,7 @@ export const TodayTaskRow = memo(function TodayTaskRow({
           </div>
         </div>
       )}
+      </div>
     </li>
   );
 });
