@@ -12,7 +12,7 @@ export const TASK_QUALITY_RULES = `REGLAS PARA LAS TAREAS:
 - "priority" es "alta", "media" o "baja": alta para lo que desbloquea el resto o es urgente por plazo.
 - "estimatedHours" es un número en HORAS (decimales permitidos, hasta 8) y respeta la duración que dio el usuario: 10 min = 0.17, 15 min = 0.25, 30 min = 0.5. Nunca la redondees hacia arriba.
 - TIEMPO TOTAL: si el usuario da un tiempo total diario o semanal (ej. "10 minutos al día", "3 h por semana"), la suma de las horas de las tareas recurrentes de ese período NO puede superarlo. Un hábito único es UNA sola tarea recurrente con esa duración (nunca una tarea por actividad). Si quieres variedad, rota el contenido en "subtasks" (ej. vocabulario, pronunciación, podcast corto) o en "notes", sin sumar tiempo.
-- Si una tarea es un hábito que se repite cada día o cada semana, pon además "recurrence": "diaria" o "semanal" (y "noDeadline": true). Si no se repite, omite "recurrence".
+- Si una tarea es un hábito que se repite, pon además "recurrence" (y "noDeadline": true): "diaria" si es cada día, "laboral" si es solo de lunes a viernes (ej. trabajo, prospección) o "semanal" si es cada semana. Si no se repite, omite "recurrence".
 - No inventes nombres de módulos, temas, capítulos ni contenidos que el usuario no haya dado. Si no conoces el temario, usa sesiones genéricas ("Sesión 1 de 8 – 2 h", "Sesión 2 de 8 – 2 h") o incluye una única tarea para conseguir el temario.
 - FECHAS: cada tarea lleva "dueDate" o "noDeadline": true. NUNCA dejes una tarea sin ninguno de los dos.
   - "noDeadline": true para hábitos, práctica continua y tareas abiertas que no tienen un plazo propio.

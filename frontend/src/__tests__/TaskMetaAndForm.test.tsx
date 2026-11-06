@@ -173,7 +173,7 @@ describe('TaskEditForm', () => {
   it('uses short labels in the recurrence select so they are not cut off', () => {
     render(<TaskEditForm task={baseTask} onSave={vi.fn()} />);
     const options = Array.from((screen.getByLabelText('Repetir') as HTMLSelectElement).options).map((o) => o.text);
-    expect(options).toEqual(['No se repite', 'Diaria', 'Semanal']);
+    expect(options).toEqual(['No se repite', 'Diaria', 'Lun a vie', 'Semanal']);
   });
 
   it('"Sin fecha límite" disables and clears the date and sends noDeadline', async () => {
