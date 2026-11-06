@@ -149,8 +149,10 @@ describe('prompt rules for habits and durations', () => {
     expect(buildProjectSystemInstruction()).toMatch(/entre 1 y 8 tareas/);
   });
 
-  it('ask for recurrence on daily/weekly habits', () => {
-    expect(TASK_QUALITY_RULES).toContain('"recurrence": "diaria" o "semanal"');
+  it('ask for recurrence on daily, Monday to Friday and weekly habits', () => {
+    expect(TASK_QUALITY_RULES).toContain('"diaria" si es cada día');
+    expect(TASK_QUALITY_RULES).toContain('"laboral" si es solo de lunes a viernes');
+    expect(TASK_QUALITY_RULES).toContain('"semanal" si es cada semana');
   });
 
   it('ask to respect the duration given by the user', () => {

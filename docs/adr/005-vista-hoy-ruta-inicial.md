@@ -47,3 +47,12 @@ Esta enmienda sustituye la frase de "Decisión" que dice que, al completarse, un
 - Completar la última subtarea **termina la tarea** (es un plan que llegó a su fin): queda Completada, con todas las subtareas marcadas, y no vuelve sola. Al hacerlo la app pregunta "¿Quieres reiniciarla?": "Reiniciar" desmarca las subtareas y la deja de nuevo pendiente en su próxima fecha, y "No" la deja terminada.
 - Las repetitivas **sin subtareas** no cambian.
 - Sin cambios de esquema.
+
+### 2026-11-06: repetición de lunes a viernes
+
+Nuevo valor de `recurrence`: `laboral` (en la interfaz, "Lun a vie"). Amplía el esquema sin migrar datos; las tareas diarias existentes siguen siendo de 7 días hasta que se cambien a mano.
+
+- Al completarse avanza como una diaria, pero salta el fin de semana: el viernes vuelve el lunes (`nextOccurrence`).
+- Sábado y domingo no aparece en Hoy ni en Esta semana, ni siquiera vencida (`restsOnDay`). Una que quedó pendiente el viernes aparece el lunes como vencida. Ambas vistas usan el día calendario de `APP_TIME_ZONE`.
+- Nunca guarda una fecha de fin de semana al editarse: `updateTask` la pasa al lunes siguiente (`moveOffWeekend`). Esto cubre la tarea ya completada el viernes y fechada para el sábado cuando se cambia a `laboral`.
+- No se contemplan días festivos ni selección de días sueltos.

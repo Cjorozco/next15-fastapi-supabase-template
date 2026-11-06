@@ -16,17 +16,19 @@ export type TaskStatus = (typeof TASK_STATUSES)[number];
 export const TASK_PRIORITIES = ["baja", "media", "alta"] as const;
 export type TaskPriority = (typeof TASK_PRIORITIES)[number];
 
-export const TASK_RECURRENCES = ["diaria", "semanal"] as const;
+export const TASK_RECURRENCES = ["diaria", "laboral", "semanal"] as const;
 export type TaskRecurrence = (typeof TASK_RECURRENCES)[number];
 
 export const TASK_RECURRENCE_LABELS: Record<TaskRecurrence, string> = {
   diaria: "Todos los días",
+  laboral: "De lunes a viernes",
   semanal: "Todas las semanas",
 };
 
 /** Short labels for narrow selects ("Todos los días" gets cut off). */
 export const TASK_RECURRENCE_SHORT_LABELS: Record<TaskRecurrence, string> = {
   diaria: "Diaria",
+  laboral: "Lun a vie",
   semanal: "Semanal",
 };
 
@@ -112,11 +114,41 @@ export function statusAfterCompletion(
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const RECURRENCE_STEP_DAYS: Record<TaskRecurrence, number> = { diaria: 1, semanal: 7 };
+const RECURRENCE_STEP_DAYS: Record<TaskRecurrence, number> = { diaria: 1, laboral: 1, semanal: 7 };
 
 /** Calendar day number of a timestamp in the user's timezone (`Date#getTimezoneOffset` minutes). */
 function localDayNumber(timestamp: number, tzOffsetMinutes = 0): number {
   return Math.floor((timestamp - tzOffsetMinutes * 60_000) / DAY_MS);
+}
+
+/** Local noon of a calendar day, so a DST change can never move it to another day. */
+function localNoon(dayNumber: number, tzOffsetMinutes = 0): number {
+  return dayNumber * DAY_MS + DAY_MS / 2 + tzOffsetMinutes * 60_000;
+}
+
+/** Days from a calendar day to the next weekday: 2 on Saturday, 1 on Sunday, otherwise 0. */
+function daysToWeekday(dayNumber: number): number {
+  // Day number 0 (1 Jan 1970) was a Thursday, so this gives 0 = Sunday ... 6 = Saturday.
+  const weekday = (dayNumber + 4) % 7;
+  if (weekday === 6) return 2;
+  return weekday === 0 ? 1 : 0;
+}
+
+/** A date on Saturday or Sunday becomes the following Monday; a weekday is left as it is. */
+export function moveOffWeekend(dueDate: number, tzOffsetMinutes?: number): number {
+  const day = localDayNumber(dueDate, tzOffsetMinutes);
+  const shift = daysToWeekday(day);
+  return shift === 0 ? dueDate : localNoon(day + shift, tzOffsetMinutes);
+}
+
+/**
+ * A Monday to Friday task does not apply on a weekend, not even when it is overdue:
+ * the views leave it out until Monday. `dayKey` is a calendar day as `YYYY-MM-DD`.
+ */
+export function restsOnDay(task: { recurrence?: TaskRecurrence }, dayKey: string): boolean {
+  if (task.recurrence !== "laboral") return false;
+  const weekday = new Date(`${dayKey}T12:00:00Z`).getUTCDay();
+  return weekday === 0 || weekday === 6;
 }
 
 /**
@@ -138,9 +170,9 @@ export function isDoneForNow(
  * It is the first date of the task's own cycle (due date + k * step) that falls after
  * today, so completing an overdue task never schedules something in the past, and an
  * early completion moves on to the following cycle. Without a due date the cycle starts
- * today. Calendar days are computed in the user's timezone (`tzOffsetMinutes`, as given
- * by `Date#getTimezoneOffset`) and the result is local noon so a DST change can never
- * move it to another calendar day.
+ * today. A Monday to Friday task skips the weekend. Calendar days are computed in the
+ * user's timezone (`tzOffsetMinutes`, as given by `Date#getTimezoneOffset`) and the result
+ * is local noon so a DST change can never move it to another calendar day.
  */
 export function nextOccurrence(params: {
   dueDate?: number;
@@ -157,7 +189,10 @@ export function nextOccurrence(params: {
   const cycles = base > today ? 1 : Math.floor((today - base) / step) + 1;
   const nextDay = base + cycles * step;
 
-  return nextDay * DAY_MS + DAY_MS / 2 + offset * 60_000;
+  return localNoon(
+    params.recurrence === "laboral" ? nextDay + daysToWeekday(nextDay) : nextDay,
+    offset
+  );
 }
 
 /**

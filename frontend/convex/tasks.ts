@@ -16,6 +16,7 @@ import {
   MAX_TASK_TITLE_LENGTH,
   MAX_TASKS_PER_REQUEST,
   isDoneForNow,
+  moveOffWeekend,
   nextOccurrence,
   resolveTaskStatus,
   statusAfterCompletion,
@@ -295,6 +296,16 @@ export const updateTask = mutation({
       patch.noDeadline = false;
     }
 
+    const recurrence = "recurrence" in patch ? patch.recurrence : task.recurrence;
+
+    // A Monday to Friday task never has a weekend date: a task already dated for tomorrow
+    // (Saturday) comes back on Monday when it is switched to this recurrence.
+    const dueDate = "dueDate" in patch ? patch.dueDate : task.dueDate;
+    if (recurrence === "laboral" && dueDate !== undefined) {
+      const weekdayDate = moveOffWeekend(dueDate, args.tzOffsetMinutes);
+      if (weekdayDate !== dueDate) patch.dueDate = weekdayDate;
+    }
+
     if (args.estimatedHours !== undefined) {
       const hours = args.estimatedHours;
       if (
@@ -328,7 +339,6 @@ export const updateTask = mutation({
       const isCompleted = args.status === "completada";
       patch.status = args.status;
       patch.isCompleted = isCompleted;
-      const recurrence = "recurrence" in patch ? patch.recurrence : task.recurrence;
       // Same rule as the checkbox: completing a task completes its subtasks, except in a
       // recurring one, where it only means "that is all for today" and progress is kept.
       if (isCompleted && task.subtasks && !recurrence) {

@@ -1,6 +1,7 @@
 import { resolveProjectStatus } from '@/convex/lib/projectFields';
-import { hasNoDeadline, resolveTaskStatus, type TaskPriority } from '@/convex/lib/taskFields';
+import { hasNoDeadline, resolveTaskStatus, restsOnDay, type TaskPriority } from '@/convex/lib/taskFields';
 import { startOfDay } from '@/domains/tasks/lib/dates';
+import { dayKey } from '@/domains/tasks/lib/timezone';
 import type { Project } from '@/domains/projects/types';
 import type { Task } from '@/domains/tasks/types';
 
@@ -82,16 +83,18 @@ export function isUpcomingRecurrence(task: Pick<Task, 'recurrence' | 'dueDate'>,
  * Pending tasks of every active project. Paused and completed projects are left out.
  * Order: bucket (see `WEEK_BUCKETS`), then priority (high first, none last), then date
  * (soonest first). Ties keep project and task order. Recurring tasks dated after today
- * are left out: they come back on their day (see `isUpcomingRecurrence`).
+ * are left out: they come back on their day (see `isUpcomingRecurrence`). So are Monday to
+ * Friday tasks on a weekend, by the same calendar day as "Hoy".
  */
 export function buildWeekTasks(projects: readonly Project[], now: number): WeekTask[] {
+  const todayKey = dayKey(now);
   const items: WeekTask[] = [];
   for (const project of projects) {
     if (resolveProjectStatus(project) !== 'activo') continue;
     const tasks = [...project.tasks].sort((a, b) => a.position - b.position);
     for (const task of tasks) {
       if (resolveTaskStatus(task) === 'completada') continue;
-      if (isUpcomingRecurrence(task, now)) continue;
+      if (isUpcomingRecurrence(task, now) || restsOnDay(task, todayKey)) continue;
       const dueDate = effectiveDueDate(task, project.dueDate);
       items.push({ task, project, dueDate, bucket: bucketFor(task, dueDate, now) });
     }
