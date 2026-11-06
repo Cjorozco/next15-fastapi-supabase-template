@@ -1,5 +1,5 @@
 import { resolveProjectStatus } from '@/convex/lib/projectFields';
-import { resolveTaskStatus } from '@/convex/lib/taskFields';
+import { resolveTaskStatus, restsOnDay } from '@/convex/lib/taskFields';
 import { dayKey } from '@/domains/tasks/lib/timezone';
 import { PRIORITY_RANK } from '@/domains/tasks/lib/week';
 import type { Project } from '@/domains/projects/types';
@@ -23,17 +23,19 @@ export function nextPendingSubtask(task: Pick<Task, 'subtasks'>): Subtask | unde
 /**
  * Where a task belongs in "Hoy", or null when it does not belong.
  * Only the task's own date counts: tasks without one stay in "Esta semana".
- * For recurring tasks `dueDate` is the date of the next occurrence, so a daily task
- * without a date has not started its cycle yet and is due today. A weekly task is due
- * once that date arrives, which also keeps it out of the list the same day it is
- * completed (it comes back dated one week ahead).
+ * For recurring tasks `dueDate` is the date of the next occurrence, so a daily or Monday
+ * to Friday task without a date has not started its cycle yet and is due today. A weekly
+ * task is due once that date arrives, which also keeps it out of the list the same day it
+ * is completed (it comes back dated one week ahead). A Monday to Friday task stays out on
+ * weekends, even when overdue.
  */
 export function todayGroupFor(
   task: Pick<Task, 'dueDate' | 'recurrence'>,
   todayKey: string
 ): TodayGroup | null {
+  if (restsOnDay(task, todayKey)) return null;
   if (task.dueDate === undefined) {
-    return task.recurrence === 'diaria' ? 'hoy' : null;
+    return task.recurrence === 'diaria' || task.recurrence === 'laboral' ? 'hoy' : null;
   }
   const due = dayKey(task.dueDate);
   if (due < todayKey) return 'vencida';

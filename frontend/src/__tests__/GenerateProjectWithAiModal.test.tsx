@@ -178,7 +178,7 @@ describe('GenerateProjectWithAiModal', () => {
     expect(screen.getByLabelText('Duración estimada de la tarea 1')).toHaveValue('10 min');
     const select = screen.getByLabelText('Repetición de la tarea 1') as HTMLSelectElement;
     expect(select.value).toBe('diaria');
-    expect(Array.from(select.options).map((o) => o.text)).toEqual(['Sin repetir', 'Diaria', 'Semanal']);
+    expect(Array.from(select.options).map((o) => o.text)).toEqual(['Sin repetir', 'Diaria', 'Lun a vie', 'Semanal']);
     expect(screen.getByLabelText('Subtareas de la tarea 1 (una por línea)')).toHaveValue('Vocabulario\nPronunciación');
     expect(screen.getByLabelText('Notas de la tarea 1')).toHaveValue('Rota el foco');
 

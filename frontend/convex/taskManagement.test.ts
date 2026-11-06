@@ -350,6 +350,83 @@ describe("recurring tasks", () => {
     expect(result.subtasks![0].isCompleted).toBe(true);
   });
 
+  describe("Monday to Friday", () => {
+    // Fri 14, Sat 15, Sun 16 and Mon 17 of June 2030, at noon in Bogotá.
+    const BOGOTA = 300;
+    const FRIDAY = Date.UTC(2030, 5, 14, 17);
+    const SATURDAY = Date.UTC(2030, 5, 15, 17);
+    const SUNDAY = Date.UTC(2030, 5, 16, 17);
+    const MONDAY = Date.UTC(2030, 5, 17, 17);
+
+    test("switching a task dated on Saturday moves it to Monday", async () => {
+      const { owner, task } = await setup();
+      await owner.mutation(api.tasks.updateTask, {
+        taskId: task._id,
+        recurrence: "diaria",
+        dueDate: SATURDAY,
+      });
+
+      const updated = await owner.mutation(api.tasks.updateTask, {
+        taskId: task._id,
+        recurrence: "laboral",
+        tzOffsetMinutes: BOGOTA,
+      });
+
+      expect(updated.recurrence).toBe("laboral");
+      expect(updated.dueDate).toBe(MONDAY);
+    });
+
+    test("a Sunday date set on an existing task moves to Monday", async () => {
+      const { owner, task } = await setup();
+      await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "laboral" });
+
+      const updated = await owner.mutation(api.tasks.updateTask, {
+        taskId: task._id,
+        dueDate: SUNDAY,
+        tzOffsetMinutes: BOGOTA,
+      });
+
+      expect(updated.dueDate).toBe(MONDAY);
+    });
+
+    test("a weekday date stays as it is", async () => {
+      const { owner, task } = await setup();
+      const updated = await owner.mutation(api.tasks.updateTask, {
+        taskId: task._id,
+        recurrence: "laboral",
+        dueDate: FRIDAY,
+        tzOffsetMinutes: BOGOTA,
+      });
+      expect(updated.dueDate).toBe(FRIDAY);
+    });
+
+    test("a daily task can keep a weekend date", async () => {
+      const { owner, task } = await setup();
+      const updated = await owner.mutation(api.tasks.updateTask, {
+        taskId: task._id,
+        recurrence: "diaria",
+        dueDate: SATURDAY,
+        tzOffsetMinutes: BOGOTA,
+      });
+      expect(updated.dueDate).toBe(SATURDAY);
+    });
+
+    test("completing it reopens the task on a weekday", async () => {
+      const { owner, task } = await setup();
+      await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "laboral" });
+
+      const reopened = await owner.mutation(api.tasks.update, {
+        taskId: task._id,
+        isCompleted: true,
+        tzOffsetMinutes: TZ,
+      });
+
+      expect(reopened.isCompleted).toBe(false);
+      expect(reopened.dueDate).toBeGreaterThan(Date.now());
+      expect([0, 6]).not.toContain(new Date(reopened.dueDate!).getUTCDay());
+    });
+  });
+
   test("a task without recurrence still completes normally", async () => {
     const { owner, task } = await setup();
     const done = await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true });

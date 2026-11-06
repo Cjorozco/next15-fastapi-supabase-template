@@ -22,7 +22,7 @@ const projectPriority = v.union(
   v.literal("ninguna")
 );
 
-const taskRecurrence = v.union(v.literal("diaria"), v.literal("semanal"));
+const taskRecurrence = v.union(v.literal("diaria"), v.literal("laboral"), v.literal("semanal"));
 
 export default defineSchema({
   users: defineTable({
