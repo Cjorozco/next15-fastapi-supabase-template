@@ -298,14 +298,6 @@ export const updateTask = mutation({
 
     const recurrence = "recurrence" in patch ? patch.recurrence : task.recurrence;
 
-    // A Monday to Friday task never has a weekend date: a task already dated for tomorrow
-    // (Saturday) comes back on Monday when it is switched to this recurrence.
-    const dueDate = "dueDate" in patch ? patch.dueDate : task.dueDate;
-    if (recurrence === "laboral" && dueDate !== undefined) {
-      const weekdayDate = moveOffWeekend(dueDate, args.tzOffsetMinutes);
-      if (weekdayDate !== dueDate) patch.dueDate = weekdayDate;
-    }
-
     if (args.estimatedHours !== undefined) {
       const hours = args.estimatedHours;
       if (
@@ -362,6 +354,16 @@ export const updateTask = mutation({
     } else if (task.status !== resolveTaskStatus(task)) {
       // Lazily normalize legacy / missing status while the document is being edited.
       patch.status = resolveTaskStatus(task);
+    }
+
+    // A Monday to Friday task never has a weekend date: a task already dated for tomorrow
+    // (Saturday) comes back on Monday when it is switched to this recurrence. This goes
+    // after the completion above, which must start from the original date: from Monday it
+    // would advance again, to Tuesday.
+    const dueDate = "dueDate" in patch ? patch.dueDate : task.dueDate;
+    if (recurrence === "laboral" && dueDate !== undefined) {
+      const weekdayDate = moveOffWeekend(dueDate, args.tzOffsetMinutes);
+      if (weekdayDate !== dueDate) patch.dueDate = weekdayDate;
     }
 
     await ctx.db.patch(args.taskId, patch);

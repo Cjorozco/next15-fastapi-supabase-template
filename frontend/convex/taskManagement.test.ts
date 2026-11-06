@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 
@@ -409,6 +409,58 @@ describe("recurring tasks", () => {
         tzOffsetMinutes: BOGOTA,
       });
       expect(updated.dueDate).toBe(SATURDAY);
+    });
+
+    test("switching and completing a Saturday task on Friday comes back on Monday, not Tuesday", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(Date.UTC(2030, 5, 14, 15)); // Friday, 10:00 in Bogotá
+      try {
+        const { owner, task } = await setup();
+        await owner.mutation(api.tasks.updateTask, {
+          taskId: task._id,
+          recurrence: "diaria",
+          dueDate: SATURDAY,
+        });
+
+        const reopened = await owner.mutation(api.tasks.updateTask, {
+          taskId: task._id,
+          recurrence: "laboral",
+          status: "completada",
+          tzOffsetMinutes: BOGOTA,
+        });
+
+        expect(reopened.isCompleted).toBe(false);
+        expect(reopened.dueDate).toBe(MONDAY);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("advancing a subtask again keeps the date on a weekday", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(Date.UTC(2030, 5, 14, 15)); // Friday, 10:00 in Bogotá
+      try {
+        const { owner, task } = await setup();
+        await owner.mutation(api.tasks.addSubtask, { taskId: task._id, title: "Paso" });
+        await owner.mutation(api.tasks.updateTask, {
+          taskId: task._id,
+          recurrence: "diaria",
+          dueDate: SATURDAY,
+        });
+
+        // Already advanced today: the date is not recalculated, only moved off the weekend.
+        const reopened = await owner.mutation(api.tasks.updateTask, {
+          taskId: task._id,
+          recurrence: "laboral",
+          status: "completada",
+          tzOffsetMinutes: BOGOTA,
+        });
+
+        expect(reopened.isCompleted).toBe(false);
+        expect(reopened.dueDate).toBe(MONDAY);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     test("completing it reopens the task on a weekday", async () => {
