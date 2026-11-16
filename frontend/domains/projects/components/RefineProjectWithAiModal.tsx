@@ -365,6 +365,7 @@ ${activeInstruction}`;
                 <div className="flex gap-2">
                   <Input
                     type="password"
+                    autoComplete="new-password"
                     placeholder={provider === 'gemini' ? 'AIzaSy...' : 'gsk_...'}
                     value={inputKey}
                     onChange={(e) => setInputKey(e.target.value)}
