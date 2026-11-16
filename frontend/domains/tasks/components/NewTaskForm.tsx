@@ -57,7 +57,7 @@ export const NewTaskForm = memo(function NewTaskForm({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') submit();
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit();
     if (e.key === 'Escape') onCancel();
   };
 
