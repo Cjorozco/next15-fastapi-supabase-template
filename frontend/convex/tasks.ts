@@ -225,7 +225,8 @@ export const update = mutation({
 
 /**
  * Ends a recurring task without deleting it: it stops repeating and stays completed in
- * its project, with what it repeated and when it was last done, as history.
+ * its project, with what it repeated and when it was last done, as history. Its date
+ * (the next occurrence) is cleared.
  */
 export const endRecurrence = mutation({
   args: { taskId: v.id("tasks") },
@@ -248,6 +249,10 @@ export const endRecurrence = mutation({
       recurrenceEndedAt: Date.now(),
       isCompleted: true,
       status: "completada",
+      // The date was the next occurrence, which will not happen: drop it. Without a date
+      // or recurrence, `noDeadline` keeps it from inheriting the project date.
+      dueDate: undefined,
+      noDeadline: true,
     });
 
     const updated = await ctx.db.get(args.taskId);
