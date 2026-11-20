@@ -59,6 +59,13 @@ export default defineSchema({
     estimatedHours: v.optional(v.number()),
     // When set, completing the task reopens it with the next due date.
     recurrence: v.optional(taskRecurrence),
+    // Last time a cycle of a recurring task was done (it reopens right away, so the
+    // checkbox cannot tell).
+    lastDoneAt: v.optional(v.number()),
+    // Set when the user ends a recurring task: it stays completed as history of what it
+    // was (`endedRecurrence`) instead of being deleted.
+    recurrenceEndedAt: v.optional(v.number()),
+    endedRecurrence: v.optional(taskRecurrence),
     notes: v.optional(v.string()),
     assignee: v.optional(v.string()),
     subtasks: v.optional(

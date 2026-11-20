@@ -3,14 +3,20 @@
 import { memo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { MAX_BULK_TASKS, parsePastedTasks } from '@/domains/tasks/lib/bulk';
+import {
+  TASK_RECURRENCES,
+  TASK_RECURRENCE_SHORT_LABELS,
+  type TaskRecurrence,
+} from '@/convex/lib/taskFields';
 
 interface NewTaskFormProps {
   isCreating: boolean;
   /**
    * Creates one task per title. `onCreated` must be called by the parent once they
-   * exist; the form then stays open and focused to keep adding.
+   * exist; the form then stays open and focused to keep adding. `recurrence` is set when
+   * the user chose "Repetir" (it applies to every title).
    */
-  onSubmit: (titles: string[], onCreated: () => void) => void;
+  onSubmit: (titles: string[], onCreated: () => void, recurrence?: TaskRecurrence) => void;
   onCancel: () => void;
   /** `card` = compact style used in project cards; `detail` = style of the detail page. */
   variant?: 'card' | 'detail';
@@ -29,6 +35,8 @@ export const NewTaskForm = memo(function NewTaskForm({
 }: NewTaskFormProps) {
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
+  // Kept after each add, so several habits can be added in a row.
+  const [recurrence, setRecurrence] = useState<TaskRecurrence | ''>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const refocus = () => inputRef.current?.focus();
@@ -37,10 +45,14 @@ export const NewTaskForm = memo(function NewTaskForm({
     const trimmed = title.trim();
     if (!trimmed) return;
     setError('');
-    onSubmit([trimmed], () => {
-      setTitle('');
-      refocus();
-    });
+    onSubmit(
+      [trimmed],
+      () => {
+        setTitle('');
+        refocus();
+      },
+      recurrence || undefined
+    );
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
@@ -53,7 +65,7 @@ export const NewTaskForm = memo(function NewTaskForm({
       return;
     }
     setError('');
-    onSubmit(lines, refocus);
+    onSubmit(lines, refocus, recurrence || undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -93,6 +105,21 @@ export const NewTaskForm = memo(function NewTaskForm({
           }
           disabled={isCreating}
         />
+        <select
+          value={recurrence}
+          onChange={(e) => setRecurrence(e.target.value as TaskRecurrence | '')}
+          aria-label="Repetir"
+          title="Repetir"
+          disabled={isCreating}
+          className="text-xs bg-muted/50 border border-border rounded-lg px-1.5 py-1.5 text-foreground outline-none focus:border-primary transition-colors max-w-[7.5rem]"
+        >
+          <option value="">No se repite</option>
+          {TASK_RECURRENCES.map((value) => (
+            <option key={value} value={value}>
+              {TASK_RECURRENCE_SHORT_LABELS[value]}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={submit}

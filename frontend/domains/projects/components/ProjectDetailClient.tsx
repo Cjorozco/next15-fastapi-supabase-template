@@ -1,5 +1,6 @@
 'use client';
 
+import type { TaskRecurrence } from '@/convex/lib/taskFields';
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/shared/components/layout/Header';
@@ -18,6 +19,7 @@ import {
   useMoveSubtask,
   useConvertTaskToSubtask,
   useUpdateTaskDetails,
+  useEndRecurrence,
 } from '@/domains/tasks/hooks/useTaskMutations';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
@@ -49,6 +51,7 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   const { mutate: moveSubtask } = useMoveSubtask();
   const { mutate: convertTaskToSubtask } = useConvertTaskToSubtask();
   const { mutate: saveTaskDetails } = useUpdateTaskDetails();
+  const { mutate: endRecurrence } = useEndRecurrence();
 
   const [showInput, setShowInput] = useState(false);
   const [activeDraggingId, setActiveDraggingId] = useState<string | null>(null);
@@ -97,8 +100,8 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
   };
 
   const handleCreateTasks = useCallback(
-    (titles: string[], onCreated: () => void) => {
-      createTasks({ projectId, titles }, { onSuccess: onCreated });
+    (titles: string[], onCreated: () => void, recurrence?: TaskRecurrence) => {
+      createTasks({ projectId, titles, recurrence }, { onSuccess: onCreated });
     },
     [createTasks, projectId]
   );
@@ -286,6 +289,7 @@ export function ProjectDetailClient({ projectId }: ProjectDetailClientProps) {
                           onRenameSubtask={handleRenameSubtask}
                           onMoveSubtask={handleMoveSubtask}
                           onSaveDetails={saveTaskDetails}
+                          onEndRecurrence={endRecurrence}
                           inheritedDueDate={project.dueDate}
                           projects={projectOptions}
                         />
