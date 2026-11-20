@@ -26,6 +26,7 @@ export const create = mutation({
   args: {
     projectId: v.id("projects"),
     title: v.string(),
+    recurrence: v.optional(taskRecurrenceValidator),
   },
   returns: taskValidator,
   handler: async (ctx, args) => {
@@ -51,6 +52,7 @@ export const create = mutation({
       status: "pendiente",
       position: nextPosition,
       subtasks: [],
+      ...(args.recurrence ? { recurrence: args.recurrence } : {}),
     });
     await reopenProjectIfCompleted(ctx, args.projectId);
 
@@ -82,6 +84,7 @@ function reopenPatchIfRecurring(
   return {
     isCompleted: false,
     status: "pendiente",
+    lastDoneAt: now,
     ...(alreadyAdvancedToday
       ? {}
       : {
@@ -133,6 +136,8 @@ export const createMany = mutation({
   args: {
     projectId: v.id("projects"),
     titles: v.array(v.string()),
+    // Applied to every created task.
+    recurrence: v.optional(taskRecurrenceValidator),
   },
   returns: v.array(taskValidator),
   handler: async (ctx, args) => {
@@ -160,6 +165,7 @@ export const createMany = mutation({
         status: "pendiente",
         position: position++,
         subtasks: [],
+        ...(args.recurrence ? { recurrence: args.recurrence } : {}),
       });
       const task = await ctx.db.get(taskId);
       if (task) created.push(toTaskDto(task));
@@ -207,6 +213,42 @@ export const update = mutation({
     if (task.isCompleted && !args.isCompleted) {
       await reopenProjectIfCompleted(ctx, task.projectId);
     }
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
+  },
+});
+
+/**
+ * Ends a recurring task without deleting it: it stops repeating and stays completed in
+ * its project, with what it repeated and when it was last done, as history.
+ */
+export const endRecurrence = mutation({
+  args: { taskId: v.id("tasks") },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    if (!task.recurrence) {
+      throw new DomainException("INVALID_INPUT", "The task does not repeat");
+    }
+
+    await ctx.db.patch(args.taskId, {
+      recurrence: undefined,
+      endedRecurrence: task.recurrence,
+      recurrenceEndedAt: Date.now(),
+      isCompleted: true,
+      status: "completada",
+    });
 
     const updated = await ctx.db.get(args.taskId);
     if (!updated) {
@@ -273,6 +315,11 @@ export const updateTask = mutation({
 
     if (args.recurrence !== undefined) {
       patch.recurrence = args.recurrence ?? undefined;
+      // Repeating again: it is no longer an ended recurring task.
+      if (args.recurrence !== null) {
+        patch.recurrenceEndedAt = undefined;
+        patch.endedRecurrence = undefined;
+      }
     }
 
     if (args.title !== undefined) {

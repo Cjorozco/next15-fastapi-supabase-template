@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Square } from 'lucide-react';
 import { Checkbox } from '@/shared/components/ui/checkbox';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -32,6 +32,8 @@ interface TaskEditFormProps {
   onSave: (input: TaskDetailsInput) => Promise<boolean>;
   /** Projects the task can be moved to (including its current one). Hides the selector when absent. */
   projects?: Array<{ _id: Id<'projects'>; name: string }>;
+  /** Ends a recurring task (it stays completed as history). Hidden when absent. */
+  onEndRecurrence?: () => Promise<boolean>;
 }
 
 const FIELD = 'bg-muted/50 border border-border text-foreground text-xs rounded-lg h-8';
@@ -40,7 +42,7 @@ const FIELD = 'bg-muted/50 border border-border text-foreground text-xs rounded-
  * Edit form for a task. All field state is local so typing never re-renders the task
  * list; only "Guardar" talks to the server.
  */
-export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
+export function TaskEditForm({ task, onSave, projects, onEndRecurrence }: TaskEditFormProps) {
   const [title, setTitle] = useState(task.title);
   const [status, setStatus] = useState<TaskStatus>(resolveTaskStatus(task));
   const [dueDate, setDueDate] = useState(toDateInputValue(task.dueDate));
@@ -52,6 +54,16 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
   const [notes, setNotes] = useState(task.notes ?? '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+
+  const endRecurrence = async () => {
+    if (!onEndRecurrence) return;
+    setIsEnding(true);
+    const ended = await onEndRecurrence();
+    setIsEnding(false);
+    if (ended) setConfirmingEnd(false);
+  };
 
   const idPrefix = `task-edit-${task._id}`;
 
@@ -209,6 +221,43 @@ export function TaskEditForm({ task, onSave, projects }: TaskEditFormProps) {
               </option>
             ))}
           </NativeSelect>
+          {task.recurrence && onEndRecurrence && (
+            <div className="pt-1">
+              {confirmingEnd ? (
+                <div className="space-y-1.5 rounded-lg border border-border bg-background/60 p-2">
+                  <p className="text-xs text-muted-foreground">
+                    Deja de repetirse y queda completada en el proyecto, con su historial.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={endRecurrence}
+                      disabled={isEnding}
+                      className="text-xs bg-primary text-primary-foreground font-medium px-2.5 py-1 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {isEnding ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Finalizar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingEnd(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground px-2 py-1"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingEnd(true)}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                >
+                  <Square className="w-3 h-3" aria-hidden="true" />
+                  Finalizar repetición
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {projects && projects.length > 1 && (

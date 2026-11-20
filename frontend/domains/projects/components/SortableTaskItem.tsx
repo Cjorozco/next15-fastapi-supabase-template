@@ -52,6 +52,8 @@ interface SortableTaskItemProps {
   projects?: Array<{ _id: Id<'projects'>; name: string }>;
   /** Enables the edit form in the expanded detail view. Resolves true when saved. */
   onSaveDetails?: (taskId: Id<'tasks'>, input: TaskDetailsInput) => Promise<boolean>;
+  /** Ends a recurring task, keeping it as history. Resolves true when done. */
+  onEndRecurrence?: (taskId: Id<'tasks'>) => Promise<boolean>;
   isDetailView?: boolean;
   activeDraggingId?: string | null;
 }
@@ -66,6 +68,7 @@ function SortableTaskItemComponent({
   onMoveSubtask,
   onRemoveSubtask,
   onSaveDetails,
+  onEndRecurrence,
   inheritedDueDate,
   projects,
   isDetailView = false,
@@ -151,6 +154,7 @@ function SortableTaskItemComponent({
     task.estimatedHours !== undefined ||
     task.priority !== undefined ||
     task.recurrence !== undefined ||
+    task.recurrenceEndedAt !== undefined ||
     hasNoDeadline(task);
   // Remount the form when the task changes on the server so it never shows stale values.
   const formKey = [
@@ -160,6 +164,7 @@ function SortableTaskItemComponent({
     task.estimatedHours,
     task.priority,
     task.recurrence,
+    task.recurrenceEndedAt,
     task.noDeadline,
     task.projectId,
     task.notes,
@@ -311,6 +316,7 @@ function SortableTaskItemComponent({
                 task={task}
                 projects={projects}
                 onSave={(input) => onSaveDetails(task._id, input)}
+                onEndRecurrence={onEndRecurrence ? () => onEndRecurrence(task._id) : undefined}
               />
             )}
           </div>

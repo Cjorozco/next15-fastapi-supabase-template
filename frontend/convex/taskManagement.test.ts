@@ -1002,3 +1002,63 @@ describe("recurring tasks with subtasks keep their progress", () => {
     expect(done.subtasks!.map((s) => s.isCompleted)).toEqual([false, true, false]);
   });
 });
+
+describe("ending a recurring task", () => {
+  test("a task can be created already repeating", async () => {
+    const { owner, project } = await setup();
+    const single = await owner.mutation(api.tasks.create, {
+      projectId: project._id,
+      title: "Meditar",
+      recurrence: "diaria",
+    });
+    expect(single.recurrence).toBe("diaria");
+
+    const many = await owner.mutation(api.tasks.createMany, {
+      projectId: project._id,
+      titles: ["A", "B"],
+      recurrence: "semanal",
+    });
+    expect(many.map((t) => t.recurrence)).toEqual(["semanal", "semanal"]);
+  });
+
+  test("completing a cycle records when it was last done", async () => {
+    const { owner, task } = await setup();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
+    const before = Date.now();
+    const done = await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true });
+    expect(done.isCompleted).toBe(false);
+    expect(done.lastDoneAt).toBeGreaterThanOrEqual(before);
+  });
+
+  test("it stops repeating and stays completed as history", async () => {
+    const { owner, task } = await setup();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "laboral" });
+    await owner.mutation(api.tasks.update, { taskId: task._id, isCompleted: true });
+
+    const ended = await owner.mutation(api.tasks.endRecurrence, { taskId: task._id });
+    expect(ended.recurrence).toBeUndefined();
+    expect(ended.endedRecurrence).toBe("laboral");
+    expect(ended.recurrenceEndedAt).toBeDefined();
+    expect(ended.lastDoneAt).toBeDefined();
+    expect(ended.isCompleted).toBe(true);
+    expect(ended.status).toBe("completada");
+  });
+
+  test("repeating it again clears the ended history", async () => {
+    const { owner, task } = await setup();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
+    await owner.mutation(api.tasks.endRecurrence, { taskId: task._id });
+
+    const again = await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "semanal" });
+    expect(again.recurrence).toBe("semanal");
+    expect(again.endedRecurrence).toBeUndefined();
+    expect(again.recurrenceEndedAt).toBeUndefined();
+  });
+
+  test("only a recurring task of the owner can be ended", async () => {
+    const { owner, intruder, task } = await setup();
+    await expect(owner.mutation(api.tasks.endRecurrence, { taskId: task._id })).rejects.toThrow();
+    await owner.mutation(api.tasks.updateTask, { taskId: task._id, recurrence: "diaria" });
+    await expect(intruder.mutation(api.tasks.endRecurrence, { taskId: task._id })).rejects.toThrow();
+  });
+});

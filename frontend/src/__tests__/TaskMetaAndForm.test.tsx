@@ -113,6 +113,42 @@ describe('TaskMeta', () => {
   });
 });
 
+describe('ended recurring task', () => {
+  it('shows what it repeated, when it was last done and when it ended', () => {
+    const ended = new Date(2026, 10, 20).getTime();
+    const last = new Date(2026, 10, 19).getTime();
+    render(
+      <TaskMeta
+        task={{
+          ...baseTask,
+          isCompleted: true,
+          endedRecurrence: 'diaria',
+          lastDoneAt: last,
+          recurrenceEndedAt: ended,
+        }}
+      />
+    );
+    expect(screen.getByText(/se repetía: todos los días/i)).toHaveTextContent(/última vez 19 nov/i);
+    expect(screen.getByText(/finalizada 20 nov/i)).toBeInTheDocument();
+  });
+
+  it('offers "Finalizar repetición" only on a recurring task and asks before ending it', async () => {
+    const onEnd = vi.fn().mockResolvedValue(true);
+    const { rerender } = render(
+      <TaskEditForm task={baseTask} onSave={vi.fn()} onEndRecurrence={onEnd} />
+    );
+    expect(screen.queryByRole('button', { name: /finalizar repetición/i })).not.toBeInTheDocument();
+
+    rerender(
+      <TaskEditForm task={{ ...baseTask, recurrence: 'diaria' }} onSave={vi.fn()} onEndRecurrence={onEnd} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /finalizar repetición/i }));
+    expect(onEnd).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /^finalizar$/i }));
+    await waitFor(() => expect(onEnd).toHaveBeenCalledTimes(1));
+  });
+});
+
 describe('TaskEditForm', () => {
   it('submits trimmed values and converts the date and hours', async () => {
     const onSave = vi.fn().mockResolvedValue(true);
