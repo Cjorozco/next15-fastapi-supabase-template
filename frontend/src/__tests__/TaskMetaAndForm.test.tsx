@@ -132,6 +132,24 @@ describe('ended recurring task', () => {
     expect(screen.getByText(/finalizada 20 nov/i)).toBeInTheDocument();
   });
 
+  it('shows no date and no "Sin límite" badge once ended, even with a project date', () => {
+    render(
+      <TaskMeta
+        task={{
+          ...baseTask,
+          isCompleted: true,
+          noDeadline: true,
+          endedRecurrence: 'diaria',
+          recurrenceEndedAt: new Date(2026, 10, 20).getTime(),
+        }}
+        inheritedDueDate={new Date(2026, 11, 1).getTime()}
+      />
+    );
+    expect(screen.queryByText(/sin límite/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/proyecto:/i)).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Fecha límite')).not.toBeInTheDocument();
+  });
+
   it('offers "Finalizar repetición" only on a recurring task and asks before ending it', async () => {
     const onEnd = vi.fn().mockResolvedValue(true);
     const { rerender } = render(

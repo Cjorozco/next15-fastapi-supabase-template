@@ -1042,6 +1042,9 @@ describe("ending a recurring task", () => {
     expect(ended.lastDoneAt).toBeDefined();
     expect(ended.isCompleted).toBe(true);
     expect(ended.status).toBe("completada");
+    // The next occurrence will not happen: the date is cleared.
+    expect(ended.dueDate).toBeUndefined();
+    expect(ended.noDeadline).toBe(true);
   });
 
   test("repeating it again clears the ended history", async () => {

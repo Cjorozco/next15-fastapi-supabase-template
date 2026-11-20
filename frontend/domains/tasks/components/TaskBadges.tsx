@@ -66,6 +66,8 @@ export const TaskMeta = memo(function TaskMeta({
   const isInherited = task.dueDate === undefined && !noDeadline && inheritedDueDate !== undefined;
   const dueDate = task.dueDate ?? (noDeadline ? undefined : inheritedDueDate);
   const overdue = isTaskOverdue({ ...task, dueDate }, now);
+  // An ended recurring task shows its history badge instead of "Sin límite".
+  const isEndedRecurrence = task.recurrenceEndedAt !== undefined && !task.recurrence;
 
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${compact ? 'pl-9' : ''}`}>
@@ -86,7 +88,7 @@ export const TaskMeta = memo(function TaskMeta({
           {overdue && <span className="sr-only"> (vencida)</span>}
         </span>
       )}
-      {noDeadline && (
+      {noDeadline && !isEndedRecurrence && (
         <span
           className={`${PILL} bg-muted/60 text-muted-foreground border-border`}
           title="Esta tarea no tiene fecha límite"
@@ -113,7 +115,7 @@ export const TaskMeta = memo(function TaskMeta({
           <span className="sr-only">Se repite {TASK_RECURRENCE_LABELS[task.recurrence].toLowerCase()}</span>
         </span>
       )}
-      {task.recurrenceEndedAt !== undefined && !task.recurrence && (
+      {isEndedRecurrence && task.recurrenceEndedAt !== undefined && (
         <span
           className={`${PILL} bg-muted/60 text-muted-foreground border-border`}
           title={`Repetición finalizada el ${formatDueDate(task.recurrenceEndedAt, now)}`}
