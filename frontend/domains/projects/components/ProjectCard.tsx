@@ -1,5 +1,6 @@
 'use client';
 
+import type { TaskRecurrence } from '@/convex/lib/taskFields';
 import { memo, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Project } from '@/domains/projects/types';
@@ -54,8 +55,8 @@ function ProjectCardComponent({ project }: ProjectCardProps) {
 
   const projectId = project._id;
   const handleCreateTasks = useCallback(
-    (titles: string[], onCreated: () => void) => {
-      createTasks({ projectId, titles }, { onSuccess: onCreated });
+    (titles: string[], onCreated: () => void, recurrence?: TaskRecurrence) => {
+      createTasks({ projectId, titles, recurrence }, { onSuccess: onCreated });
     },
     [createTasks, projectId]
   );

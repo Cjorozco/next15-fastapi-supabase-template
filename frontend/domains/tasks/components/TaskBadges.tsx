@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { CalendarDays, CalendarX, Clock, Flag, Infinity as InfinityIcon, Repeat } from 'lucide-react';
+import { CalendarDays, CalendarX, Clock, Flag, History, Infinity as InfinityIcon, Repeat } from 'lucide-react';
 import {
   hasNoDeadline,
   resolveTaskStatus,
@@ -111,6 +111,19 @@ export const TaskMeta = memo(function TaskMeta({
         >
           <Repeat className="w-2.5 h-2.5" aria-hidden="true" />
           <span className="sr-only">Se repite {TASK_RECURRENCE_LABELS[task.recurrence].toLowerCase()}</span>
+        </span>
+      )}
+      {task.recurrenceEndedAt !== undefined && !task.recurrence && (
+        <span
+          className={`${PILL} bg-muted/60 text-muted-foreground border-border`}
+          title={`Repetición finalizada el ${formatDueDate(task.recurrenceEndedAt, now)}`}
+        >
+          <History className="w-2.5 h-2.5" aria-hidden="true" />
+          {task.endedRecurrence
+            ? `Se repetía: ${TASK_RECURRENCE_LABELS[task.endedRecurrence].toLowerCase()}`
+            : 'Ya no se repite'}
+          {task.lastDoneAt !== undefined && ` · última vez ${formatDueDate(task.lastDoneAt, now)}`}
+          {` · finalizada ${formatDueDate(task.recurrenceEndedAt, now)}`}
         </span>
       )}
       {task.estimatedHours !== undefined && (

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Id } from '@/convex/_generated/dataModel';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
 import { formatDueDate } from '@/domains/tasks/lib/dates';
-import type { Task, TaskDetailsInput } from '@/domains/tasks/types';
+import type { Task, TaskDetailsInput, TaskRecurrence } from '@/domains/tasks/types';
 
 /** Offset the server needs to compute recurring dates in the user's calendar. */
 const tzOffsetMinutes = () => new Date().getTimezoneOffset();
@@ -59,10 +59,14 @@ export const useCreateTasks = () => {
 
   const mutate = useCallback(
     (
-      { projectId, titles }: { projectId: Id<'projects'>; titles: string[] },
+      {
+        projectId,
+        titles,
+        recurrence,
+      }: { projectId: Id<'projects'>; titles: string[]; recurrence?: TaskRecurrence },
       options?: { onSuccess?: () => void }
     ) => {
-      createMany({ projectId, titles })
+      createMany({ projectId, titles, ...(recurrence ? { recurrence } : {}) })
         .then((tasks) => {
           toast.success(
             tasks.length === 1 ? `Tarea "${tasks[0].title}" creada` : `${tasks.length} tareas creadas`
@@ -118,6 +122,27 @@ export const useUpdateTaskDetails = () => {
       }
     },
     [updateTask]
+  );
+
+  return { mutate };
+};
+
+/** Ends a recurring task: it stays completed in the project as history. */
+export const useEndRecurrence = () => {
+  const endRecurrence = useMutation(api.tasks.endRecurrence);
+
+  const mutate = useCallback(
+    async (taskId: Id<'tasks'>): Promise<boolean> => {
+      try {
+        await endRecurrence({ taskId });
+        toast.success('Repetición finalizada. La tarea queda en el historial del proyecto');
+        return true;
+      } catch (err: unknown) {
+        toast.error(mapErrorToUserMessage(err, 'Error al finalizar la repetición'));
+        return false;
+      }
+    },
+    [endRecurrence]
   );
 
   return { mutate };

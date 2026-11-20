@@ -23,6 +23,12 @@ export interface Task {
   noDeadline?: boolean;
   estimatedHours?: number;
   recurrence?: TaskRecurrence;
+  /** Last time a cycle of a recurring task was done. */
+  lastDoneAt?: number;
+  /** The recurring task was ended on this date; it stays as history. */
+  recurrenceEndedAt?: number;
+  /** What the task repeated before it was ended. */
+  endedRecurrence?: TaskRecurrence;
   notes?: string;
   assignee?: string;
   subtasks?: Subtask[];

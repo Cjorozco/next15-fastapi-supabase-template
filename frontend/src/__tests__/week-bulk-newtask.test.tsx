@@ -45,7 +45,7 @@ describe('NewTaskForm', () => {
     fireEvent.change(input, { target: { value: ' Primera ' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(onSubmit).toHaveBeenCalledWith(['Primera'], expect.any(Function));
+    expect(onSubmit).toHaveBeenCalledWith(['Primera'], expect.any(Function), undefined);
     expect(onCancel).not.toHaveBeenCalled();
     expect(input.value).toBe('');
     expect(input).toHaveFocus();
@@ -61,7 +61,7 @@ describe('NewTaskForm', () => {
 
     paste(screen.getByLabelText('Nombre de la tarea'), 'Uno\nDos\n- Tres');
 
-    expect(onSubmit).toHaveBeenCalledWith(['Uno', 'Dos', 'Tres'], expect.any(Function));
+    expect(onSubmit).toHaveBeenCalledWith(['Uno', 'Dos', 'Tres'], expect.any(Function), undefined);
   });
 
   it('lets a single pasted line behave like normal text', () => {
@@ -84,6 +84,18 @@ describe('NewTaskForm', () => {
 
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent(/hasta 50 tareas/i);
+  });
+
+  it('creates the task already repeating when "Repetir" is chosen', () => {
+    const onSubmit = vi.fn();
+    render(<NewTaskForm isCreating={false} onSubmit={onSubmit} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Repetir'), { target: { value: 'diaria' } });
+    const input = screen.getByLabelText('Nombre de la tarea');
+    fireEvent.change(input, { target: { value: 'Meditar' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onSubmit).toHaveBeenCalledWith(['Meditar'], expect.any(Function), 'diaria');
   });
 
   it('closes with Escape', () => {
