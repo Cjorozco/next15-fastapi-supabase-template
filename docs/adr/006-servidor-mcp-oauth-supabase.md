@@ -41,3 +41,11 @@ La primera versión (#49, commit inicial) usaba un `Authorization: Bearer` fijo,
 - **Dependencia en beta:** el servidor OAuth 2.1 de Supabase está en beta.
 - **`crear_tarea`** usa dos mutations (crear, y luego fecha y estado). Si la segunda falla, la tarea queda creada y el resumen lo avisa. Un reintento puede duplicarla.
 - **Zona horaria:** las fechas `YYYY-MM-DD` se guardan a medianoche de Bogotá. El filtro `semana` hereda la limitación de `/week` descrita en el ADR 005.
+
+## Enmiendas
+
+### 2026-11-22: editar y cambiar el estado de proyectos
+
+A partir del [segundo handoff](../handoffs/handoff-mcp-proyectos-estado.md) se añaden `editar_proyecto` (nombre y/o descripción) y `cambiar_estado_proyecto` (`activo` / `en_pausa` / `completado`). Las dos reutilizan `projects.updateProject`, la mutation del diálogo de edición de la app, que ya valida dueño, nombre vacío o repetido y longitudes. Cada una lee antes el proyecto con `projects.get` y devuelve el id y los valores antes → después. Siguen sin existir el borrado y la edición de prioridad o fecha de proyectos.
+
+Como cambia el alcance, se actualiza el texto de `/oauth/consent` y hay que revocar la autorización y reconectar al publicar, según las consecuencias de arriba.
