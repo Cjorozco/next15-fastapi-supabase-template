@@ -18,7 +18,7 @@ Este proyecto cuenta con documentación de arquitectura completa en [`ARCHITECTU
 5. **Autenticación con Supabase Auth:** Supabase gestiona la identidad del usuario y firma JWTs con ES256 que Convex valida vía JWKS (`convex/auth.config.ts`). No alterar este mecanismo sin consultar.
 6. **Sin sobreingeniería:** Mantener la arquitectura simple y directa. Preferir las abstracciones nativas de Convex y Next.js App Router antes que capas intermedias innecesarias.
 7. **Dominio primero:** organizar por dominio de negocio (`domains/{dominio}/`), no por tipo de archivo. `shared/` no conoce términos de negocio.
-8. **Decisiones como ADR:** toda decisión de arquitectura relevante se registra en `docs/adr/` (hoy 001 a 006). Un ADR histórico no se reescribe: se añade una nota o uno nuevo que lo reemplace.
+8. **Decisiones como ADR:** toda decisión de arquitectura relevante se registra en `docs/adr/` (hoy 001 a 007). Un ADR histórico no se reescribe: se añade una nota o uno nuevo que lo reemplace.
 9. **Borrado lógico (`active: false`)** para registros con historial. Aquí no aplica a proyectos ni tareas (ver excepciones).
 10. **FinOps:** preferir lo gratuito o ya instalado.
 

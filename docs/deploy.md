@@ -56,9 +56,24 @@ cd frontend
 # Para ambiente de desarrollo local
 npx convex dev
 
-# Para desplegar a producción
+# Despliegue manual a producción (plan B: normalmente lo hace Vercel, ver abajo)
 npx convex deploy
 ```
+
+#### Despliegue automático desde Vercel
+
+`frontend/vercel.json` define el comando de build:
+
+```sh
+if [ -n "$CONVEX_DEPLOY_KEY" ]; then npx convex deploy --cmd 'npm run build'; else npm run build; fi
+```
+
+- **Producción:** con `CONVEX_DEPLOY_KEY` definida, `convex deploy` ejecuta primero `npm run build` (con `NEXT_PUBLIC_CONVEX_URL` del despliegue de la clave) y, solo si termina bien, comprueba tipos y sube funciones, índices y schema a Convex. Si el build o el push fallan, el despliegue de Vercel falla y la web anterior sigue publicada.
+- **Preview** (ramas y PRs): sin la clave, solo `npm run build`. Ninguna rama despliega al Convex de producción.
+- **Configurar una vez:** en el panel de Convex, despliegue de **producción** → Settings → *Generate Production Deploy Key*. En Vercel → Settings → Environment Variables, `CONVEX_DEPLOY_KEY` solo en **Production**, como variable sensible. La clave nunca va al repositorio.
+- **Comprobar:** el log del build de Vercel debe terminar con `Deployed Convex functions to https://<deployment>.convex.cloud`.
+
+Motivo: con el despliegue manual, el frontend llegó a producción con funciones de Convex que no existían (`tasks.get`, noviembre de 2026). Ver ADR 007.
 
 #### Migraciones de datos
 
@@ -69,7 +84,7 @@ npx convex run migrations:backfillTaskFields --prod        # idempotente
 npx convex run migrations:countTasksPendingBackfill --prod # debe devolver pending: 0
 ```
 
-Orden recomendado: `npx convex deploy` → migración → merge del PR a `master`, para que el frontend nuevo nunca llame a funciones que aún no existen.
+Orden recomendado cuando hay migración: `npx convex deploy` manual del schema ampliado → migración → merge del PR a `master` (que vuelve a desplegar Convex desde Vercel con el mismo código), para que el frontend nuevo nunca llame a funciones que aún no existen. Sin migración, basta con el merge.
 
 ### Paso 2: Desplegar Frontend a Vercel
 
