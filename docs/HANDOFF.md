@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-11-22 (servidor MCP con OAuth de Supabase, ADR 006). Anterior: 2026-10-30 · **Último cambio de código:** `ef93c3b` (herramientas de escritura del MCP, #51), publicado en `master` con `114d162`. Esta actualización solo añade el MCP; el resto del documento no se revisó y puede estar desfasado.
+> **Última actualización:** 2026-11-22 (servidor MCP con OAuth de Supabase, ADR 006). Anterior: 2026-10-30 · **Último cambio de código:** `c818c05` (`editar_proyecto` y `cambiar_estado_proyecto` del MCP, #55), publicado en `master` con `addb5b5`. Esta actualización solo añade el MCP; el resto del documento no se revisó y puede estar desfasado.
 
 ## 1. Qué es
 
@@ -22,13 +22,14 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 ## 3. Estado actual
 
 - Tests: Vitest 38 archivos / 444 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-11-22).
-- **Servidor MCP (2026-11-22, #49 y #51, ADR 006):** `POST /api/mcp` en producción (`https://project-manager-web-five.vercel.app/api/mcp`), conectado en Claude como conector personalizado y probado desde el chat.
+- **Servidor MCP (2026-11-22, #49, #51 y #55, ADR 006):** `POST /api/mcp` en producción (`https://project-manager-web-five.vercel.app/api/mcp`), conectado en Claude como conector personalizado y probado desde el chat.
   - Lectura: `listar_proyectos`, `listar_tareas` (proyecto, estado, `hoy`/`semana`, páginas de 200) y `obtener_tarea`.
-  - Escritura sin borrado: `crear_proyecto` (con tareas opcionales en una operación), `crear_tarea` y `mover_tarea`. Cada una devuelve un resumen para confirmar.
+  - Escritura sin borrado: `crear_proyecto` (con tareas opcionales en una operación), `crear_tarea`, `mover_tarea`, `editar_proyecto` (nombre y/o descripción) y `cambiar_estado_proyecto` (`activo` / `en_pausa` / `completado`). Cada una devuelve un resumen con los valores antes → después para confirmar. Las dos de proyectos reutilizan `projects.updateProject`; probadas en producción (renombrar, pausar y reactivar un proyecto de prueba) y en un chat nuevo.
   - Auth: OAuth 2.1 con Supabase Auth (servidor OAuth en beta, registro dinámico activo, consentimiento en `/oauth/consent`). El MCP verifica el JWT y lo reenvía a Convex, así que usa las mismas queries y mutations que la app con el usuario que aprobó. Sin secretos propios.
-  - Doc de uso: `frontend/README.md`, sección "Servidor MCP". Encargo original: `docs/handoffs/handoff-mcp-project-manager.md`.
+  - Doc de uso: `frontend/README.md`, sección "Servidor MCP". Encargos originales: `docs/handoffs/handoff-mcp-project-manager.md` y `docs/handoffs/handoff-mcp-proyectos-estado.md`.
   - Revocar acceso: Supabase → Authentication → OAuth Apps. Si cambia lo que puede hacer el MCP, actualizar el texto de `/oauth/consent`, revocar y reconectar.
   - Un asistente de Claude dijo ver el conector en `ccr-local:8002` (HTTP local). El conector guardado usa la URL pública y funciona en un chat nuevo; parece la dirección interna de ese entorno, no del proyecto (no confirmado).
+  - Claude guarda la lista de herramientas de cada conexión: tras añadir una herramienta, abrir un chat nuevo o reconectar.
 - Demo de un clic (`c8871be`): botón "Probar demo" en `/login` (visible si existe `NEXT_PUBLIC_DEMO_EMAIL`) que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
@@ -53,6 +54,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 | Commit | Cambio |
 |---|---|
+| `c818c05` | MCP: `editar_proyecto` y `cambiar_estado_proyecto` con `projects.updateProject`; segundo handoff y enmienda del ADR 006 (#55). |
 | `3a58070` | Handoff del MCP guardado como histórico y ADR 006 (#53). |
 | `ef93c3b` | MCP fase 2: `crear_proyecto`, `crear_tarea`, `mover_tarea`, sin borrado (#51). |
 | `412d0a5` | MCP fase 1: lectura con OAuth 2.1 de Supabase, consentimiento y `tasks.get` (#49). |
