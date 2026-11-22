@@ -1,11 +1,15 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { safeRedirectPath } from '@/shared/lib/safeRedirect';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 export async function proxy(request: NextRequest) {
-  // El login demo es un endpoint público que gestiona su propia sesión.
-  if (request.nextUrl.pathname === '/api/demo-login') {
+  // El login demo gestiona su propia sesión y el MCP valida su propio token Bearer:
+  // sin cookie de Supabase, el redirect a /login rompería a los clientes MCP.
+  // Los metadatos OAuth (/.well-known/*) son públicos por definición.
+  const { pathname: path } = request.nextUrl;
+  if (path === '/api/demo-login' || path === '/api/mcp' || path.startsWith('/.well-known/')) {
     return NextResponse.next({ request });
   }
 
@@ -35,17 +39,21 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
 
   // Redirigir a /login si no autenticado en ruta protegida
+  // Se guarda a dónde iba (p. ej. el consentimiento OAuth) para volver tras entrar.
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.search = '';
+    if (pathname !== '/') {
+      url.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`);
+    }
     return NextResponse.redirect(url);
   }
 
-  // Redirigir al dashboard si ya está autenticado y accede a login/register
+  // Redirigir al dashboard (o a donde iba) si ya está autenticado y accede a login/register
   if (user && isPublicRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/hoy';
-    return NextResponse.redirect(url);
+    const target = safeRedirectPath(request.nextUrl.searchParams.get('redirect'));
+    return NextResponse.redirect(new URL(target, request.url));
   }
 
   return supabaseResponse;
