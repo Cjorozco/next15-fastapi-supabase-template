@@ -7,7 +7,8 @@ import { createSupabaseServerClient } from '@/shared/lib/supabaseServer';
  * Consent screen of the OAuth 2.1 server (Supabase Auth → OAuth Server → Authorization
  * Path = /oauth/consent). Supabase sends the user here with `authorization_id`; the proxy
  * already made them sign in. Approving lets that client (e.g. Claude) read this account's
- * projects and tasks, create them and change task status (never delete) through the MCP
+ * projects and tasks, create them, change task status and edit project name, description
+ * and status (never delete) through the MCP
  * server. Keep this text in sync with the tools in `src/app/api/mcp/route.ts`.
  */
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,7 @@ export default async function ConsentPage({
         <ul className="text-xs space-y-1.5 list-disc pl-4">
           <li>Podrá leer tus proyectos y tareas.</li>
           <li>Podrá crear proyectos y tareas, y cambiar el estado de una tarea.</li>
+          <li>Podrá cambiar el nombre, la descripción y el estado de un proyecto.</li>
           <li>No podrá borrar nada.</li>
           <li>No verá tus claves ni datos de otros usuarios.</li>
         </ul>

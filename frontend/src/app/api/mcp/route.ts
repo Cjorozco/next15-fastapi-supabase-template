@@ -12,7 +12,9 @@ import {
   bogotaMidnight,
   describeTask,
   summarizeCreatedProject,
+  summarizeEditedProject,
   summarizeMovedTask,
+  summarizeProjectStatus,
   toProjectTasks,
 } from '@/domains/mcp/lib/writes';
 import { mapErrorToUserMessage } from '@/shared/lib/userFacingError';
@@ -290,8 +292,74 @@ const mcpHandler = createMcpHandler(
         }
       }
     );
+
+    server.registerTool(
+      'editar_proyecto',
+      {
+        title: 'Editar proyecto',
+        description:
+          'Cambia el nombre y/o la descripción de un proyecto por id (una descripción vacía la borra). Devuelve el id y cada cambio, antes → después, para que el usuario lo confirme. No borra proyectos.',
+        inputSchema: z
+          .object({
+            proyecto_id: z.string().min(1).describe('Id de un proyecto (de listar_proyectos)'),
+            nombre: z.string().trim().min(1).max(100).optional(),
+            descripcion: z.string().trim().max(1000).optional(),
+          })
+          .refine((input) => input.nombre !== undefined || input.descripcion !== undefined, {
+            message: 'Indica nombre o descripcion',
+          }),
+        annotations: WRITE,
+      },
+      async ({ proyecto_id, nombre, descripcion }, ctx) => {
+        const action = 'No se editó el proyecto';
+        try {
+          const convex = convexFor(ctx.http?.authInfo);
+          const projectId = proyecto_id as Id<'projects'>;
+          const before = await convex.query(api.projects.get, { projectId });
+          if (!before) return failure(`${action}: proyecto no encontrado.`);
+          const after = await convex.mutation(api.projects.updateProject, {
+            projectId,
+            ...(nombre !== undefined ? { name: nombre } : {}),
+            ...(descripcion !== undefined ? { description: descripcion } : {}),
+          });
+          return text(summarizeEditedProject(before, after));
+        } catch (error) {
+          return writeFailure(action, error);
+        }
+      }
+    );
+
+    server.registerTool(
+      'cambiar_estado_proyecto',
+      {
+        title: 'Cambiar estado de proyecto',
+        description:
+          'Cambia el estado de un proyecto a activo, en_pausa o completado. Las vistas Hoy y Esta semana solo incluyen proyectos activos. Devuelve el id, el nombre y el estado antes → después, para que el usuario lo confirme. No borra proyectos.',
+        inputSchema: z.object({
+          proyecto_id: z.string().min(1).describe('Id de un proyecto (de listar_proyectos)'),
+          estado: z.enum(['activo', 'en_pausa', 'completado']),
+        }),
+        annotations: WRITE,
+      },
+      async ({ proyecto_id, estado }, ctx) => {
+        const action = 'No se cambió el estado del proyecto';
+        try {
+          const convex = convexFor(ctx.http?.authInfo);
+          const projectId = proyecto_id as Id<'projects'>;
+          const before = await convex.query(api.projects.get, { projectId });
+          if (!before) return failure(`${action}: proyecto no encontrado.`);
+          const after = await convex.mutation(api.projects.updateProject, {
+            projectId,
+            status: estado,
+          });
+          return text(summarizeProjectStatus(before, after));
+        } catch (error) {
+          return writeFailure(action, error);
+        }
+      }
+    );
   },
-  { serverInfo: { name: 'project-manager', version: '1.2.0' } }
+  { serverInfo: { name: 'project-manager', version: '1.3.0' } }
 );
 
 const handler = withMcpAuth(mcpHandler, (_req, token) => verifySupabaseToken(token), {
