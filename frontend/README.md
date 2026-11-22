@@ -81,7 +81,11 @@ convex/                  # Backend Convex
 
 ## Servidor MCP
 
-Permite que Claude lea, cree y mueva tus proyectos y tareas desde el chat (sin borrar). Endpoint: `https://<tu-dominio>/api/mcp` (Streamable HTTP). Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/`, `src/app/.well-known/oauth-protected-resource/` y `src/app/oauth/consent/`.
+Permite que Claude lea, cree, edite y mueva tus proyectos y tareas desde el chat (sin borrar).
+
+**URL de producción del conector:** `https://project-manager-web-five.vercel.app/api/mcp` (Streamable HTTP, HTTPS). Es la única que debe usar el conector de Claude: las URLs de cada despliegue (`project-manager-<hash>-….vercel.app`) están protegidas por Vercel, y `localhost` solo sirve en desarrollo.
+
+Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/`, `src/app/.well-known/oauth-protected-resource/` y `src/app/oauth/consent/`.
 
 **Lectura:**
 
@@ -96,10 +100,12 @@ Permite que Claude lea, cree y mueva tus proyectos y tareas desde el chat (sin b
 | `crear_proyecto` | Proyecto con nombre y descripción; con `tareas` (título, fecha, prioridad) crea todo en una operación, o nada | `projects.create` / `projects.createWithTasks` | Nombre, descripción, cada tarea con estado y fecha, e id del proyecto. Rechaza nombres repetidos |
 | `crear_tarea` | Tarea al final de un proyecto, con fecha y estado opcionales | `tasks.create` + `tasks.updateTask` | Título, estado, fecha, proyecto e id. Si la fecha o el estado no se pudieron guardar, lo avisa |
 | `mover_tarea` | Cambia el estado (`pendiente` / `en_progreso` / `completada`) | `tasks.updateTask` | Estado antes → después. En una repetitiva completada, que sigue abierta y su próxima fecha |
+| `editar_proyecto` | Cambia nombre y/o descripción de un proyecto por id (descripción vacía la borra) | `projects.updateProject` | Id, y nombre/descripción antes → después. Rechaza nombres repetidos; si nada cambia, lo dice |
+| `cambiar_estado_proyecto` | Cambia el estado a `activo` / `en_pausa` / `completado` | `projects.updateProject` | Id, nombre y estado antes → después. Hoy y Esta semana solo muestran proyectos activos |
 
 Las fechas se escriben `YYYY-MM-DD` y se guardan a la medianoche de Bogotá, como el selector de la app. Claude marca estas herramientas como de escritura (`readOnlyHint: false`), así que puede pedir permiso antes de usarlas.
 
-**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó), borrar proyectos o tareas, ni editar otros campos (título, notas, prioridad, subtareas).
+**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó), borrar proyectos o tareas (se borran a mano desde la app), ni editar otros campos (título, notas o prioridad de tareas, subtareas, prioridad o fecha de proyectos).
 
 ### Cómo se autentica
 
@@ -119,7 +125,9 @@ No hay que añadir variables en Vercel ni en Convex: el MCP usa `NEXT_PUBLIC_SUP
 
 ### Conectar en Claude
 
-Settings → Connectors → *Add custom connector*, URL `https://<tu-dominio>/api/mcp`, sin cabeceras. Claude abrirá el inicio de sesión y la pantalla de consentimiento. Luego pregunta, por ejemplo, "¿qué tengo hoy?".
+Settings → Connectors → *Add custom connector*, URL `https://project-manager-web-five.vercel.app/api/mcp`, sin cabeceras. Claude abrirá el inicio de sesión y la pantalla de consentimiento. Luego pregunta, por ejemplo, "¿qué tengo hoy?".
+
+Claude guarda la lista de herramientas de cada conexión: si tras un despliegue no ves una herramienta nueva, abre un chat nuevo o reconecta el conector.
 
 **Revocar el acceso:** en Supabase → Authentication → OAuth Apps, borra el cliente de Claude (o sus autorizaciones). Los tokens ya emitidos caducan con la vida normal de un token de Supabase.
 
