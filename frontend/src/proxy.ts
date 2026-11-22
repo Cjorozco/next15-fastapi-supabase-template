@@ -4,8 +4,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 export async function proxy(request: NextRequest) {
-  // El login demo es un endpoint público que gestiona su propia sesión.
-  if (request.nextUrl.pathname === '/api/demo-login') {
+  // El login demo gestiona su propia sesión y el MCP valida su propio token Bearer:
+  // sin cookie de Supabase, el redirect a /login rompería a los clientes MCP.
+  const { pathname: path } = request.nextUrl;
+  if (path === '/api/demo-login' || path === '/api/mcp') {
     return NextResponse.next({ request });
   }
 
