@@ -194,8 +194,10 @@ export function summarizeEditedTask(
   projects: { before: string; after: string }
 ): string {
   const changes: string[] = [];
-  const add = (field: string, from: string, to: string) => {
-    if (from !== to) changes.push(`${field}: ${from} → ${to}`);
+  // `changed` compares the raw values: labels may be truncated (notes) and equal labels
+  // must not hide a real change.
+  const add = (field: string, from: string, to: string, changed = from !== to) => {
+    if (changed) changes.push(`${field}: ${from} → ${to}`);
   };
   add('título', `«${before.title}»`, `«${after.title}»`);
   add('estado', STATUS_LABEL[before.status], STATUS_LABEL[after.status]);
@@ -207,7 +209,7 @@ export function summarizeEditedTask(
   );
   add('repetición', recurrenceLabel(before.recurrence), recurrenceLabel(after.recurrence));
   add('horas estimadas', hoursLabel(before.estimatedHours), hoursLabel(after.estimatedHours));
-  add('notas', notesLabel(before.notes), notesLabel(after.notes));
+  add('notas', notesLabel(before.notes), notesLabel(after.notes), (before.notes ?? '') !== (after.notes ?? ''));
   add('proyecto', `«${projects.before}»`, `«${projects.after}»`);
 
   const head = `Tarea «${after.title}» (id ${after._id})`;

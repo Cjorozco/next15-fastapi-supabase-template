@@ -177,6 +177,17 @@ describe('task edits', () => {
     expect(text).toContain('proyecto: «A» → «B»');
   });
 
+  test('reports a notes change even when only the truncated tail differs', () => {
+    const prefix = 'x'.repeat(90);
+    const text = summarizeEditedTask(
+      { ...base, notes: `${prefix} antes` },
+      { ...base, notes: `${prefix} después` },
+      same
+    );
+    expect(text).toContain('- notas:');
+    expect(text).not.toContain('no cambió nada');
+  });
+
   test('says when nothing changed', () => {
     expect(summarizeEditedTask(base, base, same)).toContain('no cambió nada');
   });
