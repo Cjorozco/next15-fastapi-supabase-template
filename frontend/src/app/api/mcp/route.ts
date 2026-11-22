@@ -226,6 +226,8 @@ const mcpHandler = createMcpHandler(
         let taskId: Id<'tasks'>;
         try {
           convex = convexFor(ctx.http?.authInfo);
+          const project = await convex.query(api.projects.get, { projectId: proyecto_id });
+          if (!project) return failure(`${action}: proyecto no encontrado.`);
           const created = await convex.mutation(api.tasks.create, {
             projectId: proyecto_id as Id<'projects'>,
             title: titulo,

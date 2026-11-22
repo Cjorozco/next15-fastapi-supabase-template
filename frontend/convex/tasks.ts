@@ -1,7 +1,7 @@
 import { mutation, MutationCtx, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
-import { requireProjectOwner } from "./lib/authorization";
+import { requireAuthenticatedUser, requireProjectOwner } from "./lib/authorization";
 import { DomainException } from "./lib/errors";
 import {
   taskPriorityValidator,
@@ -24,7 +24,8 @@ import {
 
 /** One task with its project's name, or null when it does not exist or is not the caller's. */
 export const get = query({
-  args: { taskId: v.id("tasks") },
+  // A plain string: an id of another table (or garbage) returns null like a missing task.
+  args: { taskId: v.string() },
   returns: v.union(
     v.object({
       task: taskValidator,
@@ -33,7 +34,10 @@ export const get = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    const task = await ctx.db.get(args.taskId);
+    await requireAuthenticatedUser(ctx);
+    const taskId = ctx.db.normalizeId("tasks", args.taskId);
+    if (!taskId) return null;
+    const task = await ctx.db.get(taskId);
     if (!task) return null;
     try {
       const project = await requireProjectOwner(ctx, task.projectId);
