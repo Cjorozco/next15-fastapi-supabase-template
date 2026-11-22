@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-11-22 (servidor MCP con OAuth de Supabase, ADR 006). Anterior: 2026-10-30 · **Último cambio de código:** `c818c05` (`editar_proyecto` y `cambiar_estado_proyecto` del MCP, #55), publicado en `master` con `addb5b5`. Esta actualización solo añade el MCP; el resto del documento no se revisó y puede estar desfasado.
+> **Última actualización:** 2026-11-22 (MCP con `editar_tarea` y despliegue de Convex desde Vercel, ADR 006 y 007). Anterior: 2026-11-22 (servidor MCP) · **Último cambio de código:** `8ee61be` (ids inválidos en el MCP, #64), publicado en `master` con `d76b27e`. Las actualizaciones de noviembre solo añaden el MCP y el despliegue; el resto del documento no se revisó y puede estar desfasado.
 
 ## 1. Qué es
 
@@ -17,19 +17,22 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - Leer `AGENTS.md` y `.agents/rules/` (working-style, ux-principles, architecture, convex-conventions, ai-validation-zod).
 - App viva en `frontend/`. Para Convex, leer antes `frontend/convex/_generated/ai/guidelines.md`.
 - Flujo de ramas: `master` (producción) y `develop` (integración); cambios en rama nueva desde `develop` con PR y squash; publicar con PR `develop` → `master` (merge commit). Regla única en `.agents/rules/working-style.md`; decisión en ADR 004.
+- Despliegue: Vercel publica la web en cada merge a `master` y, con `CONVEX_DEPLOY_KEY` (solo Production), despliega también Convex (`frontend/vercel.json`, ADR 007). El log del build muestra `Deployed Convex functions to [REDACTED]`. Con migraciones de datos, `npx convex deploy` manual antes del merge (`docs/deploy.md`).
 - Comandos (en `frontend/`): `npm run test` (Vitest), `npx tsc --noEmit`.
 
 ## 3. Estado actual
 
-- Tests: Vitest 38 archivos / 444 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-11-22).
-- **Servidor MCP (2026-11-22, #49, #51 y #55, ADR 006):** `POST /api/mcp` en producción (`https://project-manager-web-five.vercel.app/api/mcp`), conectado en Claude como conector personalizado y probado desde el chat.
+- Tests: Vitest 38 archivos / 453 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-11-22).
+- **Servidor MCP (2026-11-22, #49, #51, #55, #62 y #64, ADR 006):** `POST /api/mcp` en producción (`https://project-manager-web-five.vercel.app/api/mcp`), conectado en Claude como conector personalizado y probado desde el chat.
   - Lectura: `listar_proyectos`, `listar_tareas` (proyecto, estado, `hoy`/`semana`, páginas de 200) y `obtener_tarea`.
-  - Escritura sin borrado: `crear_proyecto` (con tareas opcionales en una operación), `crear_tarea`, `mover_tarea`, `editar_proyecto` (nombre y/o descripción) y `cambiar_estado_proyecto` (`activo` / `en_pausa` / `completado`). Cada una devuelve un resumen con los valores antes → después para confirmar. Las dos de proyectos reutilizan `projects.updateProject`; probadas en producción (renombrar, pausar y reactivar un proyecto de prueba) y en un chat nuevo.
+  - Escritura sin borrado: `crear_proyecto` (con tareas opcionales en una operación), `crear_tarea`, `mover_tarea`, `editar_proyecto` (nombre y/o descripción), `cambiar_estado_proyecto` (`activo` / `en_pausa` / `completado`) y `editar_tarea` (título, estado, prioridad, fecha o `sin_fecha`, repetición, horas, notas y mover de proyecto; reutiliza `tasks.updateTask`). Cada una devuelve un resumen con los valores antes → después para confirmar. Las de proyectos reutilizan `projects.updateProject`. Todas probadas en producción con datos de prueba; `editar_tarea` también en un caso real (fecha de la tarea de n8n al 2026-11-30). No hay borrado, ni edición de subtareas, ni "fecha de fin de repetición" (no existe en el modelo).
+  - Ids inválidos (inventados o de otra tabla): `tasks.get` y `projects.get` usan `normalizeId`, así que las herramientas responden "tarea/proyecto no encontrado" en vez de `Server Error` (#64).
   - Auth: OAuth 2.1 con Supabase Auth (servidor OAuth en beta, registro dinámico activo, consentimiento en `/oauth/consent`). El MCP verifica el JWT y lo reenvía a Convex, así que usa las mismas queries y mutations que la app con el usuario que aprobó. Sin secretos propios.
-  - Doc de uso: `frontend/README.md`, sección "Servidor MCP". Encargos originales: `docs/handoffs/handoff-mcp-project-manager.md` y `docs/handoffs/handoff-mcp-proyectos-estado.md`.
+  - Doc de uso: `frontend/README.md`, sección "Servidor MCP". Encargos originales: `docs/handoffs/handoff-mcp-project-manager.md`, `handoff-mcp-proyectos-estado.md` y `handoff-mcp-editar-tarea.md`.
   - Revocar acceso: Supabase → Authentication → OAuth Apps. Si cambia lo que puede hacer el MCP, actualizar el texto de `/oauth/consent`, revocar y reconectar.
   - Un asistente de Claude dijo ver el conector en `ccr-local:8002` (HTTP local). El conector guardado usa la URL pública y funciona en un chat nuevo; parece la dirección interna de ese entorno, no del proyecto (no confirmado).
   - Claude guarda la lista de herramientas de cada conexión: tras añadir una herramienta, abrir un chat nuevo o reconectar.
+  - Incidente resuelto (2026-11-22): `obtener_tarea` y `mover_tarea` fallaban porque `tasks.get` no se había desplegado en el Convex de producción (el despliegue era manual). Se desplegó a mano y luego se automatizó (ADR 007).
 - Demo de un clic (`c8871be`): botón "Probar demo" en `/login` (visible si existe `NEXT_PUBLIC_DEMO_EMAIL`) que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
@@ -45,6 +48,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - `frontend/domains/{projects,tasks,dashboard}`: componentes, hooks y esquemas Zod de IA.
 - `frontend/shared/lib/ai/`: gateway multi-proveedor (Gemini, Groq), adaptadores, `config.ts`, `safe-ai-parser.ts`, `ai-errors.ts`, `useAiClient.ts`.
 - `frontend/src/proxy.ts`: guards de auth (frontera de red de Next 16); deja pasar `/api/demo-login`, `/api/mcp` y `/.well-known/*`, y al mandar a `/login` guarda la ruta de vuelta (`?redirect=`, validada con `shared/lib/safeRedirect.ts`).
+- Despliegue: `frontend/vercel.json` (build de Vercel con `npx convex deploy` si existe `CONVEX_DEPLOY_KEY`), `docs/deploy.md`.
 - MCP: `src/app/api/mcp/route.ts` (herramientas), `domains/mcp/lib/` (`tools.ts` lectura, `writes.ts` escritura, `supabaseToken.ts` verificación del JWT, `resource.ts`), `src/app/.well-known/oauth-protected-resource/` (metadatos RFC 9728), `src/app/oauth/consent/page.tsx` (consentimiento), `convex/lib/projectQueries.ts` (lectura compartida con `projects.list`) y `tasks.get` en `convex/tasks.ts`.
 - Demo: `convex/demo.ts`, `convex/crons.ts`, `convex/lib/demoData.ts`, `src/app/api/demo-login/route.ts`, `shared/components/layout/DemoBanner.tsx`.
 
@@ -54,6 +58,10 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 | Commit | Cambio |
 |---|---|
+| `8ee61be` | MCP: ids inválidos responden "no encontrada" (`normalizeId` en `tasks.get` y `projects.get`) (#64). |
+| `d731482` | MCP: `editar_tarea` con `tasks.updateTask` (#62). |
+| `51cb799` | Docs: el log de Vercel muestra la URL de Convex como `[REDACTED]` (#60). |
+| `c9448b9` | Convex se despliega desde el build de producción de Vercel (`vercel.json`, ADR 007) (#58). |
 | `c818c05` | MCP: `editar_proyecto` y `cambiar_estado_proyecto` con `projects.updateProject`; segundo handoff y enmienda del ADR 006 (#55). |
 | `3a58070` | Handoff del MCP guardado como histórico y ADR 006 (#53). |
 | `ef93c3b` | MCP fase 2: `crear_proyecto`, `crear_tarea`, `mover_tarea`, sin borrado (#51). |
@@ -79,9 +87,9 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 6. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
 7. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
 8. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
-9. MCP: el token OAuth vale para todo lo que el usuario puede hacer en Convex, no solo para lo que expone el MCP; si hiciera falta acotarlo, el JWT trae `client_id`. `crear_tarea` usa dos mutations y un reintento puede duplicar la tarea. El filtro `semana` hereda la limitación de zona horaria de `/week` (ADR 005). El servidor OAuth de Supabase está en beta.
+9. MCP: el token OAuth vale para todo lo que el usuario puede hacer en Convex, no solo para lo que expone el MCP; si hiciera falta acotarlo, el JWT trae `client_id`. `crear_tarea` usa dos mutations y un reintento puede duplicar la tarea. Sin borrado ni edición de subtareas por MCP, por decisión; una "fecha de fin de repetición" exigiría un campo nuevo. El filtro `semana` hereda la limitación de zona horaria de `/week` (ADR 005). El servidor OAuth de Supabase está en beta.
 10. Aviso de Next.js sobre una vulnerabilidad: al arrancar `next dev` apareció una recomendación de actualizar que cerraba el servidor tras la primera petición. No se ejecutó el `next upgrade` que proponía; falta comprobarlo con `npm audit`.
-11. Convex se despliega desde el build de Vercel en producción (`frontend/vercel.json`, ADR 007) solo si `CONVEX_DEPLOY_KEY` está en Vercel (Production). Sin esa variable, Convex vuelve a ser manual (`npx convex deploy`).
+11. Convex se despliega desde el build de Vercel en producción (`frontend/vercel.json`, ADR 007) con `CONVEX_DEPLOY_KEY` en Vercel (Production), configurada y verificada el 2026-11-22. Si esa variable se borra o caduca, Convex vuelve a ser manual sin aviso: revisar que el log muestre `Deployed Convex functions`.
 
 ## 6. Capa común y excepciones
 
