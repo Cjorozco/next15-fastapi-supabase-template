@@ -79,17 +79,27 @@ convex/                  # Backend Convex
 - ✅ Notificaciones con Sonner
 - ✅ Tests unitarios y de integración con Vitest (Convex Test + Testing Library)
 
-## Servidor MCP (solo lectura)
+## Servidor MCP
 
-Permite que Claude lea tus proyectos y tareas desde el chat. Endpoint: `https://<tu-dominio>/api/mcp` (Streamable HTTP). Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/`, `src/app/.well-known/oauth-protected-resource/` y `src/app/oauth/consent/`.
+Permite que Claude lea, cree y mueva tus proyectos y tareas desde el chat (sin borrar). Endpoint: `https://<tu-dominio>/api/mcp` (Streamable HTTP). Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/`, `src/app/.well-known/oauth-protected-resource/` y `src/app/oauth/consent/`.
 
-**Qué expone** (solo lectura):
+**Lectura:**
 
 - `listar_proyectos`: id, nombre, estado, fecha límite y tareas pendientes.
 - `listar_tareas`: filtros `proyecto_id`, `estado` (`pendiente` / `en_progreso` / `completada`) y `fecha` (`hoy` = la vista Hoy; `semana` = vencidas y de esta semana). Páginas de 200: si la respuesta trae `siguiente`, se pide el resto con `desde`. Las fechas, en `YYYY-MM-DD` hora de Bogotá.
 - `obtener_tarea`: detalle de una tarea (notas, horas, subtareas).
 
-**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó) y ninguna escritura ni borrado.
+**Escritura** (sin borrado). Cada herramienta usa la misma mutation de Convex que la app y responde con un resumen de lo que hizo; ese resumen es el **criterio de confirmación**:
+
+| Herramienta | Qué hace | Mutation | Confirmación (resumen) |
+| --- | --- | --- | --- |
+| `crear_proyecto` | Proyecto con nombre y descripción; con `tareas` (título, fecha, prioridad) crea todo en una operación, o nada | `projects.create` / `projects.createWithTasks` | Nombre, descripción, cada tarea con estado y fecha, e id del proyecto. Rechaza nombres repetidos |
+| `crear_tarea` | Tarea al final de un proyecto, con fecha y estado opcionales | `tasks.create` + `tasks.updateTask` | Título, estado, fecha, proyecto e id. Si la fecha o el estado no se pudieron guardar, lo avisa |
+| `mover_tarea` | Cambia el estado (`pendiente` / `en_progreso` / `completada`) | `tasks.updateTask` | Estado antes → después. En una repetitiva completada, que sigue abierta y su próxima fecha |
+
+Las fechas se escriben `YYYY-MM-DD` y se guardan a la medianoche de Bogotá, como el selector de la app. Claude marca estas herramientas como de escritura (`readOnlyHint: false`), así que puede pedir permiso antes de usarlas.
+
+**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó), borrar proyectos o tareas, ni editar otros campos (título, notas, prioridad, subtareas).
 
 ### Cómo se autentica
 
@@ -112,3 +122,5 @@ No hay que añadir variables en Vercel ni en Convex: el MCP usa `NEXT_PUBLIC_SUP
 Settings → Connectors → *Add custom connector*, URL `https://<tu-dominio>/api/mcp`, sin cabeceras. Claude abrirá el inicio de sesión y la pantalla de consentimiento. Luego pregunta, por ejemplo, "¿qué tengo hoy?".
 
 **Revocar el acceso:** en Supabase → Authentication → OAuth Apps, borra el cliente de Claude (o sus autorizaciones). Los tokens ya emitidos caducan con la vida normal de un token de Supabase.
+
+**Si cambia lo que puede hacer el MCP** (por ejemplo, al añadir la escritura), actualiza el texto de `/oauth/consent`, revoca la autorización existente y vuelve a conectar en Claude, para que el acceso nuevo se apruebe de forma explícita.
