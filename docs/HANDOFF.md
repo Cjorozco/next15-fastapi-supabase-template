@@ -22,7 +22,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 ## 3. Estado actual
 
-- Tests: Vitest 38 archivos / 453 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-11-22).
+- Tests: Vitest 4 con dos proyectos (`app` en jsdom, `convex` en edge-runtime): 38 archivos / 453 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-11-22).
 - **Servidor MCP (2026-11-22, #49, #51, #55, #62 y #64, ADR 006):** `POST /api/mcp` en producción (`https://project-manager-web-five.vercel.app/api/mcp`), conectado en Claude como conector personalizado y probado desde el chat.
   - Lectura: `listar_proyectos`, `listar_tareas` (proyecto, estado, `hoy`/`semana`, páginas de 200) y `obtener_tarea`.
   - Escritura sin borrado: `crear_proyecto` (con tareas opcionales en una operación), `crear_tarea`, `mover_tarea`, `editar_proyecto` (nombre y/o descripción), `cambiar_estado_proyecto` (`activo` / `en_pausa` / `completado`) y `editar_tarea` (título, estado, prioridad, fecha o `sin_fecha`, repetición, horas, notas y mover de proyecto; reutiliza `tasks.updateTask`). Cada una devuelve un resumen con los valores antes → después para confirmar. Las de proyectos reutilizan `projects.updateProject`. Todas probadas en producción con datos de prueba; `editar_tarea` también en un caso real (fecha de la tarea de n8n al 2026-11-30). No hay borrado, ni edición de subtareas, ni "fecha de fin de repetición" (no existe en el modelo).
@@ -88,7 +88,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 7. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
 8. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
 9. MCP: el token OAuth vale para todo lo que el usuario puede hacer en Convex, no solo para lo que expone el MCP; si hiciera falta acotarlo, el JWT trae `client_id`. `crear_tarea` usa dos mutations y un reintento puede duplicar la tarea. Sin borrado ni edición de subtareas por MCP, por decisión; una "fecha de fin de repetición" exigiría un campo nuevo. El filtro `semana` hereda la limitación de zona horaria de `/week` (ADR 005). El servidor OAuth de Supabase está en beta.
-10. Dependencias de desarrollo con avisos de `npm audit` (vitest, shadcn, typescript-eslint, hono…): 16 avisos, 2 críticos. No afectan a producción (`npm audit --omit=dev` en 0 desde Next 16.4.5); revisar al actualizar esas herramientas.
+10. `npm audit` deja 4 avisos moderados, todos de la misma cadena de desarrollo: shadcn 4.23.0 → `ts-morph` → `@ts-morph/common` → `minimatch` < 11.0.1 (DoS en patrones glob). No hay arreglo publicado (4.23.0 es la última de shadcn) y es un CLI que no llega a producción (`npm audit --omit=dev` en 0). Revisar cuando shadcn publique una versión nueva.
 11. Convex se despliega desde el build de Vercel en producción (`frontend/vercel.json`, ADR 007) con `CONVEX_DEPLOY_KEY` en Vercel (Production), configurada y verificada el 2026-11-22. Si esa variable se borra o caduca, Convex vuelve a ser manual sin aviso: revisar que el log muestre `Deployed Convex functions`.
 
 ## 6. Capa común y excepciones

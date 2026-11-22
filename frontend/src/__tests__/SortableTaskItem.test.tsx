@@ -239,7 +239,12 @@ describe('SortableTaskItem (edit and reorder subtasks)', () => {
     ],
   };
 
-  function renderExpanded(handlers: { rename?: ReturnType<typeof vi.fn>; move?: ReturnType<typeof vi.fn> }) {
+  type ItemProps = React.ComponentProps<typeof SortableTaskItem>;
+
+  function renderExpanded(handlers: {
+    rename?: ItemProps['onRenameSubtask'];
+    move?: ItemProps['onMoveSubtask'];
+  }) {
     render(
       <SortableTaskItem
         task={task}
