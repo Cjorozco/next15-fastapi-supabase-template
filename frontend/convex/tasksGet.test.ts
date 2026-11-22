@@ -30,9 +30,25 @@ describe("tasks.get", () => {
     expect(await intruder.query(api.tasks.get, { taskId: task._id })).toBeNull();
   });
 
+  test("returns null for an id that is not a task id", async () => {
+    const { owner } = await setup();
+    const project = await owner.mutation(api.projects.create, { name: "Otro" });
+    expect(await owner.query(api.tasks.get, { taskId: "no-es-un-id" })).toBeNull();
+    expect(await owner.query(api.tasks.get, { taskId: project._id })).toBeNull();
+  });
+
+  test("projects.get returns null for an id that is not a project id", async () => {
+    const { owner, task } = await setup();
+    expect(await owner.query(api.projects.get, { projectId: "no-es-un-id" })).toBeNull();
+    expect(await owner.query(api.projects.get, { projectId: task._id })).toBeNull();
+  });
+
   test("rejects anonymous callers", async () => {
     const { base, task } = await setup();
     await expect(base.query(api.tasks.get, { taskId: task._id })).rejects.toThrow(
+      /NOT_AUTHENTICATED/
+    );
+    await expect(base.query(api.tasks.get, { taskId: "no-es-un-id" })).rejects.toThrow(
       /NOT_AUTHENTICATED/
     );
   });

@@ -31,12 +31,16 @@ export const list = query({
 });
 
 export const get = query({
-  args: { projectId: v.id("projects") },
+  // A plain string: an id of another table (or garbage, e.g. from the MCP server) returns
+  // null like a missing project instead of failing argument validation.
+  args: { projectId: v.string() },
   returns: v.union(projectWithTasksValidator, v.null()),
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
 
-    const project = await ctx.db.get(args.projectId);
+    const projectId = ctx.db.normalizeId("projects", args.projectId);
+    if (!projectId) return null;
+    const project = await ctx.db.get(projectId);
     if (!project || project.ownerId !== user._id) {
       return null;
     }
