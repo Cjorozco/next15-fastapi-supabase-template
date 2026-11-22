@@ -2,7 +2,7 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-11-22 (MCP con `editar_tarea` y despliegue de Convex desde Vercel, ADR 006 y 007). Anterior: 2026-11-22 (servidor MCP) · **Último cambio de código:** `8ee61be` (ids inválidos en el MCP, #64), publicado en `master` con `d76b27e`. Las actualizaciones de noviembre solo añaden el MCP y el despliegue; el resto del documento no se revisó y puede estar desfasado.
+> **Última actualización:** 2026-11-22 (dependencias: Next 16.4.5, Vitest 4, shadcn 4). Anterior: 2026-11-22 (MCP con `editar_tarea` y despliegue de Convex) · **Último cambio de código:** `a0b4fb6` (dependencias de desarrollo, #70), publicado en `master` con `affa2a0`. Las actualizaciones de noviembre solo añaden el MCP y el despliegue; el resto del documento no se revisó y puede estar desfasado.
 
 ## 1. Qué es
 
@@ -37,7 +37,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
 - Incidente resuelto (2026-10-09): una sesión vio `.git` sin `config` ni `index` (sospecha de sincronización de OneDrive, porque el repo vive dentro de OneDrive). Al revisar después, el remoto y el índice estaban bien y los commits funcionan. Sigue pendiente decidir si se mueve el repo fuera de OneDrive.
-- `npm run lint`: 0 errores y 4 advertencias "Unused eslint-disable directive" en archivos autogenerados de `convex/_generated/` (no se tocan). `npm run build` (Next 16.1.6, Turbopack) compila, pasa TypeScript e incluye la ruta dinámica `/api/demo-login` (verificado el 2026-10-09 por otra sesión, con `.env.local` y `.env.production` locales).
+- `npm run lint`: 0 errores y 1 advertencia (`@next/next/no-location-assign-relative-destination` en `src/app/(auth)/login/page.tsx`, el `window.location.assign('/hoy')` del login demo, que fuerza una recarga completa a propósito). `npm run build` (Next 16.4.5, Turbopack) compila con las variables de prueba del CI e incluye `/api/mcp`, `/oauth/consent` y `/.well-known/oauth-protected-resource` (verificado el 2026-11-22).
 - No se probó la app en vivo en el navegador.
 - `ARCHITECTURE.md` y `CHANGELOG.md` están actualizados con IA, subtareas, tema, fix de seguridad y retiro de Cypress.
 - Las reglas de agentes se corrigieron para reflejar el código real (commit `f2699e7` en `master`) y luego se alinearon con la capa común (rama `docs/align-common-layer`, fusionada a `master` por fast-forward y subida a `origin`; ver sección 6).
@@ -52,12 +52,15 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - MCP: `src/app/api/mcp/route.ts` (herramientas), `domains/mcp/lib/` (`tools.ts` lectura, `writes.ts` escritura, `supabaseToken.ts` verificación del JWT, `resource.ts`), `src/app/.well-known/oauth-protected-resource/` (metadatos RFC 9728), `src/app/oauth/consent/page.tsx` (consentimiento), `convex/lib/projectQueries.ts` (lectura compartida con `projects.list`) y `tasks.get` en `convex/tasks.ts`.
 - Demo: `convex/demo.ts`, `convex/crons.ts`, `convex/lib/demoData.ts`, `src/app/api/demo-login/route.ts`, `shared/components/layout/DemoBanner.tsx`.
 
-- Auditoría de publicación (2026-10-26): Next 16.4.3 y zod 4.6.x (`npm audit --omit=dev` en 0), cabeceras de seguridad (CSP, nosniff, X-Frame-Options, Referrer, Permissions) en `next.config.ts`, `not-found.tsx`, `error.tsx`, `robots.ts`, cliente Supabase perezoso (`shared/lib/supabase.ts`) y CI en `.github/workflows/ci.yml`. La CSP no se ha probado en navegador: revisar la consola tras desplegar. Pendiente humano: monitoreo de errores/uptime, prueba de backup de Convex, aviso de privacidad, límite global del login demo, Lighthouse.
+- Auditoría de publicación (2026-10-26; dependencias revisadas el 2026-11-22: Next 16.4.5, `npm audit --omit=dev` en 0): zod 4.6.x, cabeceras de seguridad (CSP, nosniff, X-Frame-Options, Referrer, Permissions) en `next.config.ts`, `not-found.tsx`, `error.tsx`, `robots.ts`, cliente Supabase perezoso (`shared/lib/supabase.ts`) y CI en `.github/workflows/ci.yml`. La CSP no se ha probado en navegador: revisar la consola tras desplegar. Pendiente humano: monitoreo de errores/uptime, prueba de backup de Convex, aviso de privacidad, límite global del login demo, Lighthouse.
 
 ## 4. Cambios recientes
 
 | Commit | Cambio |
 |---|---|
+| `a0b4fb6` | Dependencias de desarrollo: Vitest 4.1.12 (dos proyectos, `app` y `convex`), shadcn 4.23.0 y `npm audit fix`; de 16 avisos a 4 moderados (#70). |
+| `7215435` | Next.js 16.4.3 → 16.4.5 por 7 avisos moderados; `npm audit --omit=dev` en 0 (#68). |
+| `b4e90f5` | Docs: HANDOFF con `editar_tarea` y despliegue de Convex (#66). |
 | `8ee61be` | MCP: ids inválidos responden "no encontrada" (`normalizeId` en `tasks.get` y `projects.get`) (#64). |
 | `d731482` | MCP: `editar_tarea` con `tasks.updateTask` (#62). |
 | `51cb799` | Docs: el log de Vercel muestra la URL de Convex como `[REDACTED]` (#60). |
