@@ -88,7 +88,7 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 7. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
 8. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
 9. MCP: el token OAuth vale para todo lo que el usuario puede hacer en Convex, no solo para lo que expone el MCP; si hiciera falta acotarlo, el JWT trae `client_id`. `crear_tarea` usa dos mutations y un reintento puede duplicar la tarea. Sin borrado ni edición de subtareas por MCP, por decisión; una "fecha de fin de repetición" exigiría un campo nuevo. El filtro `semana` hereda la limitación de zona horaria de `/week` (ADR 005). El servidor OAuth de Supabase está en beta.
-10. Aviso de Next.js sobre una vulnerabilidad: al arrancar `next dev` apareció una recomendación de actualizar que cerraba el servidor tras la primera petición. No se ejecutó el `next upgrade` que proponía; falta comprobarlo con `npm audit`.
+10. Dependencias de desarrollo con avisos de `npm audit` (vitest, shadcn, typescript-eslint, hono…): 16 avisos, 2 críticos. No afectan a producción (`npm audit --omit=dev` en 0 desde Next 16.4.5); revisar al actualizar esas herramientas.
 11. Convex se despliega desde el build de Vercel en producción (`frontend/vercel.json`, ADR 007) con `CONVEX_DEPLOY_KEY` en Vercel (Production), configurada y verificada el 2026-11-22. Si esa variable se borra o caduca, Convex vuelve a ser manual sin aviso: revisar que el log muestre `Deployed Convex functions`.
 
 ## 6. Capa común y excepciones
