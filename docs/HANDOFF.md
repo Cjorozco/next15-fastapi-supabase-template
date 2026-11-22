@@ -2,11 +2,11 @@
 
 > La fuente de verdad es este archivo. Hay una copia en Notion (Proyectos / Project Manager (Next + Convex)) que se refresca cuando se pida en la sesión de Claude Code.
 >
-> **Última actualización:** 2026-10-30 (flujo de ramas, ADR 004). Anterior: 2026-10-09 · **Último cambio de código:** `c8871be` (login demo de un clic). Antes de él, el último fue `990d109` (2026-09-20). Repo local verificado el 2026-10-09: árbol limpio y sincronizado con `origin`.
+> **Última actualización:** 2026-11-22 (servidor MCP con OAuth de Supabase, ADR 006). Anterior: 2026-10-30 · **Último cambio de código:** `ef93c3b` (herramientas de escritura del MCP, #51), publicado en `master` con `114d162`. Esta actualización solo añade el MCP; el resto del documento no se revisó y puede estar desfasado.
 
 ## 1. Qué es
 
-Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos. Incluye subtareas, drag and drop, gráficas de avance y un copiloto de IA opcional con la API key del propio usuario (BYOK).
+Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos. Incluye subtareas, drag and drop, gráficas de avance y un copiloto de IA opcional con la API key del propio usuario (BYOK). Desde Claude se puede leer y operar con un conector MCP remoto (sección 3).
 
 **Stack:** Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 + shadcn · Convex (backend reactivo) · Supabase Auth (JWT ES256 verificado por JWKS en Convex) · Zod 4 · Vitest.
 
@@ -21,7 +21,14 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 ## 3. Estado actual
 
-- Tests: Vitest 19 archivos / 146 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-10-26).
+- Tests: Vitest 38 archivos / 444 pruebas OK. `tsc --noEmit` sin errores (verificado el 2026-11-22).
+- **Servidor MCP (2026-11-22, #49 y #51, ADR 006):** `POST /api/mcp` en producción (`https://project-manager-web-five.vercel.app/api/mcp`), conectado en Claude como conector personalizado y probado desde el chat.
+  - Lectura: `listar_proyectos`, `listar_tareas` (proyecto, estado, `hoy`/`semana`, páginas de 200) y `obtener_tarea`.
+  - Escritura sin borrado: `crear_proyecto` (con tareas opcionales en una operación), `crear_tarea` y `mover_tarea`. Cada una devuelve un resumen para confirmar.
+  - Auth: OAuth 2.1 con Supabase Auth (servidor OAuth en beta, registro dinámico activo, consentimiento en `/oauth/consent`). El MCP verifica el JWT y lo reenvía a Convex, así que usa las mismas queries y mutations que la app con el usuario que aprobó. Sin secretos propios.
+  - Doc de uso: `frontend/README.md`, sección "Servidor MCP". Encargo original: `docs/handoffs/handoff-mcp-project-manager.md`.
+  - Revocar acceso: Supabase → Authentication → OAuth Apps. Si cambia lo que puede hacer el MCP, actualizar el texto de `/oauth/consent`, revocar y reconectar.
+  - Un asistente de Claude dijo ver el conector en `ccr-local:8002` (HTTP local). El conector guardado usa la URL pública y funciona en un chat nuevo; parece la dirección interna de ese entorno, no del proyecto (no confirmado).
 - Demo de un clic (`c8871be`): botón "Probar demo" en `/login` (visible si existe `NEXT_PUBLIC_DEMO_EMAIL`) que llama a `POST /api/demo-login` (`src/app/api/demo-login/route.ts`). La ruta inicia sesión en Supabase con `DEMO_EMAIL`/`DEMO_PASSWORD`, que solo existen en el servidor (404 si faltan; límite de 10 intentos por minuto por IP, en memoria de la instancia). `proxy.ts` deja pública esa ruta. Datos sembrados en `convex/lib/demoData.ts`; `convex/demo.ts` (`reset`, interna) los restaura cada 24 h desde `convex/crons.ts` y solo toca al usuario con `DEMO_TOKEN_IDENTIFIER` (si falta, no hace nada). `convex/demo.test.ts` (6 pruebas) la cubre. `DemoBanner` aparece en el header. `tasks` ganó campos opcionales (`status`, `priority`, `dueDate`, `assignee`) que el seed rellena y la UI aún no muestra.
 - Autorización en Convex: `convex/authorization.test.ts` (15 pruebas) cubre llamadas anónimas, usuario sin registro y aislamiento entre usuarios sobre una base compartida para todas las funciones públicas de `projects` y `tasks`. Se comprobó que falla si se reintroduce el IDOR de `tasks.reorder`. `convex/example.test.ts` son pruebas funcionales reales; su prueba "cannot access other user project" usa dos bases separadas y por eso no prueba aislamiento (lo cubre el archivo nuevo).
 - Usuarios en Convex: `convex/users.test.ts` (9 pruebas) cubre `users.me` (anónimo, sin registro, forma devuelta, aislamiento entre usuarios) y `users.store` (rechazo anónimo, creación, idempotencia, email vacío, identidades distintas).
@@ -36,7 +43,8 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 - `frontend/convex/`: `projects.ts`, `tasks.ts`, `users.ts` (rutas planas), `schema.ts`, `lib/authorization.ts` (`requireAuthenticatedUser`, `requireProjectOwner`), `lib/errors.ts`.
 - `frontend/domains/{projects,tasks,dashboard}`: componentes, hooks y esquemas Zod de IA.
 - `frontend/shared/lib/ai/`: gateway multi-proveedor (Gemini, Groq), adaptadores, `config.ts`, `safe-ai-parser.ts`, `ai-errors.ts`, `useAiClient.ts`.
-- `frontend/src/proxy.ts`: guards de auth (frontera de red de Next 16); deja pasar `/api/demo-login`.
+- `frontend/src/proxy.ts`: guards de auth (frontera de red de Next 16); deja pasar `/api/demo-login`, `/api/mcp` y `/.well-known/*`, y al mandar a `/login` guarda la ruta de vuelta (`?redirect=`, validada con `shared/lib/safeRedirect.ts`).
+- MCP: `src/app/api/mcp/route.ts` (herramientas), `domains/mcp/lib/` (`tools.ts` lectura, `writes.ts` escritura, `supabaseToken.ts` verificación del JWT, `resource.ts`), `src/app/.well-known/oauth-protected-resource/` (metadatos RFC 9728), `src/app/oauth/consent/page.tsx` (consentimiento), `convex/lib/projectQueries.ts` (lectura compartida con `projects.list`) y `tasks.get` en `convex/tasks.ts`.
 - Demo: `convex/demo.ts`, `convex/crons.ts`, `convex/lib/demoData.ts`, `src/app/api/demo-login/route.ts`, `shared/components/layout/DemoBanner.tsx`.
 
 - Auditoría de publicación (2026-10-26): Next 16.4.3 y zod 4.6.x (`npm audit --omit=dev` en 0), cabeceras de seguridad (CSP, nosniff, X-Frame-Options, Referrer, Permissions) en `next.config.ts`, `not-found.tsx`, `error.tsx`, `robots.ts`, cliente Supabase perezoso (`shared/lib/supabase.ts`) y CI en `.github/workflows/ci.yml`. La CSP no se ha probado en navegador: revisar la consola tras desplegar. Pendiente humano: monitoreo de errores/uptime, prueba de backup de Convex, aviso de privacidad, límite global del login demo, Lighthouse.
@@ -45,6 +53,9 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 
 | Commit | Cambio |
 |---|---|
+| `3a58070` | Handoff del MCP guardado como histórico y ADR 006 (#53). |
+| `ef93c3b` | MCP fase 2: `crear_proyecto`, `crear_tarea`, `mover_tarea`, sin borrado (#51). |
+| `412d0a5` | MCP fase 1: lectura con OAuth 2.1 de Supabase, consentimiento y `tasks.get` (#49). |
 | `c8871be` | Login demo de un clic con datos sembrados y reinicio diario por cron. |
 | `547b0f8` | Pruebas de `users.me` y `users.store`. |
 | `aa5b392` | Pruebas de autorización y aislamiento entre tenants. |
@@ -66,6 +77,8 @@ Gestor de proyectos y tareas en tiempo real. Cada usuario ve solo sus proyectos.
 6. Sin colaboración entre usuarios: cada proyecto tiene un solo dueño.
 7. Los tests de Convex no cubren `createWithTasks` con posiciones arbitrarias del cliente.
 8. El nombre de la carpeta del repo (`next15-fastapi-supabase-template`) ya no describe el producto.
+9. MCP: el token OAuth vale para todo lo que el usuario puede hacer en Convex, no solo para lo que expone el MCP; si hiciera falta acotarlo, el JWT trae `client_id`. `crear_tarea` usa dos mutations y un reintento puede duplicar la tarea. El filtro `semana` hereda la limitación de zona horaria de `/week` (ADR 005). El servidor OAuth de Supabase está en beta.
+10. Aviso de Next.js sobre una vulnerabilidad: al arrancar `next dev` apareció una recomendación de actualizar que cerraba el servidor tras la primera petición. No se ejecutó el `next upgrade` que proponía; falta comprobarlo con `npm audit`.
 
 ## 6. Capa común y excepciones
 
