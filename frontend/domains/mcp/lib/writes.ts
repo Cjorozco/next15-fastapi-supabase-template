@@ -1,3 +1,8 @@
+import {
+  PROJECT_STATUS_LABELS,
+  resolveProjectStatus,
+  type ProjectStatus,
+} from '@/convex/lib/projectFields';
 import { MAX_TASKS_PER_REQUEST, type TaskPriority, type TaskStatus } from '@/convex/lib/taskFields';
 import { dayKey } from '@/domains/tasks/lib/timezone';
 
@@ -115,4 +120,39 @@ export function summarizeMovedTask(
     return `«${after.title}» ${where} ya estaba ${STATUS_LABEL[after.status]}; no cambió nada.`;
   }
   return `«${after.title}» ${where}: ${STATUS_LABEL[before.status]} → ${STATUS_LABEL[after.status]}.`;
+}
+
+interface ProjectLike {
+  _id: string;
+  name: string;
+  description?: string;
+  status?: ProjectStatus;
+}
+
+const quoteOrEmpty = (value: string | undefined) => (value ? `«${value}»` : '(vacía)');
+
+/** What `editar_proyecto` changed: id plus each field before → after, or that nothing changed. */
+export function summarizeEditedProject(before: ProjectLike, after: ProjectLike): string {
+  const changes: string[] = [];
+  if (before.name !== after.name) changes.push(`nombre: «${before.name}» → «${after.name}»`);
+  if ((before.description ?? '') !== (after.description ?? '')) {
+    changes.push(
+      `descripción: ${quoteOrEmpty(before.description)} → ${quoteOrEmpty(after.description)}`
+    );
+  }
+  if (changes.length === 0) {
+    return `Proyecto «${after.name}» (id ${after._id}): no cambió nada, ya tenía esos datos.`;
+  }
+  return [`Proyecto «${after.name}» (id ${after._id}) actualizado:`, ...changes.map((c) => `- ${c}`)].join(
+    '\n'
+  );
+}
+
+/** What `cambiar_estado_proyecto` changed: id, name and status before → after. */
+export function summarizeProjectStatus(before: ProjectLike, after: ProjectLike): string {
+  const from = resolveProjectStatus(before);
+  const to = resolveProjectStatus(after);
+  const head = `Proyecto «${after.name}» (id ${after._id})`;
+  if (from === to) return `${head} ya estaba ${PROJECT_STATUS_LABELS[to].toLowerCase()}; no cambió nada.`;
+  return `${head}: ${PROJECT_STATUS_LABELS[from].toLowerCase()} → ${PROJECT_STATUS_LABELS[to].toLowerCase()}.`;
 }

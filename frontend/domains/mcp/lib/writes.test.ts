@@ -5,7 +5,9 @@ import {
   bogotaMidnight,
   describeTask,
   summarizeCreatedProject,
+  summarizeEditedProject,
   summarizeMovedTask,
+  summarizeProjectStatus,
   toProjectTasks,
 } from './writes';
 
@@ -106,5 +108,29 @@ describe('summaries', () => {
         'Estudio'
       )
     ).toContain('ya estaba completada');
+  });
+});
+
+describe('project edits', () => {
+  const base = { _id: 'p1', name: 'Viejo', description: 'Antes', status: 'activo' as const };
+
+  test('lists name and description changes with the id', () => {
+    const text = summarizeEditedProject(base, { ...base, name: 'Nuevo', description: undefined });
+    expect(text).toContain('id p1');
+    expect(text).toContain('nombre: «Viejo» → «Nuevo»');
+    expect(text).toContain('descripción: «Antes» → (vacía)');
+  });
+
+  test('says when the edit changed nothing', () => {
+    expect(summarizeEditedProject(base, base)).toContain('no cambió nada');
+  });
+
+  test('shows status before and after, defaulting a missing status to activo', () => {
+    expect(
+      summarizeProjectStatus({ _id: 'p1', name: 'X' }, { _id: 'p1', name: 'X', status: 'en_pausa' })
+    ).toBe('Proyecto «X» (id p1): activo → en pausa.');
+    expect(
+      summarizeProjectStatus({ ...base, status: 'en_pausa' }, { ...base, status: 'en_pausa' })
+    ).toContain('ya estaba en pausa');
   });
 });
