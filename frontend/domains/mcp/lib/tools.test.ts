@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import type { Id } from '@/convex/_generated/dataModel';
 import type { Project } from '@/domains/projects/types';
 import type { Task } from '@/domains/tasks/types';
-import { isValidBearer } from './accessToken';
 import { filterTasks, MAX_LISTED_TASKS, summarizeProjects } from './tools';
 
 // Wednesday 18 Nov 2026, 15:00 in Bogotá (UTC-5).
@@ -96,20 +95,5 @@ describe('filterTasks pagination', () => {
     expect(second.tareas).toHaveLength(1);
     expect(second.tareas[0].id).toBe(many.tasks[MAX_LISTED_TASKS]._id);
     expect(second.siguiente).toBeUndefined();
-  });
-});
-
-describe('isValidBearer', () => {
-  test('accepts only the exact token', () => {
-    expect(isValidBearer('Bearer abc123', 'abc123')).toBe(true);
-    expect(isValidBearer('bearer abc123', 'abc123')).toBe(true);
-    expect(isValidBearer('Bearer abc124', 'abc123')).toBe(false);
-    expect(isValidBearer('abc123', 'abc123')).toBe(false);
-    expect(isValidBearer(null, 'abc123')).toBe(false);
-  });
-
-  test('is closed when no token is configured', () => {
-    expect(isValidBearer('Bearer ', '')).toBe(false);
-    expect(isValidBearer('Bearer x', undefined)).toBe(false);
   });
 });

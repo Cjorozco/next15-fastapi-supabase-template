@@ -81,36 +81,34 @@ convex/                  # Backend Convex
 
 ## Servidor MCP (solo lectura)
 
-Permite que Claude lea los proyectos y tareas desde el chat. Endpoint: `https://<tu-dominio>/api/mcp` (Streamable HTTP). Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/` y `convex/mcp.ts`.
+Permite que Claude lea tus proyectos y tareas desde el chat. Endpoint: `https://<tu-dominio>/api/mcp` (Streamable HTTP). Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/`, `src/app/.well-known/oauth-protected-resource/` y `src/app/oauth/consent/`.
 
-**Qué expone** (fase 1, solo lectura):
+**Qué expone** (solo lectura):
 
 - `listar_proyectos`: id, nombre, estado, fecha límite y tareas pendientes.
 - `listar_tareas`: filtros `proyecto_id`, `estado` (`pendiente` / `en_progreso` / `completada`) y `fecha` (`hoy` = la vista Hoy; `semana` = vencidas y de esta semana). Páginas de 200: si la respuesta trae `siguiente`, se pide el resto con `desde`. Las fechas, en `YYYY-MM-DD` hora de Bogotá.
 - `obtener_tarea`: detalle de una tarea (notas, horas, subtareas).
 
-**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (actúa siempre como un único usuario fijo) y ninguna escritura ni borrado.
+**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó) y ninguna escritura ni borrado.
 
-### Configurar
+### Cómo se autentica
 
-1. Genera dos secretos distintos (no los guardes en el repo):
-   ```bash
-   openssl rand -hex 32   # MCP_ACCESS_TOKEN
-   openssl rand -hex 32   # MCP_CONVEX_SECRET
-   ```
-2. En **Vercel** (Settings → Environment Variables, solo Production): `MCP_ACCESS_TOKEN` y `MCP_CONVEX_SECRET`. Para probar en local, en `.env.local`.
-3. En **Convex** (el despliegue que usa ese entorno):
-   ```bash
-   npx convex env set MCP_CONVEX_SECRET <mismo valor que en Vercel>
-   npx convex env set MCP_USER_TOKEN_IDENTIFIER "<SUPABASE_URL>/auth/v1|<id de tu usuario en Supabase>"
-   ```
-   El id está en Supabase → Authentication → Users. Para producción añade `--prod`.
-4. Redespliega en Vercel.
+OAuth 2.1 con **Supabase Auth como servidor de autorización**. No hay secretos propios del MCP:
 
-Si falta cualquiera de las variables, el endpoint no devuelve datos: sin token válido responde `401`.
+1. Claude llama a `/api/mcp` sin token y recibe `401` con `resource_metadata`, que apunta a `/.well-known/oauth-protected-resource/api/mcp`. Ahí se indica que los tokens los emite `https://<ref>.supabase.co/auth/v1`.
+2. Claude se registra solo en Supabase (registro dinámico) y te manda a `/oauth/consent`. Si no tienes sesión, pasas antes por `/login` y vuelves.
+3. Al pulsar **Permitir**, Supabase entrega a Claude un token de tu usuario.
+4. El MCP verifica ese JWT (firma ES256 con el JWKS del proyecto, emisor y `aud: authenticated`) y lo reenvía a Convex. Las herramientas usan las mismas consultas que la app (`projects.list`, `tasks.get`) con tu usuario.
+
+### Configurar (una vez, en el panel de Supabase)
+
+1. **Authentication → OAuth Server**: activa el servidor OAuth 2.1, pon **Authorization Path** = `/oauth/consent` y activa **Dynamic client registration**.
+2. **Authentication → URL Configuration**: la **Site URL** debe ser el dominio de producción (la pantalla de consentimiento es Site URL + `/oauth/consent`).
+
+No hay que añadir variables en Vercel ni en Convex: el MCP usa `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `NEXT_PUBLIC_CONVEX_URL`, que ya existen.
 
 ### Conectar en Claude
 
-En Claude: Settings → Connectors → *Add custom connector*. URL: `https://<tu-dominio>/api/mcp`. En **Request headers** añade `Authorization` con el valor `Bearer <MCP_ACCESS_TOKEN>`. Luego pregunta, por ejemplo, "¿qué tengo hoy?".
+Settings → Connectors → *Add custom connector*, URL `https://<tu-dominio>/api/mcp`, sin cabeceras. Claude abrirá el inicio de sesión y la pantalla de consentimiento. Luego pregunta, por ejemplo, "¿qué tengo hoy?".
 
-Para rotar el token: genera uno nuevo, cámbialo en Vercel, redespliega y actualiza la cabecera del conector.
+**Revocar el acceso:** en Supabase → Authentication → OAuth Apps, borra el cliente de Claude (o sus autorizaciones). Los tokens ya emitidos caducan con la vida normal de un token de Supabase.

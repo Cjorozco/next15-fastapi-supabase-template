@@ -1,25 +1,30 @@
-import { createMcpHandler } from 'mcp-handler';
+import { createMcpHandler, withMcpAuth } from 'mcp-handler';
+import type { AuthInfo } from '@modelcontextprotocol/server';
 import { ConvexHttpClient } from 'convex/browser';
 import { z } from 'zod';
 import { api } from '@/convex/_generated/api';
 import type { Id } from '@/convex/_generated/dataModel';
-import { isValidBearer } from '@/domains/mcp/lib/accessToken';
+import { MCP_RESOURCE_METADATA_PATH } from '@/domains/mcp/lib/resource';
+import { verifySupabaseToken } from '@/domains/mcp/lib/supabaseToken';
 import { filterTasks, summarizeProjects, summarizeTask } from '@/domains/mcp/lib/tools';
 
 /**
- * Remote MCP server, read only (phase 1). Claude connects with
- * `Authorization: Bearer <MCP_ACCESS_TOKEN>`; without it the answer is 401 and Convex is
- * never called. Data comes from `convex/mcp.ts`, which acts as one fixed user.
- * Env (server only, never NEXT_PUBLIC): MCP_ACCESS_TOKEN, MCP_CONVEX_SECRET.
+ * Remote MCP server, read only. Auth is OAuth 2.1 with Supabase Auth as the authorization
+ * server: without a valid Supabase token the answer is 401 with a `resource_metadata`
+ * pointer (`/.well-known/oauth-protected-resource`), which is how Claude finds where to
+ * sign in. The token is then forwarded to Convex, so tools call the same queries as the
+ * app (`projects.list`, `tasks.get`) as the user who approved the connection.
  */
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function convex() {
+/** Convex client acting as the caller. One per request: the token is per user. */
+function convexFor(authInfo: AuthInfo | undefined): ConvexHttpClient {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
-  const secret = process.env.MCP_CONVEX_SECRET;
-  if (!url || !secret) throw new Error('MCP no configurado');
-  return { client: new ConvexHttpClient(url), secret };
+  if (!url || !authInfo) throw new Error('MCP no configurado');
+  const client = new ConvexHttpClient(url);
+  client.setAuth(authInfo.token);
+  return client;
 }
 
 const json = (value: unknown) => ({
@@ -30,11 +35,6 @@ const failure = (message: string) => ({
   content: [{ type: 'text' as const, text: message }],
   isError: true,
 });
-
-async function loadProjects() {
-  const { client, secret } = convex();
-  return await client.query(api.mcp.listProjects, { secret });
-}
 
 const mcpHandler = createMcpHandler(
   (server) => {
@@ -47,9 +47,10 @@ const mcpHandler = createMcpHandler(
         inputSchema: z.object({}),
         annotations: { readOnlyHint: true },
       },
-      async () => {
+      async (_args, ctx) => {
         try {
-          return json(summarizeProjects(await loadProjects()));
+          const projects = await convexFor(ctx.http?.authInfo).query(api.projects.list, {});
+          return json(summarizeProjects(projects));
         } catch {
           return failure('No se pudieron leer los proyectos.');
         }
@@ -75,9 +76,9 @@ const mcpHandler = createMcpHandler(
         }),
         annotations: { readOnlyHint: true },
       },
-      async ({ proyecto_id, estado, fecha, desde }) => {
+      async ({ proyecto_id, estado, fecha, desde }, ctx) => {
         try {
-          const projects = await loadProjects();
+          const projects = await convexFor(ctx.http?.authInfo).query(api.projects.list, {});
           return json(
             filterTasks(projects, { proyectoId: proyecto_id, estado, fecha, desde }, Date.now())
           );
@@ -96,11 +97,9 @@ const mcpHandler = createMcpHandler(
         inputSchema: z.object({ tarea_id: z.string().min(1) }),
         annotations: { readOnlyHint: true },
       },
-      async ({ tarea_id }) => {
+      async ({ tarea_id }, ctx) => {
         try {
-          const { client, secret } = convex();
-          const result = await client.query(api.mcp.getTask, {
-            secret,
+          const result = await convexFor(ctx.http?.authInfo).query(api.tasks.get, {
             taskId: tarea_id as Id<'tasks'>,
           });
           if (!result) return failure('Tarea no encontrada.');
@@ -122,17 +121,14 @@ const mcpHandler = createMcpHandler(
       }
     );
   },
-  { serverInfo: { name: 'project-manager', version: '1.0.0' } }
+  { serverInfo: { name: 'project-manager', version: '1.1.0' } }
 );
 
-async function handler(request: Request): Promise<Response> {
-  if (!isValidBearer(request.headers.get('authorization'), process.env.MCP_ACCESS_TOKEN)) {
-    return new Response(JSON.stringify({ error: 'unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Bearer' },
-    });
-  }
-  return mcpHandler(request);
-}
+const handler = withMcpAuth(mcpHandler, (_req, token) => verifySupabaseToken(token), {
+  required: true,
+  // RFC 9728 path-suffixed form: its `resource` comes out as `<origin>/api/mcp`, which
+  // must equal the URL entered in Claude exactly.
+  resourceMetadataPath: MCP_RESOURCE_METADATA_PATH,
+});
 
 export { handler as GET, handler as POST, handler as DELETE };

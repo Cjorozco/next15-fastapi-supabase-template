@@ -19,7 +19,6 @@ import type * as lib_projectQueries from "../lib/projectQueries.js";
 import type * as lib_taskDto from "../lib/taskDto.js";
 import type * as lib_taskFields from "../lib/taskFields.js";
 import type * as lib_taskValidation from "../lib/taskValidation.js";
-import type * as mcp from "../mcp.js";
 import type * as migrations from "../migrations.js";
 import type * as projects from "../projects.js";
 import type * as tasks from "../tasks.js";
@@ -43,7 +42,6 @@ declare const fullApi: ApiFromModules<{
   "lib/taskDto": typeof lib_taskDto;
   "lib/taskFields": typeof lib_taskFields;
   "lib/taskValidation": typeof lib_taskValidation;
-  mcp: typeof mcp;
   migrations: typeof migrations;
   projects: typeof projects;
   tasks: typeof tasks;
