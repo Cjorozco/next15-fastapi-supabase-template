@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/shared/lib/supabase';
+import { safeRedirectPath } from '@/shared/lib/safeRedirect';
 import { Loader2, LogIn, Eye, EyeOff, Play } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -47,7 +48,8 @@ export default function LoginPage() {
       );
       setIsLoading(false);
     } else {
-      router.push('/hoy');
+      // Vuelve a donde iba (p. ej. el consentimiento OAuth del MCP); por defecto, a Hoy.
+      router.push(safeRedirectPath(new URLSearchParams(window.location.search).get('redirect')));
     }
   };
 

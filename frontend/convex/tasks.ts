@@ -1,4 +1,4 @@
-import { mutation, MutationCtx } from "./_generated/server";
+import { mutation, MutationCtx, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { requireProjectOwner } from "./lib/authorization";
@@ -21,6 +21,29 @@ import {
   resolveTaskStatus,
   statusAfterCompletion,
 } from "./lib/taskFields";
+
+/** One task with its project's name, or null when it does not exist or is not the caller's. */
+export const get = query({
+  args: { taskId: v.id("tasks") },
+  returns: v.union(
+    v.object({
+      task: taskValidator,
+      project: v.object({ _id: v.id("projects"), name: v.string() }),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) return null;
+    try {
+      const project = await requireProjectOwner(ctx, task.projectId);
+      return { task: toTaskDto(task), project: { _id: project._id, name: project.name } };
+    } catch (error) {
+      if (error instanceof DomainException && error.code === "ENTITY_NOT_FOUND") return null;
+      throw error;
+    }
+  },
+});
 
 export const create = mutation({
   args: {

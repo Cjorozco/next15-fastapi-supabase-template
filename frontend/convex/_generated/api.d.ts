@@ -15,6 +15,7 @@ import type * as lib_demoData from "../lib/demoData.js";
 import type * as lib_errors from "../lib/errors.js";
 import type * as lib_projectDto from "../lib/projectDto.js";
 import type * as lib_projectFields from "../lib/projectFields.js";
+import type * as lib_projectQueries from "../lib/projectQueries.js";
 import type * as lib_taskDto from "../lib/taskDto.js";
 import type * as lib_taskFields from "../lib/taskFields.js";
 import type * as lib_taskValidation from "../lib/taskValidation.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "lib/errors": typeof lib_errors;
   "lib/projectDto": typeof lib_projectDto;
   "lib/projectFields": typeof lib_projectFields;
+  "lib/projectQueries": typeof lib_projectQueries;
   "lib/taskDto": typeof lib_taskDto;
   "lib/taskFields": typeof lib_taskFields;
   "lib/taskValidation": typeof lib_taskValidation;
