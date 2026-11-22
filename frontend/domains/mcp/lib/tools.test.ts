@@ -3,7 +3,7 @@ import type { Id } from '@/convex/_generated/dataModel';
 import type { Project } from '@/domains/projects/types';
 import type { Task } from '@/domains/tasks/types';
 import { isValidBearer } from './accessToken';
-import { filterTasks, summarizeProjects } from './tools';
+import { filterTasks, MAX_LISTED_TASKS, summarizeProjects } from './tools';
 
 // Wednesday 18 Nov 2026, 15:00 in Bogotá (UTC-5).
 const NOW = Date.UTC(2026, 10, 18, 20, 0);
@@ -79,6 +79,23 @@ describe('filterTasks', () => {
     expect(
       filterTasks([active, paused], { proyectoId: 'p2' }, NOW).tareas.map((t) => t.titulo)
     ).toEqual(['Pausada']);
+  });
+});
+
+describe('filterTasks pagination', () => {
+  test('pages through every task with "siguiente"', () => {
+    const many = project({
+      tasks: Array.from({ length: MAX_LISTED_TASKS + 1 }, () => task()),
+    });
+    const first = filterTasks([many], {}, NOW);
+    expect(first.tareas).toHaveLength(MAX_LISTED_TASKS);
+    expect(first.total).toBe(MAX_LISTED_TASKS + 1);
+    expect(first.siguiente).toBe(MAX_LISTED_TASKS);
+
+    const second = filterTasks([many], { desde: first.siguiente }, NOW);
+    expect(second.tareas).toHaveLength(1);
+    expect(second.tareas[0].id).toBe(many.tasks[MAX_LISTED_TASKS]._id);
+    expect(second.siguiente).toBeUndefined();
   });
 });
 

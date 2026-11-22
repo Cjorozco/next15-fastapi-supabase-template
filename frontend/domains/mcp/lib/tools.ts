@@ -11,7 +11,7 @@ import type { Task } from '@/domains/tasks/types';
  * "Hoy" and "Esta semana" views. Pure functions: the route only fetches and serializes.
  */
 
-/** Cap on listed tasks so one answer stays readable in a chat. */
+/** Page size of `listar_tareas`, so one answer stays readable in a chat. */
 export const MAX_LISTED_TASKS = 200;
 
 export type DateFilter = 'hoy' | 'semana';
@@ -20,6 +20,8 @@ export interface TaskFilters {
   proyectoId?: string;
   estado?: TaskStatus;
   fecha?: DateFilter;
+  /** Offset for the next page: pass the `siguiente` of the previous answer. */
+  desde?: number;
 }
 
 export interface ProjectSummary {
@@ -85,7 +87,7 @@ export function filterTasks(
   projects: readonly Project[],
   filters: TaskFilters,
   now: number
-): { tareas: TaskSummary[]; total: number } {
+): { tareas: TaskSummary[]; total: number; siguiente?: number } {
   const scoped = filters.proyectoId
     ? projects.filter((project) => project._id === filters.proyectoId)
     : projects;
@@ -110,5 +112,11 @@ export function filterTasks(
   if (filters.estado) {
     items = items.filter((item) => item.estado === filters.estado);
   }
-  return { tareas: items.slice(0, MAX_LISTED_TASKS), total: items.length };
+  const desde = Math.max(0, Math.floor(filters.desde ?? 0));
+  const end = desde + MAX_LISTED_TASKS;
+  return {
+    tareas: items.slice(desde, end),
+    total: items.length,
+    ...(end < items.length ? { siguiente: end } : {}),
+  };
 }

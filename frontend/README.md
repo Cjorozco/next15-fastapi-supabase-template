@@ -86,7 +86,7 @@ Permite que Claude lea los proyectos y tareas desde el chat. Endpoint: `https://
 **Qué expone** (fase 1, solo lectura):
 
 - `listar_proyectos`: id, nombre, estado, fecha límite y tareas pendientes.
-- `listar_tareas`: filtros `proyecto_id`, `estado` (`pendiente` / `en_progreso` / `completada`) y `fecha` (`hoy` = la vista Hoy; `semana` = vencidas y de esta semana). Las fechas, en `YYYY-MM-DD` hora de Bogotá.
+- `listar_tareas`: filtros `proyecto_id`, `estado` (`pendiente` / `en_progreso` / `completada`) y `fecha` (`hoy` = la vista Hoy; `semana` = vencidas y de esta semana). Páginas de 200: si la respuesta trae `siguiente`, se pide el resto con `desde`. Las fechas, en `YYYY-MM-DD` hora de Bogotá.
 - `obtener_tarea`: detalle de una tarea (notas, horas, subtareas).
 
 **Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (actúa siempre como un único usuario fijo) y ninguna escritura ni borrado.

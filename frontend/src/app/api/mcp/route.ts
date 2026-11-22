@@ -61,19 +61,25 @@ const mcpHandler = createMcpHandler(
       {
         title: 'Listar tareas',
         description:
-          'Lista tareas. fecha "hoy" devuelve lo mismo que la vista Hoy (vencidas y de hoy); "semana" las vencidas y las que vencen esta semana. Ambas solo incluyen tareas pendientes de proyectos activos. Sin fecha devuelve todas. Fechas en YYYY-MM-DD, hora de Bogotá.',
+          'Lista tareas. fecha "hoy" devuelve lo mismo que la vista Hoy (vencidas y de hoy); "semana" las vencidas y las que vencen esta semana. Ambas solo incluyen tareas pendientes de proyectos activos. Sin fecha devuelve todas. Fechas en YYYY-MM-DD, hora de Bogotá. Devuelve hasta 200 por página: si la respuesta trae "siguiente", vuelve a llamar con desde = siguiente para ver el resto.',
         inputSchema: z.object({
           proyecto_id: z.string().optional().describe('Id de un proyecto (de listar_proyectos)'),
           estado: z.enum(['pendiente', 'en_progreso', 'completada']).optional(),
           fecha: z.enum(['hoy', 'semana']).optional(),
+          desde: z
+            .number()
+            .int()
+            .min(0)
+            .optional()
+            .describe('Posición desde la que listar; usa el "siguiente" de la respuesta anterior'),
         }),
         annotations: { readOnlyHint: true },
       },
-      async ({ proyecto_id, estado, fecha }) => {
+      async ({ proyecto_id, estado, fecha, desde }) => {
         try {
           const projects = await loadProjects();
           return json(
-            filterTasks(projects, { proyectoId: proyecto_id, estado, fecha }, Date.now())
+            filterTasks(projects, { proyectoId: proyecto_id, estado, fecha, desde }, Date.now())
           );
         } catch {
           return failure('No se pudieron leer las tareas.');
