@@ -101,11 +101,12 @@ Código: `src/app/api/mcp/route.ts`, `domains/mcp/lib/`, `src/app/.well-known/oa
 | `crear_tarea` | Tarea al final de un proyecto, con fecha y estado opcionales | `tasks.create` + `tasks.updateTask` | Título, estado, fecha, proyecto e id. Si la fecha o el estado no se pudieron guardar, lo avisa |
 | `mover_tarea` | Cambia el estado (`pendiente` / `en_progreso` / `completada`) | `tasks.updateTask` | Estado antes → después. En una repetitiva completada, que sigue abierta y su próxima fecha |
 | `editar_proyecto` | Cambia nombre y/o descripción de un proyecto por id (descripción vacía la borra) | `projects.updateProject` | Id, y nombre/descripción antes → después. Rechaza nombres repetidos; si nada cambia, lo dice |
+| `editar_tarea` | Edita una tarea por id: título, estado, prioridad, fecha (o `sin_fecha`), repetición (`diaria` / `laboral` / `semanal` / `ninguna`), horas estimadas, notas (vacío las borra) y `proyecto_id` para moverla. Solo cambia lo que recibe | `tasks.updateTask` (la del formulario de edición) | Id, título y cada campo antes → después (p. ej. `fecha: 2026-11-23 → 2026-11-30`). Aplica las reglas de la app (repetitiva completada se reabre; lunes a viernes no cae en fin de semana). Id inexistente: error sin cambios |
 | `cambiar_estado_proyecto` | Cambia el estado a `activo` / `en_pausa` / `completado` | `projects.updateProject` | Id, nombre y estado antes → después. Hoy y Esta semana solo muestran proyectos activos |
 
 Las fechas se escriben `YYYY-MM-DD` y se guardan a la medianoche de Bogotá, como el selector de la app. Claude marca estas herramientas como de escritura (`readOnlyHint: false`), así que puede pedir permiso antes de usarlas.
 
-**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó), borrar proyectos o tareas (se borran a mano desde la app), ni editar otros campos (título, notas o prioridad de tareas, subtareas, prioridad o fecha de proyectos).
+**Qué NO expone:** el código del repo, claves o variables de entorno, datos de otros usuarios (cada conexión ve solo los datos de quien la aprobó), borrar proyectos o tareas (se borran a mano desde la app), ni editar subtareas ni la prioridad o fecha de proyectos. No hay "fecha de fin de repetición": la app solo permite finalizar una repetición desde su formulario.
 
 ### Cómo se autentica
 

@@ -3,7 +3,13 @@ import {
   resolveProjectStatus,
   type ProjectStatus,
 } from '@/convex/lib/projectFields';
-import { MAX_TASKS_PER_REQUEST, type TaskPriority, type TaskStatus } from '@/convex/lib/taskFields';
+import {
+  MAX_TASKS_PER_REQUEST,
+  TASK_RECURRENCE_SHORT_LABELS,
+  type TaskPriority,
+  type TaskRecurrence,
+  type TaskStatus,
+} from '@/convex/lib/taskFields';
 import { dayKey } from '@/domains/tasks/lib/timezone';
 
 /**
@@ -155,4 +161,56 @@ export function summarizeProjectStatus(before: ProjectLike, after: ProjectLike):
   const head = `Proyecto «${after.name}» (id ${after._id})`;
   if (from === to) return `${head} ya estaba ${PROJECT_STATUS_LABELS[to].toLowerCase()}; no cambió nada.`;
   return `${head}: ${PROJECT_STATUS_LABELS[from].toLowerCase()} → ${PROJECT_STATUS_LABELS[to].toLowerCase()}.`;
+}
+
+interface EditableTask {
+  _id: string;
+  title: string;
+  status: TaskStatus;
+  priority?: TaskPriority;
+  dueDate?: number;
+  noDeadline?: boolean;
+  recurrence?: TaskRecurrence;
+  estimatedHours?: number;
+  notes?: string;
+}
+
+const orNone = (value: string | undefined, none: string) => value ?? none;
+const recurrenceLabel = (value: TaskRecurrence | undefined) =>
+  value ? TASK_RECURRENCE_SHORT_LABELS[value] : 'sin repetición';
+const hoursLabel = (value: number | undefined) => (value === undefined ? 'sin estimar' : `${value} h`);
+const notesLabel = (value: string | undefined) =>
+  value ? `«${value.length > 80 ? `${value.slice(0, 77)}...` : value}»` : '(vacías)';
+
+/**
+ * What `editar_tarea` changed: id, title and one "campo: antes → después" line per field
+ * that differs. `requested` lists the fields the caller sent, so a change the app made on
+ * its own (e.g. a Monday to Friday date moved off a weekend, or a recurring task reopened)
+ * is flagged instead of looking like what was asked.
+ */
+export function summarizeEditedTask(
+  before: EditableTask,
+  after: EditableTask,
+  projects: { before: string; after: string }
+): string {
+  const changes: string[] = [];
+  const add = (field: string, from: string, to: string) => {
+    if (from !== to) changes.push(`${field}: ${from} → ${to}`);
+  };
+  add('título', `«${before.title}»`, `«${after.title}»`);
+  add('estado', STATUS_LABEL[before.status], STATUS_LABEL[after.status]);
+  add('prioridad', orNone(before.priority, 'sin prioridad'), orNone(after.priority, 'sin prioridad'));
+  add(
+    'fecha',
+    before.dueDate === undefined ? (before.noDeadline ? 'sin fecha límite' : 'sin fecha') : dayKey(before.dueDate),
+    after.dueDate === undefined ? (after.noDeadline ? 'sin fecha límite' : 'sin fecha') : dayKey(after.dueDate)
+  );
+  add('repetición', recurrenceLabel(before.recurrence), recurrenceLabel(after.recurrence));
+  add('horas estimadas', hoursLabel(before.estimatedHours), hoursLabel(after.estimatedHours));
+  add('notas', notesLabel(before.notes), notesLabel(after.notes));
+  add('proyecto', `«${projects.before}»`, `«${projects.after}»`);
+
+  const head = `Tarea «${after.title}» (id ${after._id})`;
+  if (changes.length === 0) return `${head}: no cambió nada, ya tenía esos datos.`;
+  return [`${head} actualizada:`, ...changes.map((change) => `- ${change}`)].join('\n');
 }

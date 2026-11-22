@@ -6,6 +6,7 @@ import {
   describeTask,
   summarizeCreatedProject,
   summarizeEditedProject,
+  summarizeEditedTask,
   summarizeMovedTask,
   summarizeProjectStatus,
   toProjectTasks,
@@ -132,5 +133,51 @@ describe('project edits', () => {
     expect(
       summarizeProjectStatus({ ...base, status: 'en_pausa' }, { ...base, status: 'en_pausa' })
     ).toContain('ya estaba en pausa');
+  });
+});
+
+describe('task edits', () => {
+  const nov23 = Date.UTC(2026, 10, 23, 5);
+  const nov30 = Date.UTC(2026, 10, 30, 5);
+  const base = {
+    _id: 't1',
+    title: 'n8n',
+    status: 'pendiente' as const,
+    dueDate: nov23,
+    recurrence: 'laboral' as const,
+  };
+  const same = { before: 'Estudio', after: 'Estudio' };
+
+  test('shows the date change in the requested format, and nothing else', () => {
+    const text = summarizeEditedTask(base, { ...base, dueDate: nov30 }, same);
+    expect(text).toContain('Tarea «n8n» (id t1) actualizada:');
+    expect(text).toContain('- fecha: 2026-11-23 → 2026-11-30');
+    expect(text.split('\n')).toHaveLength(2);
+  });
+
+  test('describes recurrence, deadline, hours, notes and project changes', () => {
+    const text = summarizeEditedTask(
+      { ...base, notes: 'antes' },
+      {
+        ...base,
+        dueDate: undefined,
+        noDeadline: true,
+        recurrence: undefined,
+        estimatedHours: 1.5,
+        notes: undefined,
+        priority: 'alta',
+      },
+      { before: 'A', after: 'B' }
+    );
+    expect(text).toContain('fecha: 2026-11-23 → sin fecha límite');
+    expect(text).toContain('repetición: Lun a vie → sin repetición');
+    expect(text).toContain('horas estimadas: sin estimar → 1.5 h');
+    expect(text).toContain('notas: «antes» → (vacías)');
+    expect(text).toContain('prioridad: sin prioridad → alta');
+    expect(text).toContain('proyecto: «A» → «B»');
+  });
+
+  test('says when nothing changed', () => {
+    expect(summarizeEditedTask(base, base, same)).toContain('no cambió nada');
   });
 });
