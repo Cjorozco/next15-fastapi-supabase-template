@@ -13,6 +13,7 @@ import {
   describeTask,
   summarizeCreatedProject,
   summarizeEditedProject,
+  summarizeEditedTask,
   summarizeMovedTask,
   summarizeProjectStatus,
   toProjectTasks,
@@ -358,8 +359,92 @@ const mcpHandler = createMcpHandler(
         }
       }
     );
+
+    server.registerTool(
+      'editar_tarea',
+      {
+        title: 'Editar tarea',
+        description:
+          'Edita una tarea por id: solo cambia los campos que recibe. Puede cambiar título, estado, prioridad, fecha límite (o quitarla con sin_fecha), repetición (diaria, laboral = lunes a viernes, semanal, o "ninguna" para quitarla), horas estimadas, notas (vacío las borra) y moverla a otro proyecto. Aplica las mismas reglas que la app (una repetitiva completada se reabre con su próxima fecha; una de lunes a viernes no cae en fin de semana). Devuelve cada cambio como "campo: antes → después" para que el usuario lo confirme. No borra la tarea ni edita subtareas.',
+        inputSchema: z
+          .object({
+            tarea_id: z.string().min(1).describe('Id de una tarea (de listar_tareas)'),
+            titulo: z.string().trim().min(1).max(200).optional(),
+            estado: STATUS.optional(),
+            prioridad: PRIORITY.optional(),
+            fecha: DATE.optional(),
+            sin_fecha: z
+              .literal(true)
+              .optional()
+              .describe('true quita la fecha límite (la tarea queda sin fecha límite)'),
+            repeticion: z.enum(['diaria', 'laboral', 'semanal', 'ninguna']).optional(),
+            horas_estimadas: z.number().min(0).max(10000).optional(),
+            notas: z.string().max(5000).optional().describe('Texto vacío borra las notas'),
+            proyecto_id: z
+              .string()
+              .min(1)
+              .optional()
+              .describe('Id del proyecto al que mover la tarea (de listar_proyectos)'),
+          })
+          .refine((input) => Object.keys(input).some((key) => key !== 'tarea_id'), {
+            message: 'Indica al menos un campo que cambiar',
+          })
+          .refine((input) => !(input.fecha && input.sin_fecha), {
+            message: 'No se puede poner fecha y sin_fecha a la vez',
+          }),
+        annotations: WRITE,
+      },
+      async (input, ctx) => {
+        const action = 'No se editó la tarea';
+        const dueDate = input.fecha ? bogotaMidnight(input.fecha) : undefined;
+        if (dueDate === null) {
+          return failure(`${action}: fecha no válida (${input.fecha}). Usa YYYY-MM-DD.`);
+        }
+        try {
+          const convex = convexFor(ctx.http?.authInfo);
+          const taskId = input.tarea_id as Id<'tasks'>;
+          const before = await convex.query(api.tasks.get, { taskId });
+          if (!before) return failure(`${action}: tarea no encontrada.`);
+
+          let targetProjectName = before.project.name;
+          if (input.proyecto_id !== undefined && input.proyecto_id !== before.project._id) {
+            const target = await convex.query(api.projects.get, {
+              projectId: input.proyecto_id as Id<'projects'>,
+            });
+            if (!target) return failure(`${action}: proyecto de destino no encontrado.`);
+            targetProjectName = target.name;
+          }
+
+          const after = await convex.mutation(api.tasks.updateTask, {
+            taskId,
+            ...(input.titulo !== undefined ? { title: input.titulo } : {}),
+            ...(input.estado !== undefined ? { status: input.estado } : {}),
+            ...(input.prioridad !== undefined ? { priority: input.prioridad } : {}),
+            ...(dueDate !== undefined ? { dueDate } : {}),
+            ...(input.sin_fecha ? { noDeadline: true } : {}),
+            ...(input.repeticion !== undefined
+              ? { recurrence: input.repeticion === 'ninguna' ? null : input.repeticion }
+              : {}),
+            ...(input.horas_estimadas !== undefined ? { estimatedHours: input.horas_estimadas } : {}),
+            ...(input.notas !== undefined ? { notes: input.notas } : {}),
+            ...(input.proyecto_id !== undefined
+              ? { projectId: input.proyecto_id as Id<'projects'> }
+              : {}),
+            tzOffsetMinutes: APP_TZ_OFFSET_MINUTES,
+          });
+          return text(
+            summarizeEditedTask(before.task, after, {
+              before: before.project.name,
+              after: targetProjectName,
+            })
+          );
+        } catch (error) {
+          return writeFailure(action, error);
+        }
+      }
+    );
   },
-  { serverInfo: { name: 'project-manager', version: '1.3.0' } }
+  { serverInfo: { name: 'project-manager', version: '1.4.0' } }
 );
 
 const handler = withMcpAuth(mcpHandler, (_req, token) => verifySupabaseToken(token), {

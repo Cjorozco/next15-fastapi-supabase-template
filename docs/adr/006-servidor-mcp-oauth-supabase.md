@@ -49,3 +49,9 @@ La primera versión (#49, commit inicial) usaba un `Authorization: Bearer` fijo,
 A partir del [segundo handoff](../handoffs/handoff-mcp-proyectos-estado.md) se añaden `editar_proyecto` (nombre y/o descripción) y `cambiar_estado_proyecto` (`activo` / `en_pausa` / `completado`). Las dos reutilizan `projects.updateProject`, la mutation del diálogo de edición de la app, que ya valida dueño, nombre vacío o repetido y longitudes. Cada una lee antes el proyecto con `projects.get` y devuelve el id y los valores antes → después. Siguen sin existir el borrado y la edición de prioridad o fecha de proyectos.
 
 Como cambia el alcance, se actualiza el texto de `/oauth/consent` y hay que revocar la autorización y reconectar al publicar, según las consecuencias de arriba.
+
+### 2026-11-22: editar tareas
+
+A partir del [encargo de `editar_tarea`](../handoffs/handoff-mcp-editar-tarea.md) se añade `editar_tarea`, que reutiliza `tasks.updateTask` (la mutation del formulario de edición). Edita título, estado, prioridad, fecha límite o su ausencia, repetición, horas estimadas y notas, y mueve la tarea a otro proyecto. Solo envía los campos recibidos y devuelve cada cambio como "campo: antes → después". Las reglas de la app (reapertura de repetitivas, lunes a viernes fuera del fin de semana) se aplican igual que en la UI. No edita subtareas ni borra. La "fecha de fin de repetición" pedida en el encargo no existe en el modelo y quedó fuera; añadirla exigiría un campo nuevo y un proceso que la aplique.
+
+Cambia el alcance, así que se actualiza `/oauth/consent` y hay que revocar y reconectar al publicar.
