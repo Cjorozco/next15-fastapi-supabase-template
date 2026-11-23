@@ -8,6 +8,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ## [Unreleased]
 
 ### Added
+- **MCP, subtareas:** `crear_subtarea`, `editar_subtarea` (título y/o completada) y `mover_subtarea` (posición final, desde 1); `obtener_tarea` devuelve ahora `id` y `posicion` de cada subtarea. Mutation nueva `tasks.moveSubtaskTo`; el resto reutiliza `addSubtask`, `updateSubtask` y `toggleSubtask`. Sin borrado por MCP. Requiere `npx convex deploy` (Vercel lo hace al publicar). Sin cambios de esquema.
 - **Hoy:** al marcar una tarea (o la subtarea que la completa) se ve el tachado y el resaltado unos instantes antes de que la fila se pliegue y salga de la lista; con "reducir movimiento" no hay animación. Lo mismo al marcar la "siguiente subtarea": se ve marcada y tachada un instante y luego la siguiente aparece con un fundido.
 - **Subtareas:** se pueden editar (lápiz, edición en línea con Enter/Escape) y reordenar (botones subir/bajar) en el detalle del proyecto. Mutations `tasks.updateSubtask` y `tasks.moveSubtask`; requiere `npx convex deploy`. Sin cambios de esquema.
 - **Vista "Hoy" (`/hoy`):** primera pantalla de la app. Lista las tareas pendientes de proyectos activos con fecha de hoy o vencida, más las diarias que ya arrancaron y las semanales cuya fecha llegó; muestra prioridad, repetición, avance de subtareas y la siguiente subtarea pendiente, con checkbox para completar tarea o subtarea. "Hoy" se calcula en `America/Bogota`. `/` redirige a `/hoy` y el Dashboard pasa a `/dashboard`. Sin cambios de esquema. Ver ADR 005.
