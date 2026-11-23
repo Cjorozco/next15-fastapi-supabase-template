@@ -5,6 +5,9 @@ import {
   bogotaMidnight,
   describeTask,
   summarizeCreatedProject,
+  summarizeCreatedSubtask,
+  summarizeEditedSubtask,
+  summarizeMovedSubtask,
   summarizeEditedProject,
   summarizeEditedTask,
   summarizeMovedTask,
@@ -190,5 +193,38 @@ describe('task edits', () => {
 
   test('says when nothing changed', () => {
     expect(summarizeEditedTask(base, base, same)).toContain('no cambió nada');
+  });
+});
+
+describe('subtask summaries', () => {
+  const task = (subtasks: { id: string; title: string; isCompleted: boolean }[], status: 'pendiente' | 'completada' = 'pendiente') => ({
+    _id: 't1',
+    title: 'Tarea',
+    status,
+    subtasks,
+  });
+  const a = { id: 'a', title: 'Uno', isCompleted: false };
+  const b = { id: 'b', title: 'Dos', isCompleted: false };
+
+  test('created: reports id and position, flags the reopened parent', () => {
+    const text = summarizeCreatedSubtask(task([a], 'completada'), task([a, b]));
+    expect(text).toContain('«Dos» (id b)');
+    expect(text).toContain('posición 2 de 2');
+    expect(text).toContain('estado de la tarea: completada → pendiente (lo aplica la app)');
+  });
+
+  test('edited: one line per changed field, or nothing changed', () => {
+    const done = { ...a, title: 'Uno bis', isCompleted: true };
+    const text = summarizeEditedSubtask(task([a]), task([done]), 'a');
+    expect(text).toContain('título: «Uno» → «Uno bis»');
+    expect(text).toContain('estado: pendiente → completada');
+    expect(summarizeEditedSubtask(task([a]), task([a]), 'a')).toContain('no cambió nada');
+  });
+
+  test('moved: position before → after with the resulting order', () => {
+    const text = summarizeMovedSubtask(task([a, b]), task([b, a]), 'b');
+    expect(text).toContain('posición 2 → 1 (de 2)');
+    expect(text).toContain('1. Dos\n2. Uno');
+    expect(summarizeMovedSubtask(task([a, b]), task([a, b]), 'a')).toContain('no cambió nada');
   });
 });

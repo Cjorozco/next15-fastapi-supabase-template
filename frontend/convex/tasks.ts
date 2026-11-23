@@ -637,6 +637,51 @@ export const moveSubtask = mutation({
   },
 });
 
+/**
+ * Moves a subtask to `position` (0-based) in one step; the others keep their relative
+ * order. A position past the end means "last". Used by the MCP `mover_subtarea` tool.
+ */
+export const moveSubtaskTo = mutation({
+  args: {
+    taskId: v.id("tasks"),
+    subtaskId: v.string(),
+    position: v.number(),
+  },
+  returns: taskValidator,
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    await requireProjectOwner(ctx, task.projectId);
+
+    if (!Number.isInteger(args.position) || args.position < 0) {
+      throw new DomainException("INVALID_INPUT", "Position must be a non-negative integer");
+    }
+
+    const subtasks = [...(task.subtasks ?? [])];
+    const from = subtasks.findIndex((subtask) => subtask.id === args.subtaskId);
+    if (from === -1) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Subtask not found");
+    }
+
+    const to = Math.min(args.position, subtasks.length - 1);
+    if (to !== from) {
+      const [moved] = subtasks.splice(from, 1);
+      subtasks.splice(to, 0, moved);
+      await ctx.db.patch(args.taskId, { subtasks });
+    }
+
+    const updated = await ctx.db.get(args.taskId);
+    if (!updated) {
+      throw new DomainException("ENTITY_NOT_FOUND", "Task not found");
+    }
+
+    return toTaskDto(updated);
+  },
+});
+
 export const removeSubtask = mutation({
   args: {
     taskId: v.id("tasks"),
