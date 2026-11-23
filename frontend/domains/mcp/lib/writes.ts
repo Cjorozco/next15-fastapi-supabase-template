@@ -216,3 +216,89 @@ export function summarizeEditedTask(
   if (changes.length === 0) return `${head}: no cambió nada, ya tenía esos datos.`;
   return [`${head} actualizada:`, ...changes.map((change) => `- ${change}`)].join('\n');
 }
+
+interface SubtaskLike {
+  id: string;
+  title: string;
+  isCompleted: boolean;
+}
+
+interface TaskWithSubtasks {
+  _id: string;
+  title: string;
+  status: TaskStatus;
+  dueDate?: number;
+  subtasks?: readonly SubtaskLike[];
+}
+
+const doneLabel = (value: boolean) => (value ? 'completada' : 'pendiente');
+const dateLabel = (value: number | undefined) => (value === undefined ? 'sin fecha' : dayKey(value));
+
+/**
+ * Changes the parent task took on its own after a subtask write (completing the last
+ * subtask completes the task, adding one reopens it, a recurring task moves to its next
+ * date). Flagged so they are not mistaken for what was asked.
+ */
+function parentTaskChanges(before: TaskWithSubtasks, after: TaskWithSubtasks): string[] {
+  const changes: string[] = [];
+  if (before.status !== after.status) {
+    changes.push(`estado de la tarea: ${STATUS_LABEL[before.status]} → ${STATUS_LABEL[after.status]}`);
+  }
+  if (before.dueDate !== after.dueDate) {
+    changes.push(`fecha de la tarea: ${dateLabel(before.dueDate)} → ${dateLabel(after.dueDate)}`);
+  }
+  return changes.map((change) => `${change} (lo aplica la app)`);
+}
+
+const withList = (head: string, lines: string[]) =>
+  lines.length === 0 ? head : [head, ...lines.map((line) => `- ${line}`)].join('\n');
+
+/** What `crear_subtarea` added: the new subtask with its id and position. */
+export function summarizeCreatedSubtask(before: TaskWithSubtasks, after: TaskWithSubtasks): string {
+  const known = new Set((before.subtasks ?? []).map((subtask) => subtask.id));
+  const subtasks = after.subtasks ?? [];
+  const index = subtasks.findIndex((subtask) => !known.has(subtask.id));
+  if (index === -1) return `Tarea «${after.title}» (id ${after._id}): no se añadió ninguna subtarea.`;
+  const created = subtasks[index];
+  return withList(
+    `Creada la subtarea «${created.title}» (id ${created.id}) en la tarea «${after.title}» (id ${after._id}), posición ${index + 1} de ${subtasks.length}.`,
+    parentTaskChanges(before, after)
+  );
+}
+
+/** What `editar_subtarea` changed: "campo: antes → después" per field, or that nothing changed. */
+export function summarizeEditedSubtask(
+  before: TaskWithSubtasks,
+  after: TaskWithSubtasks,
+  subtaskId: string
+): string {
+  const from = before.subtasks?.find((subtask) => subtask.id === subtaskId);
+  const to = after.subtasks?.find((subtask) => subtask.id === subtaskId);
+  if (!from || !to) return `Subtarea ${subtaskId}: no encontrada en la tarea «${after.title}».`;
+  const changes: string[] = [];
+  if (from.title !== to.title) changes.push(`título: «${from.title}» → «${to.title}»`);
+  if (from.isCompleted !== to.isCompleted) {
+    changes.push(`estado: ${doneLabel(from.isCompleted)} → ${doneLabel(to.isCompleted)}`);
+  }
+  const head = `Subtarea «${to.title}» (id ${to.id}) de la tarea «${after.title}»`;
+  const parent = parentTaskChanges(before, after);
+  if (changes.length === 0 && parent.length === 0) return `${head}: no cambió nada, ya tenía esos datos.`;
+  return withList(`${head} actualizada:`, [...changes, ...parent]);
+}
+
+/** What `mover_subtarea` changed: position before → after and the resulting order. */
+export function summarizeMovedSubtask(
+  before: TaskWithSubtasks,
+  after: TaskWithSubtasks,
+  subtaskId: string
+): string {
+  const subtasks = after.subtasks ?? [];
+  const from = (before.subtasks ?? []).findIndex((subtask) => subtask.id === subtaskId);
+  const to = subtasks.findIndex((subtask) => subtask.id === subtaskId);
+  if (from === -1 || to === -1) return `Subtarea ${subtaskId}: no encontrada en la tarea «${after.title}».`;
+  const moved = subtasks[to];
+  const head = `Subtarea «${moved.title}» (id ${moved.id}) de la tarea «${after.title}»`;
+  if (from === to) return `${head} ya estaba en la posición ${to + 1} de ${subtasks.length}; no cambió nada.`;
+  const order = subtasks.map((subtask, index) => `${index + 1}. ${subtask.title}`).join('\n');
+  return `${head}: posición ${from + 1} → ${to + 1} (de ${subtasks.length}).\nOrden actual:\n${order}`;
+}

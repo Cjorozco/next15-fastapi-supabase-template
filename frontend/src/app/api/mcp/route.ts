@@ -12,8 +12,11 @@ import {
   bogotaMidnight,
   describeTask,
   summarizeCreatedProject,
+  summarizeCreatedSubtask,
   summarizeEditedProject,
+  summarizeEditedSubtask,
   summarizeEditedTask,
+  summarizeMovedSubtask,
   summarizeMovedTask,
   summarizeProjectStatus,
   toProjectTasks,
@@ -122,7 +125,7 @@ const mcpHandler = createMcpHandler(
       {
         title: 'Obtener tarea',
         description:
-          'Detalle de una tarea por id: estado, prioridad, fecha, repetición, notas, horas estimadas y subtareas.',
+          'Detalle de una tarea por id: estado, prioridad, fecha, repetición, notas, horas estimadas y subtareas en orden (cada una con id, posición desde 1, título y completada). El id de subtarea sirve para editar_subtarea y mover_subtarea.',
         inputSchema: z.object({ tarea_id: z.string().min(1) }),
         annotations: { readOnlyHint: true },
       },
@@ -138,7 +141,9 @@ const mcpHandler = createMcpHandler(
             ...(task.notes ? { notas: task.notes } : {}),
             ...(task.estimatedHours !== undefined ? { horasEstimadas: task.estimatedHours } : {}),
             ...(task.noDeadline ? { sinFechaLimite: true } : {}),
-            subtareas: (task.subtasks ?? []).map((s) => ({
+            subtareas: (task.subtasks ?? []).map((s, index) => ({
+              id: s.id,
+              posicion: index + 1,
               titulo: s.title,
               completada: s.isCompleted,
             })),
@@ -367,7 +372,7 @@ const mcpHandler = createMcpHandler(
       {
         title: 'Editar tarea',
         description:
-          'Edita una tarea por id: solo cambia los campos que recibe. Puede cambiar título, estado, prioridad, fecha límite (o quitarla con sin_fecha), repetición (diaria, laboral = lunes a viernes, semanal, o "ninguna" para quitarla), horas estimadas, notas (vacío las borra) y moverla a otro proyecto. Aplica las mismas reglas que la app (una repetitiva completada se reabre con su próxima fecha; una de lunes a viernes no cae en fin de semana). Devuelve cada cambio como "campo: antes → después" para que el usuario lo confirme. No borra la tarea ni edita subtareas.',
+          'Edita una tarea por id: solo cambia los campos que recibe. Puede cambiar título, estado, prioridad, fecha límite (o quitarla con sin_fecha), repetición (diaria, laboral = lunes a viernes, semanal, o "ninguna" para quitarla), horas estimadas, notas (vacío las borra) y moverla a otro proyecto. Aplica las mismas reglas que la app (una repetitiva completada se reabre con su próxima fecha; una de lunes a viernes no cae en fin de semana). Devuelve cada cambio como "campo: antes → después" para que el usuario lo confirme. No borra la tarea. Las subtareas se gestionan con crear_subtarea, editar_subtarea y mover_subtarea.',
         inputSchema: z
           .object({
             tarea_id: z.string().min(1).describe('Id de una tarea (de listar_tareas)'),
@@ -445,8 +450,122 @@ const mcpHandler = createMcpHandler(
         }
       }
     );
+
+    const TASK_ID = z.string().min(1).describe('Id de una tarea (de listar_tareas)');
+    const SUBTASK_ID = z.string().min(1).describe('Id de una subtarea (de obtener_tarea)');
+    const SUBTASK_TITLE = z.string().trim().min(1).max(200);
+
+    server.registerTool(
+      'crear_subtarea',
+      {
+        title: 'Crear subtarea',
+        description:
+          'Añade una subtarea (pendiente) al final de una tarea. Como en la app, si la tarea estaba completada vuelve a quedar pendiente. Devuelve el id y la posición de la subtarea creada para que el usuario lo confirme. No borra nada.',
+        inputSchema: z.object({ tarea_id: TASK_ID, titulo: SUBTASK_TITLE }),
+        annotations: WRITE,
+      },
+      async ({ tarea_id, titulo }, ctx) => {
+        const action = `No se creó la subtarea «${titulo}»`;
+        try {
+          const convex = convexFor(ctx.http?.authInfo);
+          const taskId = tarea_id as Id<'tasks'>;
+          const before = await convex.query(api.tasks.get, { taskId });
+          if (!before) return failure(`${action}: tarea no encontrada.`);
+          const after = await convex.mutation(api.tasks.addSubtask, { taskId, title: titulo });
+          return text(summarizeCreatedSubtask(before.task, after));
+        } catch (error) {
+          return writeFailure(action, error);
+        }
+      }
+    );
+
+    server.registerTool(
+      'editar_subtarea',
+      {
+        title: 'Editar subtarea',
+        description:
+          'Cambia el título y/o el estado (completada true/false) de una subtarea: solo cambia los campos que recibe. Aplica las mismas reglas que la app: completar la última subtarea completa la tarea; en una tarea repetitiva, marcar una subtarea cuenta como el trabajo del día y la tarea pasa a su próxima fecha. Devuelve cada cambio como "campo: antes → después" para que el usuario lo confirme. No borra nada.',
+        inputSchema: z
+          .object({
+            tarea_id: TASK_ID,
+            subtarea_id: SUBTASK_ID,
+            titulo: SUBTASK_TITLE.optional(),
+            completada: z.boolean().optional(),
+          })
+          .refine((input) => input.titulo !== undefined || input.completada !== undefined, {
+            message: 'Indica titulo o completada',
+          }),
+        annotations: WRITE,
+      },
+      async ({ tarea_id, subtarea_id, titulo, completada }, ctx) => {
+        const action = 'No se editó la subtarea';
+        try {
+          const convex = convexFor(ctx.http?.authInfo);
+          const taskId = tarea_id as Id<'tasks'>;
+          const before = await convex.query(api.tasks.get, { taskId });
+          if (!before) return failure(`${action}: tarea no encontrada.`);
+          const current = before.task.subtasks?.find((s) => s.id === subtarea_id);
+          if (!current) return failure(`${action}: subtarea no encontrada en esa tarea.`);
+
+          let after = before.task;
+          if (titulo !== undefined && titulo !== current.title) {
+            after = await convex.mutation(api.tasks.updateSubtask, {
+              taskId,
+              subtaskId: subtarea_id,
+              title: titulo,
+            });
+          }
+          if (completada !== undefined && completada !== current.isCompleted) {
+            after = await convex.mutation(api.tasks.toggleSubtask, {
+              taskId,
+              subtaskId: subtarea_id,
+              isCompleted: completada,
+              tzOffsetMinutes: APP_TZ_OFFSET_MINUTES,
+            });
+          }
+          return text(summarizeEditedSubtask(before.task, after, subtarea_id));
+        } catch (error) {
+          return writeFailure(action, error);
+        }
+      }
+    );
+
+    server.registerTool(
+      'mover_subtarea',
+      {
+        title: 'Mover subtarea',
+        description:
+          'Reordena una subtarea: la coloca en la posición indicada (1 = primera; una posición mayor que el total la deja al final) y las demás conservan su orden. Devuelve la posición antes → después y el orden resultante para que el usuario lo confirme. No borra nada.',
+        inputSchema: z.object({
+          tarea_id: TASK_ID,
+          subtarea_id: SUBTASK_ID,
+          posicion: z.number().int().min(1).describe('Posición final, empezando en 1'),
+        }),
+        annotations: WRITE,
+      },
+      async ({ tarea_id, subtarea_id, posicion }, ctx) => {
+        const action = 'No se movió la subtarea';
+        try {
+          const convex = convexFor(ctx.http?.authInfo);
+          const taskId = tarea_id as Id<'tasks'>;
+          const before = await convex.query(api.tasks.get, { taskId });
+          if (!before) return failure(`${action}: tarea no encontrada.`);
+          if (!before.task.subtasks?.some((s) => s.id === subtarea_id)) {
+            return failure(`${action}: subtarea no encontrada en esa tarea.`);
+          }
+          const after = await convex.mutation(api.tasks.moveSubtaskTo, {
+            taskId,
+            subtaskId: subtarea_id,
+            position: posicion - 1,
+          });
+          return text(summarizeMovedSubtask(before.task, after, subtarea_id));
+        } catch (error) {
+          return writeFailure(action, error);
+        }
+      }
+    );
   },
-  { serverInfo: { name: 'project-manager', version: '1.4.0' } }
+  { serverInfo: { name: 'project-manager', version: '1.5.0' } }
 );
 
 const handler = withMcpAuth(mcpHandler, (_req, token) => verifySupabaseToken(token), {

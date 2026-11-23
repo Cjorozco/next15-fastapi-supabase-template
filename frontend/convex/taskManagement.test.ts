@@ -855,6 +855,28 @@ describe("editing and reordering subtasks", () => {
     expect(await titles()).toEqual(["C", "A", "B"]);
   });
 
+  test("moveSubtaskTo puts the subtask at that position and clamps past the end", async () => {
+    const { owner, task, read } = await withSubtasks(["A", "B", "C", "D"]);
+    const titles = async () => (await read()).map((s) => s.title);
+    const [a, b, , d] = await read();
+
+    await owner.mutation(api.tasks.moveSubtaskTo, { taskId: task._id, subtaskId: b.id, position: 99 });
+    expect(await titles()).toEqual(["A", "C", "D", "B"]);
+
+    await owner.mutation(api.tasks.moveSubtaskTo, { taskId: task._id, subtaskId: d.id, position: 0 });
+    expect(await titles()).toEqual(["D", "A", "C", "B"]);
+
+    await owner.mutation(api.tasks.moveSubtaskTo, { taskId: task._id, subtaskId: a.id, position: 1 });
+    expect(await titles()).toEqual(["D", "A", "C", "B"]);
+
+    await expect(
+      owner.mutation(api.tasks.moveSubtaskTo, { taskId: task._id, subtaskId: a.id, position: -1 })
+    ).rejects.toThrow();
+    await expect(
+      owner.mutation(api.tasks.moveSubtaskTo, { taskId: task._id, subtaskId: "nope", position: 0 })
+    ).rejects.toThrow();
+  });
+
   test("another user cannot edit or move subtasks", async () => {
     const { intruder, task, read } = await withSubtasks(["A", "B"]);
     const [a] = await read();
@@ -863,6 +885,9 @@ describe("editing and reordering subtasks", () => {
     ).rejects.toThrow();
     await expect(
       intruder.mutation(api.tasks.moveSubtask, { taskId: task._id, subtaskId: a.id, direction: "down" })
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.tasks.moveSubtaskTo, { taskId: task._id, subtaskId: a.id, position: 1 })
     ).rejects.toThrow();
   });
 });
